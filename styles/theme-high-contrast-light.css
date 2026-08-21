@@ -1,0 +1,45 @@
+/* Warm cream / navy high contrast theme (reduces visual stress / Irlen syndrome) */
+html.a11y-contrast-light,
+html.a11y-contrast-light body {
+  background-color: #fffdf0 !important;
+  color: #1a1a3d !important;
+}
+
+html.a11y-contrast-light body * {
+  background-color: #fffdf0 !important;
+  color: #1a1a3d !important;
+  border-color: #1a1a3d !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+html.a11y-contrast-light a,
+html.a11y-contrast-light a * {
+  color: #0044aa !important;
+  text-decoration: underline !important;
+}
+
+html.a11y-contrast-light button,
+html.a11y-contrast-light input,
+html.a11y-contrast-light select,
+html.a11y-contrast-light textarea,
+html.a11y-contrast-light [role="button"] {
+  background-color: #fff8dc !important;
+  color: #1a1a3d !important;
+  border: 2px solid #1a1a3d !important;
+}
+
+html.a11y-contrast-light img,
+html.a11y-contrast-light video,
+html.a11y-contrast-light canvas,
+html.a11y-contrast-light svg,
+html.a11y-contrast-light picture {
+  filter: contrast(1.05) !important;
+  background-color: transparent !important;
+}
+
+html.a11y-contrast-light *:focus,
+html.a11y-contrast-light *:focus-visible {
+  outline: 3px solid #0044aa !important;
+  outline-offset: 2px !important;
+}
