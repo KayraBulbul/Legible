@@ -46,6 +46,20 @@ async def test_openapi_publishes_idempotent_saved_page_response(client: AsyncCli
     assert create_responses["201"]["content"]["application/json"]["schema"] == expected
 
 
+async def test_openapi_publishes_saved_page_favourite_contract(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    schemas = response.json()["components"]["schemas"]
+    update = schemas["SavedPageUpdate"]
+    assert set(update["properties"]) == {"title", "isFavourited"}
+    assert update.get("required", []) == []
+    assert update["properties"]["title"]["type"] == "string"
+    assert update["properties"]["isFavourited"]["type"] == "boolean"
+    assert schemas["SavedPageResponse"]["properties"]["isFavourited"]["type"] == "boolean"
+    assert schemas["SavedPageSummary"]["properties"]["isFavourited"]["type"] == "boolean"
+
+
 @pytest.mark.parametrize("method", ["PATCH", "DELETE"])
 async def test_cors_preflight_allows_saved_page_writes(client: AsyncClient, method: str) -> None:
     origin = "http://localhost:5173"

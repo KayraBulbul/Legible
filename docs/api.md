@@ -70,7 +70,7 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 | `POST` | `/api/v1/saved-pages` | Yes | Current | Save a page snapshot |
 | `GET` | `/api/v1/saved-pages` | Yes | Current | List the current user's saved pages |
 | `GET` | `/api/v1/saved-pages/{id}` | Yes | Current | Retrieve one full saved page |
-| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Current | Rename a saved page |
+| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Current | Update a saved page |
 | `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Current | Delete a saved page |
 | `GET` | `/api/v1/profiles` | Yes | Planned | List accessibility profiles |
 | `POST` | `/api/v1/profiles` | Yes | Planned | Create a profile |
@@ -278,6 +278,7 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
   "originalUrl": "https://example.com/article",
   "title": "Example article",
   "excerpt": "Original content.",
+  "isFavourited": false,
   "sourceDocument": {
     "format": "semantic_html",
     "html": "<article><h1>Example article</h1><p>Original content.</p></article>",
@@ -328,6 +329,7 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
       "originalUrl": "https://example.com/article",
       "title": "Example article",
       "excerpt": "Original content.",
+      "isFavourited": false,
       "profileId": null,
       "hasTransformedContent": false,
       "capturedAt": "2026-08-22T04:31:00Z",
@@ -345,11 +347,31 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
 
 The planned default is 20 items and maximum is 100. Items sort newest first. List responses do not contain full HTML or text.
 
-### Retrieve, rename, and delete
+### Retrieve, update, and delete
 
 - `GET /api/v1/saved-pages/{id}` returns the full saved-page response.
-- `PATCH /api/v1/saved-pages/{id}` accepts `{ "title": "New title" }` and returns the updated full response.
+- `PATCH /api/v1/saved-pages/{id}` accepts `title`, `isFavourited`, or both and returns the updated full response.
 - `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
+
+Rename a page:
+
+```json
+{
+  "title": "New title"
+}
+```
+
+Favourite or unfavourite a page:
+
+```json
+{
+  "isFavourited": true
+}
+```
+
+Both fields update atomically when sent together. An empty object, explicit `null`, a non-boolean `isFavourited`, or an unknown field returns `422 validation_error`. New pages always start with `isFavourited: false`; the create endpoint does not accept client-supplied favourite state.
+
+List results remain sorted newest first. The API does not filter or reorder the list based on favourite state. A dashboard can use `isFavourited` to mark or group the returned summaries.
 
 A missing page and a page owned by another user both return `404`. Clients must not infer that another user's page exists.
 
