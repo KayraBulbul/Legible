@@ -1,0 +1,243 @@
+from datetime import datetime
+from enum import StrEnum
+from typing import Annotated, Literal
+from uuid import UUID
+
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StringConstraints, field_validator
+
+
+def to_camel(value: str) -> str:
+    first, *rest = value.split("_")
+    return first + "".join(word.capitalize() for word in rest)
+
+
+class ApiModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+        allow_inf_nan=False,
+    )
+
+
+class DyslexiaFont(StrEnum):
+    NONE = "none"
+    LEXEND = "lexend"
+    OPEN_DYSLEXIC = "opendyslexic"
+
+
+class ContrastMode(StrEnum):
+    NONE = "none"
+    DARK = "dark"
+    LIGHT = "light"
+
+
+class SimplificationLevel(StrEnum):
+    LIGHT = "light"
+    MODERATE = "moderate"
+    STRONG = "strong"
+
+
+class TransformationOperation(StrEnum):
+    SIMPLIFY = "simplify"
+    SUMMARIZE = "summarize"
+    RESTRUCTURE = "restructure"
+    FOCUS = "focus"
+    IMAGE_DESCRIPTION = "image-description"
+
+
+class AiPreferences(ApiModel):
+    simplification_level: SimplificationLevel = SimplificationLevel.MODERATE
+    preserve_technical_terms: bool = True
+
+
+class AccessibilitySettings(ApiModel):
+    schema_version: Literal[1] = 1
+    dyslexia_font: DyslexiaFont = DyslexiaFont.NONE
+    contrast_mode: ContrastMode = ContrastMode.NONE
+    declutter: bool = False
+    bionic_reading: bool = False
+    font_scale: int = Field(default=100, ge=50, le=300)
+    line_height: float | None = Field(default=None, ge=1, le=4)
+    letter_spacing: float | None = None
+    word_spacing: float | None = None
+    reduced_motion: bool = False
+    reading_width: float | None = None
+    tts_rate: float = Field(default=1.0, ge=0.5, le=2)
+    tts_pitch: float = Field(default=1.0, ge=0, le=2)
+    voice_uri: str | None = Field(default=None, alias="voiceURI", max_length=500)
+    hud_visible: bool = True
+    ai_enabled: bool = True
+    ai_preferences: AiPreferences = Field(default_factory=AiPreferences)
+
+
+DocumentText = Annotated[str, StringConstraints(max_length=1_000_000)]
+
+
+class SemanticDocument(ApiModel):
+    format: Literal["semantic_html"] = "semantic_html"
+    html: DocumentText
+    text: DocumentText
+    language: str | None = Field(default=None, min_length=2, max_length=35)
+
+    @field_validator("html", "text")
+    @classmethod
+    def reject_null_bytes(cls, value: str) -> str:
+        if "\x00" in value:
+            raise ValueError("null bytes are not allowed")
+        return value
+
+
+TransformationParameter = str | int | float | bool | None
+
+
+class TransformationRecord(ApiModel):
+    operation: TransformationOperation
+    provider: str = Field(min_length=1, max_length=80)
+    model: str = Field(min_length=1, max_length=120)
+    prompt_version: str = Field(min_length=1, max_length=120)
+    parameters: dict[str, TransformationParameter] = Field(default_factory=dict)
+    performed_at: datetime
+
+    @field_validator("performed_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("a timezone offset is required")
+        return value
+
+
+class SavedPageCreate(ApiModel):
+    client_save_id: UUID
+    original_url: AnyHttpUrl
+    title: str = Field(min_length=1, max_length=512)
+    captured_at: datetime
+    source_document: SemanticDocument
+    transformed_document: SemanticDocument | None = None
+    accessibility_settings: AccessibilitySettings = Field(default_factory=AccessibilitySettings)
+    transformations: list[TransformationRecord] = Field(default_factory=list, max_length=20)
+    profile_id: None = None
+
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("title must not be blank")
+        return value
+
+    @field_validator("original_url")
+    @classmethod
+    def reject_url_credentials(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        if value.username is not None or value.password is not None:
+            raise ValueError("URL credentials are not allowed")
+        return value
+
+    @field_validator("captured_at")
+    @classmethod
+    def require_captured_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("a timezone offset is required")
+        return value
+
+
+class SavedPageUpdate(ApiModel):
+    title: str = Field(min_length=1, max_length=512)
+
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("title must not be blank")
+        return value
+
+
+class SavedPageResponse(ApiModel):
+    id: UUID
+    client_save_id: UUID
+    original_url: str
+    title: str
+    excerpt: str
+    source_document: SemanticDocument
+    transformed_document: SemanticDocument | None
+    accessibility_settings: AccessibilitySettings
+    transformations: list[TransformationRecord]
+    profile_id: UUID | None
+    source_hash: str
+    captured_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class SavedPageSummary(ApiModel):
+    id: UUID
+    original_url: str
+    title: str
+    excerpt: str
+    profile_id: UUID | None
+    has_transformed_content: bool
+    captured_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class Pagination(ApiModel):
+    limit: int
+    offset: int
+    total: int
+
+
+class SavedPageListResponse(ApiModel):
+    items: list[SavedPageSummary]
+    pagination: Pagination
+
+
+class UserResponse(ApiModel):
+    id: UUID
+    kind: Literal["guest"]
+    display_name: str | None
+    created_at: datetime
+
+
+class SessionResponse(ApiModel):
+    access_token: str
+    expires_at: datetime
+
+
+class GuestSessionResponse(ApiModel):
+    user: UserResponse
+    session: SessionResponse
+
+
+class PairingCodeResponse(ApiModel):
+    code: str
+    expires_at: datetime
+
+
+class PairingCodeRedeem(ApiModel):
+    code: str = Field(
+        min_length=8,
+        max_length=8,
+        pattern=r"^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$",
+    )
+
+
+class HealthResponse(ApiModel):
+    status: Literal["ok"]
+    database: Literal["ok"]
+
+
+class ErrorField(ApiModel):
+    path: str
+    message: str
+
+
+class ErrorDetail(ApiModel):
+    code: str
+    message: str
+    fields: list[ErrorField] | None = None
+
+
+class ErrorResponse(ApiModel):
+    error: ErrorDetail
