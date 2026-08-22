@@ -21,6 +21,10 @@ const DEFAULT_SETTINGS = {
 };
 
 const els = {
+  backendStatus: document.getElementById('backendStatus'),
+  connectBtn: document.getElementById('connectBtn'),
+  savePageBtn: document.getElementById('savePageBtn'),
+  saveStatus: document.getElementById('saveStatus'),
   dyslexiaFont: document.getElementById('dyslexiaFont'),
   themeGrid: document.getElementById('themeGrid'),
   fontScale: document.getElementById('fontScale'),
@@ -163,6 +167,57 @@ function wireStepper({ rangeEl, downBtn, upBtn, step, key, format }) {
   upBtn.addEventListener('click', () => commit(clamp(Number(rangeEl.value) + step, min, max)));
 }
 
+async function refreshBackendStatus() {
+  const res = await chrome.runtime.sendMessage({ type: 'BACKEND_STATUS' });
+  const connected = !!(res && res.ok && res.connected);
+  els.backendStatus.textContent = connected ? 'Connected' : 'Not connected';
+  els.backendStatus.className = connected ? 'status-text ok' : 'status-text';
+  els.savePageBtn.disabled = !connected;
+  return connected;
+}
+
+function wireBackendEvents() {
+  els.connectBtn.addEventListener('click', async () => {
+    els.connectBtn.disabled = true;
+    els.backendStatus.textContent = 'Connecting...';
+    els.backendStatus.className = 'status-text';
+    const res = await chrome.runtime.sendMessage({ type: 'BACKEND_CONNECT' });
+    els.connectBtn.disabled = false;
+    if (res && res.ok) {
+      await refreshBackendStatus();
+    } else {
+      els.backendStatus.textContent = `Connect failed (${(res && res.error) || 'unknown'}).`;
+      els.backendStatus.className = 'status-text err';
+    }
+  });
+
+  els.savePageBtn.addEventListener('click', async () => {
+    els.savePageBtn.disabled = true;
+    els.saveStatus.textContent = 'Extracting page...';
+    try {
+      const extraction = await sendToContent({ type: 'EXTRACT_PAGE' });
+      if (!extraction || !extraction.ok) throw new Error('extract-failed');
+
+      els.saveStatus.textContent = 'Saving...';
+      const res = await chrome.runtime.sendMessage({
+        type: 'BACKEND_SAVE_PAGE',
+        payload: {
+          title: extraction.title,
+          originalUrl: extraction.originalUrl,
+          sourceDocument: extraction.sourceDocument,
+          a11ySettings: settings,
+        },
+      });
+
+      els.saveStatus.textContent = res && res.ok ? 'Saved.' : `Save failed (${(res && res.error) || 'unknown'}).`;
+    } catch (e) {
+      els.saveStatus.textContent = 'Cannot save this page (try a regular website tab).';
+    } finally {
+      els.savePageBtn.disabled = !(await refreshBackendStatus());
+    }
+  });
+}
+
 function wireEvents() {
   els.dyslexiaFont.addEventListener('change', () => persist({ dyslexiaFont: els.dyslexiaFont.value }));
 
@@ -281,6 +336,8 @@ async function init() {
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;
   wireEvents();
+  wireBackendEvents();
+  refreshBackendStatus();
 }
 
 init();

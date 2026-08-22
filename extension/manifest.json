@@ -30,8 +30,7 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "https://hackmelbourne2026-production.up.railway.app/*",
-    "http://127.0.0.1:8000/*"
+    "https://hackmelbourne2026-production.up.railway.app/*"
   ],
   "content_scripts": [
     {
@@ -42,6 +41,7 @@
         "content/custom-cursor.js",
         "content/ai-scanner.js",
         "content/screen-reader.js",
+        "content/extractor.js",
         "hud/hud.js",
         "content/content.js"
       ],

@@ -1,4 +1,6 @@
 import { analyzeImage } from './backend-client.js';
+import { ApiError, createGuestSession, ensureSession, authedFetchWithRetry } from './api-client.js';
+import { mapA11ySettingsToBackend } from './settings-mapper.js';
 
 if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
@@ -47,14 +49,72 @@ async function handleAnalyzeImage(payload) {
     await setCacheEntry(key, result);
     return { ok: true, result };
   } catch (err) {
-    return { ok: false, error: err.message || 'analysis-failed' };
+    return { ok: false, error: (err instanceof ApiError && err.code) || 'analysis-failed' };
+  }
+}
+
+async function handleBackendConnect() {
+  try {
+    const existing = await ensureSession();
+    if (existing) return { ok: true, connected: true, userId: existing.userId };
+    const session = await createGuestSession();
+    return { ok: true, connected: true, userId: session.userId };
+  } catch (err) {
+    return { ok: false, error: (err instanceof ApiError && err.code) || 'connect-failed' };
+  }
+}
+
+async function handleBackendStatus() {
+  const session = await ensureSession();
+  return { ok: true, connected: !!session, userId: session ? session.userId : null };
+}
+
+async function handleBackendSavePage(payload) {
+  const session = await ensureSession();
+  if (!session) return { ok: false, error: 'not_connected' };
+
+  const body = {
+    clientSaveId: crypto.randomUUID(),
+    originalUrl: payload.originalUrl,
+    title: payload.title,
+    capturedAt: new Date().toISOString(),
+    sourceDocument: payload.sourceDocument,
+    transformedDocument: null,
+    accessibilitySettings: mapA11ySettingsToBackend(payload.a11ySettings),
+    transformations: [],
+    profileId: null,
+  };
+
+  try {
+    const savedPage = await authedFetchWithRetry('/api/v1/saved-pages', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return { ok: true, savedPage };
+  } catch (err) {
+    return { ok: false, error: (err instanceof ApiError && err.code) || 'save-failed' };
   }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || message.type !== 'AI_ANALYZE_IMAGE') return undefined;
-  handleAnalyzeImage(message.payload).then(sendResponse);
-  return true;
+  if (!message || !message.type) return undefined;
+
+  switch (message.type) {
+    case 'AI_ANALYZE_IMAGE':
+      handleAnalyzeImage(message.payload).then(sendResponse);
+      return true;
+    case 'BACKEND_CONNECT':
+      handleBackendConnect().then(sendResponse);
+      return true;
+    case 'BACKEND_STATUS':
+      handleBackendStatus().then(sendResponse);
+      return true;
+    case 'BACKEND_SAVE_PAGE':
+      handleBackendSavePage(message.payload || {}).then(sendResponse);
+      return true;
+    default:
+      return undefined;
+  }
 });
 
 chrome.commands.onCommand.addListener(async (command) => {

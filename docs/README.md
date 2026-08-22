@@ -45,8 +45,9 @@ Do not commit `.env.local`. The extension should grant host permission for:
 ```
 
 Extension HTTP requests must go through the Manifest V3 service worker. Content scripts should send typed runtime messages to the service worker instead of calling the backend directly.
-The extension creates and stores a backend guest session on its first AI request. It no
-longer asks users for a Gemini key or calls Google's API directly.
+The extension uses the backend session created by its Account section. Users must select
+Connect before saving a page or running AI analysis. The extension no longer asks users
+for a Gemini key or calls Google's API directly.
 
 ## Authentication flow
 

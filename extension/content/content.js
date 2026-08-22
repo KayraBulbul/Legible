@@ -125,6 +125,9 @@
         window.A11yScreenReader && window.A11yScreenReader.toggleRead();
         sendResponse({ ok: true });
         break;
+      case 'EXTRACT_PAGE':
+        sendResponse(window.A11yExtractor ? window.A11yExtractor.extractPage() : { ok: false, reason: 'no-extractor' });
+        break;
     }
     return undefined;
   });
