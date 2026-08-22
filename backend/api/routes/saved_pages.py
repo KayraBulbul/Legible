@@ -3,11 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Response
 
-from api.dependencies import CurrentUser, DatabaseSession
+from api.dependencies import CurrentUser, DatabaseSession, PdfExporter
 from api.presenters import saved_page_response, saved_page_summary
 from api.schemas import (
     ErrorResponse,
     Pagination,
+    PdfContentMode,
     SavedPageCreate,
     SavedPageListResponse,
     SavedPageResponse,
@@ -78,6 +79,47 @@ async def retrieve_page(
 ) -> SavedPageResponse:
     page = await get_saved_page(database, current_user.id, page_id)
     return saved_page_response(page)
+
+
+@router.get(
+    "/{page_id}/export.pdf",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+            "description": "Generated saved-page PDF",
+            "headers": {
+                "Content-Disposition": {
+                    "description": "RFC 5987-compatible download filename",
+                    "schema": {"type": "string"},
+                },
+                "X-Exported-Content": {
+                    "description": "Selected saved-page content",
+                    "schema": {"type": "string", "enum": ["source", "transformed"]},
+                },
+            },
+        },
+        409: {"model": ErrorResponse, "description": "Transformed content unavailable"},
+        502: {"model": ErrorResponse, "description": "PDF rendering failed"},
+        503: {"model": ErrorResponse, "description": "PDF rendering unavailable"},
+    },
+)
+async def export_page_pdf(
+    page_id: UUID,
+    database: DatabaseSession,
+    current_user: CurrentUser,
+    exporter: PdfExporter,
+    content: Annotated[PdfContentMode, Query()] = PdfContentMode.PREFERRED,
+) -> Response:
+    result = await exporter.export(database, current_user.id, page_id, content)
+    return Response(
+        content=result.content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": result.content_disposition,
+            "X-Exported-Content": result.exported_content,
+        },
+    )
 
 
 @router.patch("/{page_id}", response_model=SavedPageResponse)

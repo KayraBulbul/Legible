@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     pairing_code_secret: str = Field(min_length=32)
     max_request_bytes: int = Field(default=20 * 1024 * 1024, ge=1024)
+    pdf_render_timeout_seconds: float = Field(default=20, gt=0)
+    pdf_render_concurrency: int = Field(default=2, ge=1)
 
     @field_validator("database_url", mode="before")
     @classmethod
