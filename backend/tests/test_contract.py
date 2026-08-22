@@ -1,3 +1,4 @@
+import pytest
 from httpx import AsyncClient
 
 
@@ -33,6 +34,34 @@ async def test_openapi_publishes_custom_validation_envelope(client: AsyncClient)
     for operation in operations:
         validation_schema = operation["responses"]["422"]["content"]["application/json"]["schema"]
         assert validation_schema == expected_response
+
+
+async def test_openapi_publishes_idempotent_saved_page_response(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    create_responses = response.json()["paths"]["/api/v1/saved-pages"]["post"]["responses"]
+    expected = {"$ref": "#/components/schemas/SavedPageResponse"}
+    assert create_responses["200"]["content"]["application/json"]["schema"] == expected
+    assert create_responses["201"]["content"]["application/json"]["schema"] == expected
+
+
+@pytest.mark.parametrize("method", ["PATCH", "DELETE"])
+async def test_cors_preflight_allows_saved_page_writes(client: AsyncClient, method: str) -> None:
+    origin = "http://localhost:5173"
+    response = await client.options(
+        "/api/v1/saved-pages/62f44fe6-e6d2-44cc-9b38-e2d49bd15ace",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": method,
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+    assert method in response.headers["access-control-allow-methods"]
+    assert "Authorization" in response.headers["access-control-allow-headers"]
 
 
 async def test_openapi_requires_null_profile_id_on_create(client: AsyncClient) -> None:

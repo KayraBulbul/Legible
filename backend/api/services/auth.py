@@ -95,6 +95,8 @@ def _new_pairing_code() -> str:
 async def create_pairing_code(
     database: AsyncSession, user_id: UUID, secret: str
 ) -> tuple[PairingCode, str]:
+    await database.execute(select(User.id).where(User.id == user_id).with_for_update())
+
     now = datetime.now(UTC)
     created_since = now - PAIRING_CODE_CREATION_WINDOW
     count_statement = (

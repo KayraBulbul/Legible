@@ -125,6 +125,21 @@ async def test_pairing_code_creation_is_rate_limited(client: AsyncClient) -> Non
     assert responses[-1].json()["error"]["code"] == "pairing_rate_limited"
 
 
+async def test_concurrent_pairing_code_creation_is_serialized(client: AsyncClient) -> None:
+    created = await client.post("/api/v1/auth/guest")
+    headers = {"Authorization": f"Bearer {created.json()['session']['accessToken']}"}
+
+    responses = await asyncio.gather(
+        *(client.post("/api/v1/auth/pairing-codes", headers=headers) for _ in range(6))
+    )
+
+    assert sorted(response.status_code for response in responses) == [201, 201, 201, 201, 201, 429]
+    async with session_factory() as database:
+        pairing_codes = list(await database.scalars(select(PairingCode)))
+    assert len(pairing_codes) == 5
+    assert sum(code.invalidated_at is None for code in pairing_codes) == 1
+
+
 async def test_pairing_redemption_is_rate_limited_by_client(client: AsyncClient) -> None:
     responses = [
         await client.post("/api/v1/auth/pairing-codes/redeem", json={"code": "23456789"})

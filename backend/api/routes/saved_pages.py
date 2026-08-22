@@ -33,7 +33,17 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=SavedPageResponse, status_code=201)
+@router.post(
+    "",
+    response_model=SavedPageResponse,
+    status_code=201,
+    responses={
+        200: {
+            "model": SavedPageResponse,
+            "description": "Existing idempotent save returned",
+        }
+    },
+)
 async def create_page(
     payload: SavedPageCreate,
     response: Response,
