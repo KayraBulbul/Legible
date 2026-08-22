@@ -1,2 +1,5 @@
 AGENTS.md
 backend/ai/.env
+.venv/
+__pycache__/
+*.pyc
