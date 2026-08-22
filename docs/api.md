@@ -1,6 +1,6 @@
 # Frontend API integration guide
 
-This document is the integration contract for the browser extension and dashboard. The deployed FastAPI API implements health, guest sessions, session revocation, extension/dashboard pairing, and the complete saved-page lifecycle. Its Pydantic schemas and generated `/openapi.json` are authoritative for implemented endpoints. Other endpoints below are marked as planned.
+This document is the integration contract for the browser extension and dashboard. The FastAPI API implements health, guest sessions, session revocation, extension/dashboard pairing, the complete saved-page lifecycle, Gemini transformations and image descriptions, and PDF export. Its Pydantic schemas and generated `/openapi.json` are authoritative for implemented endpoints. Other endpoints below are marked as planned.
 
 ## Environments
 
@@ -77,8 +77,8 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 | `GET` | `/api/v1/profiles/{id}` | Yes | Planned | Retrieve a profile |
 | `PATCH` | `/api/v1/profiles/{id}` | Yes | Planned | Update a profile |
 | `DELETE` | `/api/v1/profiles/{id}` | Yes | Planned | Delete a profile |
-| `POST` | `/api/v1/transformations` | Yes | Planned | Run a text/content transformation |
-| `POST` | `/api/v1/image-descriptions` | Yes | Planned | Generate alt text or an accessible label |
+| `POST` | `/api/v1/transformations` | Yes | Current | Run a text/content transformation |
+| `POST` | `/api/v1/image-descriptions` | Yes | Current | Generate alt text or an accessible label |
 | `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Current | Generate and download a PDF |
 
 Profiles may follow saved-page CRUD if time is tight. Their schema is still defined here so clients do not invent a second settings format.
@@ -416,7 +416,7 @@ Create with `POST /api/v1/profiles`:
 
 ## Gemini transformations
 
-Transformation endpoints are planned. `backend/ai/` is reserved for their implementation and is untouched by the persistence slice.
+Transformation endpoints are implemented and require a bearer token.
 
 `POST /api/v1/transformations` runs a synchronous, authenticated transformation. It does not save a page.
 
@@ -462,11 +462,16 @@ Supported operations are `simplify`, `summarize`, `restructure`, and `focus`. A 
 
 To retain a result, the client includes `output` as `transformedDocument` and `metadata` in `transformations` when creating a saved page. Keep the original source document so users can compare AI output against it.
 
+The backend sanitises input before calling Gemini and sanitises returned semantic HTML
+again before responding. Calls are synchronous and are not persisted by this endpoint.
+Clients must handle `429`, `502`, and `503` without disabling non-AI features.
+
 ## Image descriptions
 
-Image-description endpoints are planned.
+Image-description endpoints are implemented and require a bearer token.
 
-`POST /api/v1/image-descriptions` replaces the extension's direct Gemini image call.
+`POST /api/v1/image-descriptions` is the backend endpoint clients should adopt instead
+of calling Gemini directly.
 
 ```json
 {
@@ -492,7 +497,12 @@ Image-description endpoints are planned.
 }
 ```
 
-`role` may be `null` when no role should be added. The maximum decoded image size and accepted MIME types still need human agreement. Clients must handle `413`, `415`, `422`, `429`, and provider failure without disabling non-AI accessibility features.
+`role` may be `null` when no role should be added and is always `null` for an
+`icon-button`. The endpoint accepts base64 data URLs containing PNG, JPEG, or WebP data
+up to 8 MiB after decoding. Remote URLs, malformed data, and SVG return
+`415 unsupported_image_type`; larger decoded images return `413 image_too_large`.
+Clients must handle `413`, `415`, `422`, `429`, `502`, and `503` without disabling
+non-AI accessibility features.
 
 ## PDF export
 
@@ -614,7 +624,6 @@ Frontend and backend owners need to settle these before implementation reaches t
 
 - dashboard token persistence and recovery behaviour for lost guest sessions;
 - whether spacing and reading-width ranges should also be enforced when saving a page;
-- content and image size limits plus accepted image MIME types;
 - the HTML allowlist and treatment of remote images outside PDF export;
 - whether profiles ship in the MVP;
 - whether list pagination stays offset-based if the library grows beyond demo size.

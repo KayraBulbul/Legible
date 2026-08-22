@@ -16,16 +16,19 @@ Reference links:
 
 ## What is available
 
-The deployed API currently provides:
+The backend currently provides:
 
 - guest-session creation, lookup, and revocation;
 - one-time pairing between an extension session and a dashboard session;
 - saved-page creation with backend HTML sanitisation and idempotent retries;
 - paginated saved-page summaries;
 - saved-page detail, partial updates including favourite state, and deletion;
+- authenticated Gemini transformations and image descriptions;
+- synchronous PDF export;
 - ownership isolation for every authenticated operation.
 
-Profiles, Gemini transformations, image descriptions, and PDF exports are documented as planned. They do not appear in the current OpenAPI schema and clients must not call them yet.
+Profiles remain planned. Gemini transformations, image descriptions, and PDF exports
+appear in OpenAPI when the corresponding backend version is deployed.
 
 ## Client setup
 
@@ -81,7 +84,7 @@ const library = await response.json();
 - Treat `404` as unavailable. The API intentionally returns the same result for missing and other-user resources.
 - Request bodies are limited to 20 MiB.
 
-The full settings shape, request examples, pairing flow, pagination contract, error envelope, and planned endpoints are in [api.md](api.md).
+The full settings shape, request examples, pairing flow, pagination contract, error envelope, AI limits, and planned endpoints are in [api.md](api.md).
 
 ## CORS and deployment
 
