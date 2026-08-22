@@ -162,3 +162,72 @@ async def test_unknown_page_returns_not_found(client: AsyncClient) -> None:
 
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "saved_page_not_found"
+
+
+async def test_owner_can_rename_saved_page(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    response = await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}",
+        json={"title": "  Renamed article  "},
+        headers=headers,
+    )
+    listing = await client.get("/api/v1/saved-pages", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Renamed article"
+    assert listing.json()["items"][0]["title"] == "Renamed article"
+
+
+async def test_blank_saved_page_title_is_rejected(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    response = await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}",
+        json={"title": "   "},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert any(field["path"] == "title" for field in response.json()["error"]["fields"])
+
+
+async def test_owner_can_delete_saved_page(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    deleted = await client.delete(path, headers=headers)
+    retrieved = await client.get(path, headers=headers)
+
+    assert deleted.status_code == 204
+    assert deleted.content == b""
+    assert retrieved.status_code == 404
+
+
+async def test_user_cannot_rename_or_delete_another_users_page(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    owner_headers = await create_guest_headers(client)
+    other_headers = await create_guest_headers(client)
+    created = await client.post(
+        "/api/v1/saved-pages", json=saved_page_payload, headers=owner_headers
+    )
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    renamed = await client.patch(path, json={"title": "Stolen"}, headers=other_headers)
+    deleted = await client.delete(path, headers=other_headers)
+    owner_read = await client.get(path, headers=owner_headers)
+
+    assert renamed.status_code == 404
+    assert deleted.status_code == 404
+    assert owner_read.status_code == 200
+    assert owner_read.json()["title"] == "Example article"

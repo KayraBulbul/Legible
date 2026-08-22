@@ -141,6 +141,18 @@ class SavedPageCreate(ApiModel):
         return value
 
 
+class SavedPageUpdate(ApiModel):
+    title: str = Field(min_length=1, max_length=512)
+
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("title must not be blank")
+        return value
+
+
 class SavedPageResponse(ApiModel):
     id: UUID
     client_save_id: UUID

@@ -26,6 +26,8 @@ async def test_openapi_publishes_custom_validation_envelope(client: AsyncClient)
         schema["paths"]["/api/v1/saved-pages"]["post"],
         schema["paths"]["/api/v1/saved-pages"]["get"],
         schema["paths"]["/api/v1/saved-pages/{page_id}"]["get"],
+        schema["paths"]["/api/v1/saved-pages/{page_id}"]["patch"],
+        schema["paths"]["/api/v1/saved-pages/{page_id}"]["delete"],
     )
 
     for operation in operations:

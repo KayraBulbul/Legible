@@ -11,13 +11,24 @@ from api.schemas import (
     SavedPageCreate,
     SavedPageListResponse,
     SavedPageResponse,
+    SavedPageUpdate,
 )
-from api.services.saved_pages import create_saved_page, get_saved_page, list_saved_pages
+from api.services.saved_pages import (
+    create_saved_page,
+    delete_saved_page,
+    get_saved_page,
+    list_saved_pages,
+    update_saved_page,
+)
 
 router = APIRouter(
     prefix="/api/v1/saved-pages",
     tags=["saved pages"],
-    responses={422: {"model": ErrorResponse, "description": "Validation error"}},
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication failed"},
+        404: {"model": ErrorResponse, "description": "Saved page not found"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
 )
 
 
@@ -56,3 +67,24 @@ async def retrieve_page(
 ) -> SavedPageResponse:
     page = await get_saved_page(database, current_user.id, page_id)
     return saved_page_response(page)
+
+
+@router.patch("/{page_id}", response_model=SavedPageResponse)
+async def rename_page(
+    page_id: UUID,
+    payload: SavedPageUpdate,
+    database: DatabaseSession,
+    current_user: CurrentUser,
+) -> SavedPageResponse:
+    page = await update_saved_page(database, current_user.id, page_id, payload)
+    return saved_page_response(page)
+
+
+@router.delete("/{page_id}", status_code=204, response_class=Response)
+async def delete_page(
+    page_id: UUID,
+    database: DatabaseSession,
+    current_user: CurrentUser,
+) -> Response:
+    await delete_saved_page(database, current_user.id, page_id)
+    return Response(status_code=204)

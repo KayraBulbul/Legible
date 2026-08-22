@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.errors import AppError
-from api.schemas import SavedPageCreate
+from api.schemas import SavedPageCreate, SavedPageUpdate
 from api.services.content import sanitize_document
 from database.models import SavedPage
 
@@ -186,3 +186,22 @@ async def get_saved_page(database: AsyncSession, user_id: UUID, page_id: UUID) -
     if page is None:
         raise AppError(404, "saved_page_not_found", "Saved page not found.")
     return page
+
+
+async def update_saved_page(
+    database: AsyncSession,
+    user_id: UUID,
+    page_id: UUID,
+    payload: SavedPageUpdate,
+) -> SavedPage:
+    page = await get_saved_page(database, user_id, page_id)
+    page.title = payload.title
+    await database.commit()
+    await database.refresh(page)
+    return page
+
+
+async def delete_saved_page(database: AsyncSession, user_id: UUID, page_id: UUID) -> None:
+    page = await get_saved_page(database, user_id, page_id)
+    await database.delete(page)
+    await database.commit()

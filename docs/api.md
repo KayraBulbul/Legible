@@ -53,8 +53,8 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 | `POST` | `/api/v1/saved-pages` | Yes | Current | Save a page snapshot |
 | `GET` | `/api/v1/saved-pages` | Yes | Current | List the current user's saved pages |
 | `GET` | `/api/v1/saved-pages/{id}` | Yes | Current | Retrieve one full saved page |
-| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Planned | Rename a saved page |
-| `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Planned | Delete a saved page |
+| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Current | Rename a saved page |
+| `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Current | Delete a saved page |
 | `GET` | `/api/v1/profiles` | Yes | Planned | List accessibility profiles |
 | `POST` | `/api/v1/profiles` | Yes | Planned | Create a profile |
 | `GET` | `/api/v1/profiles/{id}` | Yes | Planned | Retrieve a profile |
@@ -331,8 +331,8 @@ The planned default is 20 items and maximum is 100. Items sort newest first. Lis
 ### Retrieve, rename, and delete
 
 - `GET /api/v1/saved-pages/{id}` returns the full saved-page response.
-- Planned: `PATCH /api/v1/saved-pages/{id}` accepts `{ "title": "New title" }` and returns the updated full response.
-- Planned: `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
+- `PATCH /api/v1/saved-pages/{id}` accepts `{ "title": "New title" }` and returns the updated full response.
+- `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
 
 A missing page and a page owned by another user both return `404`. Clients must not infer that another user's page exists.
 
