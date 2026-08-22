@@ -48,6 +48,8 @@ class PdfExportService:
             document=document,
             settings=settings,
         )
+        download_disposition = content_disposition(page.title)
+        await database.rollback()
 
         try:
             await asyncio.wait_for(self._capacity.acquire(), timeout=CAPACITY_WAIT_SECONDS)
@@ -69,7 +71,7 @@ class PdfExportService:
 
         return PdfExport(
             content=pdf,
-            content_disposition=content_disposition(page.title),
+            content_disposition=download_disposition,
             exported_content=selected_content,
         )
 

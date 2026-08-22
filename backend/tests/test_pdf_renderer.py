@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -12,7 +13,7 @@ from pypdf.generic import DictionaryObject
 
 from api.schemas import AccessibilitySettings, DyslexiaFont, SemanticDocument
 from pdf.renderers import PdfRenderInput, WeasyPrintRenderer
-from pdf.worker import build_html, document_direction, settings_css
+from pdf.worker import build_html, document_css, document_direction, settings_css
 
 
 class RecordingHandler(BaseHTTPRequestHandler):
@@ -85,12 +86,70 @@ def test_export_wrapper_sets_rtl_base_direction() -> None:
     assert '<html lang="ar" dir="rtl">' in wrapper
 
 
+def test_document_styles_use_direction_aware_indentation() -> None:
+    css, _allowed_urls = document_css({})
+
+    assert "padding-inline-start: 1.7em" in css
+    assert "padding-inline-end: 0" in css
+    assert "border-inline-start: 3px solid #999" in css
+    assert "margin-inline-start: 0" in css
+    assert "padding-inline-start: 1em" in css
+    assert "padding-left" not in css
+    assert "border-left" not in css
+    assert "margin-left" not in css
+
+
 def test_railpack_installs_core_and_cjk_noto_fonts() -> None:
     configuration = json.loads((Path(__file__).parents[1] / "railpack.json").read_text())
     packages = configuration["deploy"]["aptPackages"]
 
     assert "fonts-noto-core" in packages
     assert "fonts-noto-cjk" in packages
+
+
+async def test_renderer_stops_worker_when_cancelled(monkeypatch: pytest.MonkeyPatch) -> None:
+    class CancellableProcess:
+        def __init__(self) -> None:
+            self.returncode: int | None = None
+            self.started = asyncio.Event()
+            self.killed = False
+            self.waited = False
+
+        async def communicate(self, _payload: bytes) -> tuple[bytes, bytes]:
+            self.started.set()
+            await asyncio.Event().wait()
+            raise AssertionError("unreachable")
+
+        def kill(self) -> None:
+            self.killed = True
+
+        async def wait(self) -> int:
+            self.waited = True
+            self.returncode = -9
+            return self.returncode
+
+    process = CancellableProcess()
+
+    async def create_process(*_args: object, **_kwargs: object) -> CancellableProcess:
+        return process
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", create_process)
+    render_input = PdfRenderInput(
+        title="Cancellation test",
+        original_url="https://example.com/article",
+        captured_at=datetime.fromisoformat("2026-08-22T14:30:00+10:00"),
+        document=SemanticDocument(html="<p>Text</p>", text="Text", language="en"),
+        settings=AccessibilitySettings(),
+    )
+
+    render_task = asyncio.create_task(WeasyPrintRenderer(timeout_seconds=20).render(render_input))
+    await process.started.wait()
+    render_task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await render_task
+    assert process.killed
+    assert process.waited
 
 
 async def test_real_renderer_produces_tagged_pdf_with_metadata_and_navigation() -> None:

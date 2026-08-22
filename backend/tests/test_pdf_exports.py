@@ -1,15 +1,17 @@
 import asyncio
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies import get_pdf_export_service
 from api.main import app
 from api.services import pdf_exports
 from api.services.pdf_exports import PdfExportService
+from database.session import get_database_session, session_factory
 from pdf.renderers import PdfRendererError, PdfRendererTimeout, PdfRenderInput
 from tests.helpers import create_guest_headers
 
@@ -34,6 +36,16 @@ class BlockingRenderer:
     async def render(self, _render_input: PdfRenderInput) -> bytes:
         self.started.set()
         await self.release.wait()
+        return b"%PDF-1.7\nfake export"
+
+
+class TransactionCheckingRenderer:
+    def __init__(self, sessions: list[AsyncSession]) -> None:
+        self.sessions = sessions
+
+    async def render(self, _render_input: PdfRenderInput) -> bytes:
+        assert len(self.sessions) == 1
+        assert not self.sessions[0].in_transaction()
         return b"%PDF-1.7\nfake export"
 
 
@@ -193,6 +205,33 @@ async def test_pdf_export_uses_safe_utf8_filename_and_does_not_write_to_database
     assert 'filename="Resume-Q3-notes-Injected.pdf"' in disposition
     assert "filename*=UTF-8''R%C3%A9sum%C3%A9%20Q3%20%22notes%22Injected.pdf" in disposition
     assert before.json() == after.json()
+
+
+async def test_pdf_export_releases_database_before_rendering(
+    client: AsyncClient,
+    saved_page_payload: dict[str, Any],
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await create_page(client, saved_page_payload, headers)
+    sessions: list[AsyncSession] = []
+
+    async def tracked_database_session() -> AsyncIterator[AsyncSession]:
+        async with session_factory() as database:
+            sessions.append(database)
+            yield database
+
+    renderer = TransactionCheckingRenderer(sessions)
+    app.dependency_overrides[get_database_session] = tracked_database_session
+    app.dependency_overrides[get_pdf_export_service] = lambda: PdfExportService(renderer, 1)
+    try:
+        response = await client.get(
+            f"/api/v1/saved-pages/{created['id']}/export.pdf", headers=headers
+        )
+    finally:
+        app.dependency_overrides.pop(get_database_session, None)
+        app.dependency_overrides.pop(get_pdf_export_service, None)
+
+    assert response.status_code == 200
 
 
 @pytest.mark.parametrize(

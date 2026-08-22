@@ -187,11 +187,14 @@ def document_css(settings: dict[str, Any]) -> tuple[str, frozenset[str]]:
         h3 { font-size: 1.2em; }
         p, li, dd, blockquote { orphans: 3; widows: 3; }
         a { color: #0645ad; text-decoration: underline; overflow-wrap: anywhere; }
-        ul, ol { padding-left: 1.7em; }
+        ul, ol {
+          padding-inline-start: 1.7em;
+          padding-inline-end: 0;
+        }
         blockquote {
-          border-left: 3px solid #999;
-          margin-left: 0;
-          padding-left: 1em;
+          border-inline-start: 3px solid #999;
+          margin-inline-start: 0;
+          padding-inline-start: 1em;
         }
         table {
           border-collapse: collapse;

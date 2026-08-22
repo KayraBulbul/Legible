@@ -32,6 +32,13 @@ class PdfRenderer(Protocol):
     async def render(self, render_input: PdfRenderInput) -> bytes: ...
 
 
+async def _stop_process(process: asyncio.subprocess.Process) -> None:
+    if process.returncode is None:
+        with suppress(ProcessLookupError):
+            process.kill()
+    await process.wait()
+
+
 class WeasyPrintRenderer:
     def __init__(self, timeout_seconds: float) -> None:
         self._timeout_seconds = timeout_seconds
@@ -61,17 +68,14 @@ class WeasyPrintRenderer:
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(payload), timeout=self._timeout_seconds
             )
+        except asyncio.CancelledError:
+            await _stop_process(process)
+            raise
         except TimeoutError as exc:
-            if process.returncode is None:
-                with suppress(ProcessLookupError):
-                    process.kill()
-            await process.wait()
+            await _stop_process(process)
             raise PdfRendererTimeout("PDF rendering timed out") from exc
         except OSError as exc:
-            if process.returncode is None:
-                with suppress(ProcessLookupError):
-                    process.kill()
-            await process.wait()
+            await _stop_process(process)
             raise PdfRendererError("PDF worker communication failed") from exc
 
         if process.returncode != 0 or not stdout.startswith(b"%PDF"):
