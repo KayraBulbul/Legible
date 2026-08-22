@@ -30,7 +30,8 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "https://hackmelbourne2026-production.up.railway.app/*"
   ],
   "content_scripts": [
     {
@@ -41,6 +42,7 @@
         "content/custom-cursor.js",
         "content/ai-scanner.js",
         "content/screen-reader.js",
+        "content/extractor.js",
         "hud/hud.js",
         "content/content.js"
       ],
