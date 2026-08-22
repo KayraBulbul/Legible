@@ -6,12 +6,16 @@ import sys
 from datetime import datetime
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 from urllib.parse import urlsplit
 
 from weasyprint import HTML  # type: ignore[import-untyped]
 
 FONT_DIRECTORY = Path(__file__).with_name("fonts")
+RTL_LANGUAGES = frozenset(
+    {"ar", "ckb", "dv", "fa", "he", "nqo", "ps", "sd", "syr", "ug", "ur", "yi"}
+)
+RTL_SCRIPTS = frozenset({"adlm", "arab", "hebr", "nkoo", "rohg", "syrc", "thaa"})
 
 
 class ImagePlaceholderParser(HTMLParser):
@@ -68,6 +72,19 @@ def clamp(value: object, minimum: float, maximum: float, default: float) -> floa
     if not isinstance(value, int | float):
         return default
     return min(max(float(value), minimum), maximum)
+
+
+def document_direction(language: object) -> Literal["ltr", "rtl"]:
+    if not isinstance(language, str):
+        return "ltr"
+    subtags = [subtag.lower() for subtag in language.replace("_", "-").split("-") if subtag]
+    if not subtags:
+        return "ltr"
+    if "latn" in subtags:
+        return "ltr"
+    if RTL_SCRIPTS.intersection(subtags) or subtags[0] in RTL_LANGUAGES:
+        return "rtl"
+    return "ltr"
 
 
 def font_data_url(relative_path: str, mime_type: str) -> str:
@@ -215,12 +232,13 @@ def build_html(payload: dict[str, Any]) -> tuple[str, frozenset[str]]:
     captured_display = captured.strftime("%Y-%m-%d %H:%M %Z").strip()
     document = payload["document"]
     language = html.escape(str(document.get("language") or "en"), quote=True)
+    direction = document_direction(document.get("language"))
     fragment = replace_images(str(document["html"]))
     css, allowed_urls = document_css(payload["settings"])
     captured_iso = html.escape(captured.isoformat())
     captured_text = html.escape(captured_display)
     wrapper = f"""<!doctype html>
-<html lang="{language}">
+<html lang="{language}" dir="{direction}">
 <head>
   <meta charset="utf-8">
   <meta name="generator" content="MelbHack Accessibility API">

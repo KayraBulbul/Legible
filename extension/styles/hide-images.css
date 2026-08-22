@@ -1,0 +1,9 @@
+/* Hide Images: removes visual clutter from photos/graphics while preserving page layout */
+html.a11y-hide-images img,
+html.a11y-hide-images picture,
+html.a11y-hide-images video,
+html.a11y-hide-images canvas,
+html.a11y-hide-images svg:not(.a11y-hud):not(.a11y-hud *),
+html.a11y-hide-images [style*="background-image"] {
+  visibility: hidden !important;
+}

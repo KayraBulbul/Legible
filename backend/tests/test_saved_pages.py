@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import Any
+from uuid import uuid4
 
+import pytest
 from httpx import AsyncClient
 
 from tests.helpers import create_guest_headers
@@ -18,6 +20,7 @@ async def test_guest_can_save_list_and_retrieve_page(
     assert create_response.status_code == 201
     created = create_response.json()
     assert created["title"] == "Example article"
+    assert created["isFavourited"] is False
     assert created["sourceHash"].startswith("sha256:")
     assert len(created["sourceHash"]) == 71
     assert "<script" not in created["sourceDocument"]["html"]
@@ -31,12 +34,30 @@ async def test_guest_can_save_list_and_retrieve_page(
     assert listing["pagination"] == {"limit": 20, "offset": 0, "total": 1}
     assert listing["items"][0]["id"] == created["id"]
     assert listing["items"][0]["hasTransformedContent"] is False
+    assert listing["items"][0]["isFavourited"] is False
     assert "sourceDocument" not in listing["items"][0]
 
     detail_response = await client.get(f"/api/v1/saved-pages/{created['id']}", headers=headers)
 
     assert detail_response.status_code == 200
     assert detail_response.json() == created
+
+
+async def test_saved_page_sanitizer_preserves_safe_text_direction(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    saved_page_payload["sourceDocument"]["html"] = (
+        '<article dir="RTL"><p dir="sideways">محتوى عربي</p></article>'
+    )
+    saved_page_payload["sourceDocument"]["language"] = "ar"
+
+    response = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    assert response.status_code == 201
+    saved_html = response.json()["sourceDocument"]["html"]
+    assert '<article dir="rtl">' in saved_html
+    assert "sideways" not in saved_html
 
 
 async def test_repeated_client_save_id_is_idempotent(
@@ -68,6 +89,24 @@ async def test_reusing_client_save_id_for_different_payload_conflicts(
     assert first.status_code == 201
     assert conflict.status_code == 409
     assert conflict.json()["error"]["code"] == "client_save_id_conflict"
+
+
+async def test_idempotent_save_replay_preserves_favourite_state(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}",
+        json={"isFavourited": True},
+        headers=headers,
+    )
+
+    replay = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    assert replay.status_code == 200
+    assert replay.json()["id"] == created.json()["id"]
+    assert replay.json()["isFavourited"] is True
 
 
 async def test_saved_pages_require_authentication(
@@ -152,6 +191,19 @@ async def test_profile_id_is_rejected_until_profiles_exist(
     assert any(field["path"] == "profileId" for field in response.json()["error"]["fields"])
 
 
+async def test_favourite_state_cannot_be_set_during_creation(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    invalid_payload = deepcopy(saved_page_payload)
+    invalid_payload["isFavourited"] = True
+
+    response = await client.post("/api/v1/saved-pages", json=invalid_payload, headers=headers)
+
+    assert response.status_code == 422
+    assert any(field["path"] == "isFavourited" for field in response.json()["error"]["fields"])
+
+
 async def test_unknown_page_returns_not_found(client: AsyncClient) -> None:
     headers = await create_guest_headers(client)
 
@@ -180,6 +232,116 @@ async def test_owner_can_rename_saved_page(
     assert response.status_code == 200
     assert response.json()["title"] == "Renamed article"
     assert listing.json()["items"][0]["title"] == "Renamed article"
+
+
+async def test_owner_can_favourite_and_unfavourite_saved_page(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    favourited = await client.patch(path, json={"isFavourited": True}, headers=headers)
+    repeated = await client.patch(path, json={"isFavourited": True}, headers=headers)
+    listing = await client.get("/api/v1/saved-pages", headers=headers)
+    unfavourited = await client.patch(path, json={"isFavourited": False}, headers=headers)
+
+    assert favourited.status_code == 200
+    assert favourited.json()["isFavourited"] is True
+    assert favourited.json()["updatedAt"] > created.json()["updatedAt"]
+    assert repeated.status_code == 200
+    assert repeated.json()["isFavourited"] is True
+    assert repeated.json()["updatedAt"] == favourited.json()["updatedAt"]
+    assert listing.json()["items"][0]["isFavourited"] is True
+    assert unfavourited.status_code == 200
+    assert unfavourited.json()["isFavourited"] is False
+
+
+async def test_owner_can_rename_and_favourite_atomically(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    response = await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}",
+        json={"title": "  Favourite article  ", "isFavourited": True},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Favourite article"
+    assert response.json()["isFavourited"] is True
+
+
+async def test_invalid_combined_update_changes_neither_field(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    response = await client.patch(
+        path,
+        json={"title": "   ", "isFavourited": True},
+        headers=headers,
+    )
+    retrieved = await client.get(path, headers=headers)
+
+    assert response.status_code == 422
+    assert retrieved.json()["title"] == "Example article"
+    assert retrieved.json()["isFavourited"] is False
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"title": None},
+        {"isFavourited": None},
+        {"isFavourited": "true"},
+        {"isFavourited": 1},
+        {"unknown": True},
+    ],
+)
+async def test_invalid_saved_page_updates_are_rejected(
+    client: AsyncClient,
+    saved_page_payload: dict[str, Any],
+    payload: dict[str, Any],
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    response = await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}", json=payload, headers=headers
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+async def test_saved_page_list_order_is_unchanged_by_favourite_state(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    first = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    second_payload = deepcopy(saved_page_payload)
+    second_payload["clientSaveId"] = str(uuid4())
+    second_payload["title"] = "Newer article"
+    second = await client.post("/api/v1/saved-pages", json=second_payload, headers=headers)
+
+    favourited = await client.patch(
+        f"/api/v1/saved-pages/{first.json()['id']}",
+        json={"isFavourited": True},
+        headers=headers,
+    )
+    listing = await client.get("/api/v1/saved-pages", headers=headers)
+
+    assert favourited.status_code == 200
+    assert [item["id"] for item in listing.json()["items"]] == [
+        second.json()["id"],
+        first.json()["id"],
+    ]
 
 
 async def test_blank_saved_page_title_is_rejected(
@@ -224,10 +386,12 @@ async def test_user_cannot_rename_or_delete_another_users_page(
     path = f"/api/v1/saved-pages/{created.json()['id']}"
 
     renamed = await client.patch(path, json={"title": "Stolen"}, headers=other_headers)
+    favourited = await client.patch(path, json={"isFavourited": True}, headers=other_headers)
     deleted = await client.delete(path, headers=other_headers)
     owner_read = await client.get(path, headers=owner_headers)
 
     assert renamed.status_code == 404
+    assert favourited.status_code == 404
     assert deleted.status_code == 404
     assert owner_read.status_code == 200
     assert owner_read.json()["title"] == "Example article"

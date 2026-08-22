@@ -3,7 +3,17 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
+from pydantic.json_schema import SkipJsonSchema
 
 
 def to_camel(value: str) -> str:
@@ -148,15 +158,31 @@ class SavedPageCreate(ApiModel):
 
 
 class SavedPageUpdate(ApiModel):
-    title: str = Field(min_length=1, max_length=512)
+    title: str | SkipJsonSchema[None] = Field(default=None, min_length=1, max_length=512)
+    is_favourited: StrictBool | SkipJsonSchema[None] = None
+
+    @field_validator("title", "is_favourited", mode="before")
+    @classmethod
+    def reject_null_updates(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("updated fields must not be null")
+        return value
 
     @field_validator("title")
     @classmethod
-    def normalize_title(cls, value: str) -> str:
+    def normalize_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         value = value.strip()
         if not value:
             raise ValueError("title must not be blank")
         return value
+
+    @model_validator(mode="after")
+    def require_update(self) -> SavedPageUpdate:
+        if not self.model_fields_set:
+            raise ValueError("at least one field must be provided")
+        return self
 
 
 class SavedPageResponse(ApiModel):
@@ -165,6 +191,7 @@ class SavedPageResponse(ApiModel):
     original_url: str
     title: str
     excerpt: str
+    is_favourited: bool
     source_document: SemanticDocument
     transformed_document: SemanticDocument | None
     accessibility_settings: AccessibilitySettings
@@ -181,6 +208,7 @@ class SavedPageSummary(ApiModel):
     original_url: str
     title: str
     excerpt: str
+    is_favourited: bool
     profile_id: UUID | None
     has_transformed_content: bool
     captured_at: datetime

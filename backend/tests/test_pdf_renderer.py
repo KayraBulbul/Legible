@@ -1,15 +1,18 @@
+import json
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
+from pathlib import Path
 from threading import Thread
 from typing import Any, cast
 
+import pytest
 from pypdf import PdfReader
 from pypdf.generic import DictionaryObject
 
 from api.schemas import AccessibilitySettings, DyslexiaFont, SemanticDocument
 from pdf.renderers import PdfRenderInput, WeasyPrintRenderer
-from pdf.worker import settings_css
+from pdf.worker import build_html, document_direction, settings_css
 
 
 class RecordingHandler(BaseHTTPRequestHandler):
@@ -47,6 +50,47 @@ def test_print_settings_generate_bounded_css() -> None:
     assert "max-width: 60.000ch" in css
     assert "contrastMode" not in css
     assert "ttsRate" not in css
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [
+        (None, "ltr"),
+        ("en-AU", "ltr"),
+        ("ar", "rtl"),
+        ("he-IL", "rtl"),
+        ("az-Arab", "rtl"),
+        ("ar-Latn", "ltr"),
+    ],
+)
+def test_document_direction_uses_language_and_script(language: str | None, expected: str) -> None:
+    assert document_direction(language) == expected
+
+
+def test_export_wrapper_sets_rtl_base_direction() -> None:
+    wrapper, _allowed_urls = build_html(
+        {
+            "title": "اختبار التصدير",
+            "original_url": "https://example.com/article",
+            "captured_at": "2026-08-22T14:30:00+10:00",
+            "document": {
+                "html": "<article><p>هذه فقرة عربية.</p></article>",
+                "text": "هذه فقرة عربية.",
+                "language": "ar",
+            },
+            "settings": {},
+        }
+    )
+
+    assert '<html lang="ar" dir="rtl">' in wrapper
+
+
+def test_railpack_installs_core_and_cjk_noto_fonts() -> None:
+    configuration = json.loads((Path(__file__).parents[1] / "railpack.json").read_text())
+    packages = configuration["deploy"]["aptPackages"]
+
+    assert "fonts-noto-core" in packages
+    assert "fonts-noto-cjk" in packages
 
 
 async def test_real_renderer_produces_tagged_pdf_with_metadata_and_navigation() -> None:

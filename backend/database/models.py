@@ -2,7 +2,17 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -70,6 +80,9 @@ class SavedPage(Base):
     original_url: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     excerpt: Mapped[str] = mapped_column(Text, nullable=False)
+    is_favourited: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     source_document: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     transformed_document: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     accessibility_settings: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

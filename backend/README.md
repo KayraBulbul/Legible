@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, and user-owned saved accessibility snapshots. Saved pages support create, list, retrieve, rename, delete, and synchronous PDF export operations.
+FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, and user-owned saved accessibility snapshots. Saved pages support create, list, retrieve, update, favourite, delete, and synchronous PDF export operations.
 
 ## Requirements
 
@@ -85,9 +85,9 @@ Add the production dashboard origin to this JSON array once it is deployed. Do n
 
 Requests are limited to 20 MiB by default. Set `MAX_REQUEST_BYTES` to change that limit.
 
-`railpack.json` extends Railpack's runtime Apt packages with Pango, HarfBuzz font subsetting, and Noto fonts required by WeasyPrint. Keep the `"..."` entry so Railpack retains its generated defaults. See [Railpack's package configuration](https://railpack.com/guides/installing-packages/).
+`railpack.json` extends Railpack's runtime Apt packages with Pango, HarfBuzz font subsetting, and Noto fonts required by WeasyPrint, including CJK fallback fonts. Keep the `"..."` entry so Railpack retains its generated defaults. See [Railpack's package configuration](https://railpack.com/guides/installing-packages/).
 
-PDFs are generated in short-lived subprocesses and are never stored. Lexend and OpenDyslexic are bundled under the SIL Open Font License. Noto Sans comes from the runtime package and provides Unicode fallback glyphs.
+PDFs are generated in short-lived subprocesses and are never stored. Lexend and OpenDyslexic are bundled under the SIL Open Font License. Noto Sans and Noto Sans CJK come from runtime packages and provide Unicode fallback glyphs. The renderer derives the base text direction from the saved document language and preserves safe `dir` attributes for mixed-direction content.
 
 Use this backend start command:
 

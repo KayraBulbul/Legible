@@ -1,0 +1,42 @@
+/* Dark Mode: forces a soft dark palette on pages that don't offer one, without the neon OLED look of High Contrast */
+html.a11y-theme-dark,
+html.a11y-theme-dark body {
+  background-color: #14141c !important;
+  color: #e8e8ef !important;
+}
+
+html.a11y-theme-dark body * {
+  background-color: #14141c !important;
+  color: #e8e8ef !important;
+  border-color: #3a3a4a !important;
+}
+
+html.a11y-theme-dark a,
+html.a11y-theme-dark a * {
+  color: #7aa2ff !important;
+}
+
+html.a11y-theme-dark button,
+html.a11y-theme-dark input,
+html.a11y-theme-dark select,
+html.a11y-theme-dark textarea,
+html.a11y-theme-dark [role="button"] {
+  background-color: #1f1f2b !important;
+  color: #e8e8ef !important;
+  border: 1px solid #3a3a4a !important;
+}
+
+html.a11y-theme-dark img,
+html.a11y-theme-dark video,
+html.a11y-theme-dark canvas,
+html.a11y-theme-dark svg,
+html.a11y-theme-dark picture {
+  filter: brightness(0.88) contrast(1.05) !important;
+  background-color: transparent !important;
+}
+
+html.a11y-theme-dark *:focus,
+html.a11y-theme-dark *:focus-visible {
+  outline: 2px solid #7aa2ff !important;
+  outline-offset: 2px !important;
+}
