@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import Protocol, cast
 
@@ -19,6 +20,25 @@ from api.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+_PROVIDER_REASON = re.compile(r"\A[A-Z][A-Z0-9_]{0,79}\Z")
+
+
+def _provider_reason(error: Exception) -> str | None:
+    if not isinstance(error, genai_errors.APIError) or not isinstance(error.details, dict):
+        return None
+    provider_error = error.details.get("error", error.details)
+    if not isinstance(provider_error, dict):
+        return None
+    details = provider_error.get("details")
+    if not isinstance(details, list):
+        return None
+    for detail in details:
+        if not isinstance(detail, dict):
+            continue
+        reason = detail.get("reason")
+        if isinstance(reason, str) and _PROVIDER_REASON.fullmatch(reason):
+            return reason
+    return None
 
 
 def _log_provider_failure(
@@ -35,6 +55,7 @@ def _log_provider_failure(
         "exception_type": type(error).__name__,
         "provider_code": provider_code,
         "provider_status": provider_status,
+        "provider_reason": _provider_reason(error),
         "model": model,
     }
     logger.error(
@@ -85,11 +106,42 @@ class _TransformationOutput(BaseModel):
     language: str | None = Field(default=None, min_length=2, max_length=35)
 
 
+_TRANSFORMATION_RESPONSE_JSON_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "html": {"type": "string"},
+        "text": {"type": "string"},
+        "language": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+    },
+    "required": ["html", "text"],
+    "additionalProperties": False,
+}
+
+
 class _ImageDescriptionOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     alt_text: str = Field(alias="altText", min_length=1, max_length=2_000)
     role: ImageDescriptionRole | None = None
+
+
+_IMAGE_DESCRIPTION_RESPONSE_JSON_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "altText": {"type": "string"},
+        "role": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "enum": [role.value for role in ImageDescriptionRole],
+                },
+                {"type": "null"},
+            ]
+        },
+    },
+    "required": ["altText"],
+    "additionalProperties": False,
+}
 
 
 class GoogleGeminiService:
@@ -113,7 +165,11 @@ class GoogleGeminiService:
             "event handlers, or remote assets.\n\n"
             f"Semantic HTML:\n{document.html}\n\nPlain text fallback:\n{document.text}"
         )
-        output = await self._generate(prompt, _TransformationOutput)
+        output = await self._generate(
+            prompt,
+            _TransformationOutput,
+            response_json_schema=_TRANSFORMATION_RESPONSE_JSON_SCHEMA,
+        )
         assert isinstance(output, _TransformationOutput)
         try:
             transformed = SemanticDocument(
@@ -144,7 +200,11 @@ class GoogleGeminiService:
             types.ContentListUnion,
             [prompt, types.Part.from_bytes(data=image, mime_type=mime_type)],
         )
-        output = await self._generate(contents, _ImageDescriptionOutput)
+        output = await self._generate(
+            contents,
+            _ImageDescriptionOutput,
+            response_json_schema=_IMAGE_DESCRIPTION_RESPONSE_JSON_SCHEMA,
+        )
         assert isinstance(output, _ImageDescriptionOutput)
         role = None if kind is ImageDescriptionKind.ICON_BUTTON else output.role
         return GeminiImageDescription(
@@ -162,7 +222,9 @@ class GoogleGeminiService:
     async def _generate(
         self,
         contents: types.ContentListUnion,
-        response_schema: type[_TransformationOutput] | type[_ImageDescriptionOutput],
+        response_model: type[_TransformationOutput] | type[_ImageDescriptionOutput],
+        *,
+        response_json_schema: dict[str, object],
     ) -> _TransformationOutput | _ImageDescriptionOutput:
         try:
             client = self._get_client()
@@ -172,7 +234,7 @@ class GoogleGeminiService:
                 config=types.GenerateContentConfig(
                     temperature=0.2,
                     response_mime_type="application/json",
-                    response_schema=response_schema,
+                    response_json_schema=response_json_schema,
                 ),
             )
         except GeminiUnavailableError:
@@ -197,11 +259,11 @@ class GoogleGeminiService:
             raise GeminiProviderError from exc
 
         try:
-            if isinstance(response.parsed, response_schema):
+            if isinstance(response.parsed, response_model):
                 return response.parsed
             if not response.text:
                 raise GeminiProviderError
-            return response_schema.model_validate_json(response.text)
+            return response_model.model_validate_json(response.text)
         except (ValidationError, ValueError, GeminiProviderError) as exc:
             _log_provider_failure(
                 failure_stage="response_validation",
