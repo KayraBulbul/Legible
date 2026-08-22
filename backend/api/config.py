@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     ai_request_concurrency: int = Field(default=2, ge=1)
     ai_capacity_wait_seconds: float = Field(default=2, gt=0)
     ai_requests_per_minute: int = Field(default=15, ge=1)
+    ai_requests_per_ip_per_minute: int = Field(default=15, ge=1)
+    ai_global_requests_per_minute: int = Field(default=15, ge=1)
 
     @field_validator("database_url", mode="before")
     @classmethod

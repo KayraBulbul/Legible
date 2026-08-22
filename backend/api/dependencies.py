@@ -66,6 +66,8 @@ def get_ai_service() -> AiApplicationService:
         concurrency=settings.ai_request_concurrency,
         capacity_wait_seconds=settings.ai_capacity_wait_seconds,
         requests_per_minute=settings.ai_requests_per_minute,
+        requests_per_ip_per_minute=settings.ai_requests_per_ip_per_minute,
+        global_requests_per_minute=settings.ai_global_requests_per_minute,
     )
 
 

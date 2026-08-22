@@ -1,13 +1,18 @@
 import asyncio
 import base64
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
 from ai.errors import GeminiProviderError, GeminiRateLimitError, GeminiUnavailableError
-from ai.gemini_service import GeminiImageDescription, GeminiTransformation
+from ai.gemini_service import (
+    GeminiImageDescription,
+    GeminiTransformation,
+    GoogleGeminiService,
+)
 from api.config import get_settings
 from api.dependencies import get_ai_service
 from api.main import app, create_app
@@ -86,6 +91,8 @@ def make_service(
     concurrency: int = 2,
     capacity_wait: float = 0.1,
     rate_limit: int = 15,
+    ip_rate_limit: int = 15,
+    global_rate_limit: int = 100,
 ) -> AiApplicationService:
     return AiApplicationService(
         provider,
@@ -93,12 +100,32 @@ def make_service(
         concurrency=concurrency,
         capacity_wait_seconds=capacity_wait,
         requests_per_minute=rate_limit,
+        requests_per_ip_per_minute=ip_rate_limit,
+        global_requests_per_minute=global_rate_limit,
     )
 
 
 @pytest.fixture
 def fake_provider() -> FakeGeminiService:
     return FakeGeminiService()
+
+
+async def test_gemini_transform_preserves_unknown_language(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider = GoogleGeminiService(api_key="test-key", model="fake-gemini")
+
+    async def generate(_contents: object, response_schema: Any) -> Any:
+        return response_schema(html="<p>Clear</p>", text="Clear", language=None)
+
+    monkeypatch.setattr(provider, "_generate", generate)
+    result = await provider.transform(
+        TextTransformationOperation.SIMPLIFY,
+        SemanticDocument(html="<p>Dense</p>", text="Dense", language=None),
+        AiPreferences(),
+    )
+
+    assert result.document.language is None
 
 
 @pytest.fixture
@@ -414,3 +441,82 @@ async def test_local_rate_limit_is_scoped_to_user(
     assert limited.status_code == 429
     assert limited.json()["error"]["code"] == "ai_rate_limited"
     assert other_user.status_code == 200
+
+
+async def test_new_guest_identity_does_not_reset_client_rate_limit(
+    client: AsyncClient,
+    fake_provider: FakeGeminiService,
+) -> None:
+    service = make_service(fake_provider, ip_rate_limit=1)
+    app.dependency_overrides[get_ai_service] = lambda: service
+    payload = {
+        "operation": "focus",
+        "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
+    }
+    try:
+        first_user = await create_guest_headers(client)
+        second_user = await create_guest_headers(client)
+        first = await client.post("/api/v1/transformations", headers=first_user, json=payload)
+        limited = await client.post("/api/v1/transformations", headers=second_user, json=payload)
+    finally:
+        app.dependency_overrides.pop(get_ai_service, None)
+
+    assert first.status_code == 200
+    assert limited.status_code == 429
+    assert limited.json()["error"]["code"] == "ai_rate_limited"
+
+
+async def test_expired_rate_limit_subjects_are_removed(
+    client: AsyncClient,
+    fake_provider: FakeGeminiService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = make_service(fake_provider)
+    app.dependency_overrides[get_ai_service] = lambda: service
+    timestamps = iter((0.0, 61.0))
+    monkeypatch.setattr("api.services.ai.monotonic", lambda: next(timestamps))
+    payload = {
+        "operation": "focus",
+        "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
+    }
+    try:
+        first_user = await create_guest_headers(client)
+        second_user = await create_guest_headers(client)
+        first = await client.post("/api/v1/transformations", headers=first_user, json=payload)
+        second = await client.post("/api/v1/transformations", headers=second_user, json=payload)
+    finally:
+        app.dependency_overrides.pop(get_ai_service, None)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(service._attempts) == 3
+
+
+async def test_global_rate_limit_applies_across_clients(
+    client: AsyncClient,
+    fake_provider: FakeGeminiService,
+) -> None:
+    service = make_service(fake_provider, global_rate_limit=1)
+    app.dependency_overrides[get_ai_service] = lambda: service
+    payload = {
+        "operation": "focus",
+        "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
+    }
+    other_transport = ASGITransport(app=app, client=("203.0.113.20", 4312))
+    try:
+        first_user = await create_guest_headers(client)
+        async with AsyncClient(
+            transport=other_transport,
+            base_url="http://test",
+        ) as other_client:
+            second_user = await create_guest_headers(other_client)
+            first = await client.post("/api/v1/transformations", headers=first_user, json=payload)
+            limited = await other_client.post(
+                "/api/v1/transformations", headers=second_user, json=payload
+            )
+    finally:
+        app.dependency_overrides.pop(get_ai_service, None)
+
+    assert first.status_code == 200
+    assert limited.status_code == 429
+    assert limited.json()["error"]["code"] == "ai_rate_limited"

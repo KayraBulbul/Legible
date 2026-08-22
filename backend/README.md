@@ -79,7 +79,9 @@ Provide these environment variables through Railway rather than committing a `.e
 - `AI_REQUEST_TIMEOUT_SECONDS=30`, the maximum duration of a provider request;
 - `AI_REQUEST_CONCURRENCY=2`, the maximum concurrent provider calls per API instance;
 - `AI_CAPACITY_WAIT_SECONDS=2`, how long a request waits for local capacity;
-- `AI_REQUESTS_PER_MINUTE=15`, the per-user, per-instance AI request limit.
+- `AI_REQUESTS_PER_MINUTE=15`, the per-user AI request limit;
+- `AI_REQUESTS_PER_IP_PER_MINUTE=15`, the per-client-IP request limit;
+- `AI_GLOBAL_REQUESTS_PER_MINUTE=15`, the total request limit per API instance.
 
 The current local dashboard origin can be configured as:
 

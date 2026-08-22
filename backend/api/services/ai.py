@@ -2,7 +2,7 @@ import asyncio
 import base64
 import binascii
 import re
-from collections import defaultdict, deque
+from collections import deque
 from datetime import UTC, datetime
 from time import monotonic
 from uuid import UUID
@@ -38,24 +38,29 @@ class AiApplicationService:
         concurrency: int,
         capacity_wait_seconds: float,
         requests_per_minute: int,
+        requests_per_ip_per_minute: int,
+        global_requests_per_minute: int,
     ) -> None:
         self._provider = provider
         self._timeout_seconds = timeout_seconds
         self._capacity_wait_seconds = capacity_wait_seconds
         self._capacity = asyncio.Semaphore(concurrency)
         self._requests_per_minute = requests_per_minute
-        self._attempts: defaultdict[UUID, deque[float]] = defaultdict(deque)
+        self._requests_per_ip_per_minute = requests_per_ip_per_minute
+        self._global_requests_per_minute = global_requests_per_minute
+        self._attempts: dict[str, deque[float]] = {}
         self._rate_lock = asyncio.Lock()
 
     async def transform(
         self,
         database: AsyncSession,
         user_id: UUID,
+        client_key: str,
         payload: TransformationRequest,
     ) -> TransformationResponse:
         document = sanitize_document(payload.input)
         await database.rollback()
-        await self._consume_rate_limit(user_id)
+        await self._consume_rate_limit(user_id, client_key)
         await self._acquire_capacity()
         try:
             result = await asyncio.wait_for(
@@ -99,11 +104,12 @@ class AiApplicationService:
         self,
         database: AsyncSession,
         user_id: UUID,
+        client_key: str,
         payload: ImageDescriptionRequest,
     ) -> ImageDescriptionResponse:
         mime_type, image = decode_image_data_url(payload.data_url)
         await database.rollback()
-        await self._consume_rate_limit(user_id)
+        await self._consume_rate_limit(user_id, client_key)
         await self._acquire_capacity()
         try:
             result = await asyncio.wait_for(
@@ -153,20 +159,31 @@ class AiApplicationService:
         async with self._rate_lock:
             self._attempts.clear()
 
-    async def _consume_rate_limit(self, user_id: UUID) -> None:
+    async def _consume_rate_limit(self, user_id: UUID, client_key: str) -> None:
         now = monotonic()
         cutoff = now - 60
         async with self._rate_lock:
-            attempts = self._attempts[user_id]
-            while attempts and attempts[0] <= cutoff:
-                attempts.popleft()
-            if len(attempts) >= self._requests_per_minute:
-                raise AppError(
-                    429,
-                    "ai_rate_limited",
-                    "Too many AI requests. Try again later.",
-                )
-            attempts.append(now)
+            for key, attempts in tuple(self._attempts.items()):
+                while attempts and attempts[0] <= cutoff:
+                    attempts.popleft()
+                if not attempts:
+                    del self._attempts[key]
+
+            limits = (
+                (f"user:{user_id}", self._requests_per_minute),
+                (f"client:{client_key}", self._requests_per_ip_per_minute),
+                ("global", self._global_requests_per_minute),
+            )
+            buckets = [(self._attempts.setdefault(key, deque()), limit) for key, limit in limits]
+            for attempts, limit in buckets:
+                if len(attempts) >= limit:
+                    raise AppError(
+                        429,
+                        "ai_rate_limited",
+                        "Too many AI requests. Try again later.",
+                    )
+            for attempts, _limit in buckets:
+                attempts.append(now)
 
     async def _acquire_capacity(self) -> None:
         try:

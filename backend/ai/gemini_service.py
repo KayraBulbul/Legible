@@ -94,7 +94,7 @@ class GoogleGeminiService:
             transformed = SemanticDocument(
                 html=output.html,
                 text=output.text,
-                language=output.language or document.language or "en",
+                language=output.language or document.language,
             )
         except ValidationError as exc:
             raise GeminiProviderError from exc
