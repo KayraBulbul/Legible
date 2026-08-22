@@ -23,7 +23,7 @@ The API owns:
 
 - guest identity, sessions, and extension/dashboard pairing;
 - per-user saved pages and accessibility profiles;
-- Gemini 3.7 Flash transformations and image descriptions;
+- Gemini 3.6 Flash transformations and image descriptions;
 - PDF generation for saved pages.
 
 The extension owns live page transformations and extraction. Its Manifest V3 service worker makes backend requests. Content scripts should message the service worker instead of calling the API directly. The dashboard consumes saved-page, profile, transformation, and export endpoints.
@@ -208,7 +208,7 @@ Current enum values are:
 {
   "operation": "simplify",
   "provider": "google",
-  "model": "gemini-3.7-flash",
+  "model": "gemini-3.6-flash",
   "promptVersion": "simplify-v1",
   "parameters": {
     "simplificationLevel": "moderate"
@@ -427,7 +427,7 @@ Supported operations are `simplify`, `summarize`, `restructure`, and `focus`. A 
   "metadata": {
     "operation": "simplify",
     "provider": "google",
-    "model": "gemini-3.7-flash",
+    "model": "gemini-3.6-flash",
     "promptVersion": "simplify-v1",
     "parameters": {
       "simplificationLevel": "moderate",
@@ -463,7 +463,7 @@ Image-description endpoints are planned.
   "cached": false,
   "metadata": {
     "provider": "google",
-    "model": "gemini-3.7-flash",
+    "model": "gemini-3.6-flash",
     "promptVersion": "image-description-v1",
     "performedAt": "2026-08-22T04:33:00Z"
   }
