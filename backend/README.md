@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI and PostgreSQL backend for saved accessibility snapshots. The current slice supports guest sessions, saving a page, listing the current user's pages, and retrieving one page.
+FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, and user-owned saved accessibility snapshots. Saved pages support create, list, retrieve, rename, and delete operations.
 
 ## Requirements
 
@@ -29,6 +29,15 @@ The API is available at `http://127.0.0.1:8000`, interactive documentation at `/
 
 Create a guest session first, then send its token as `Authorization: Bearer <accessToken>` to saved-page endpoints. The request and response contract is documented in `../docs/api.md`.
 
+## Production
+
+- API base URL: `https://hackmelbourne2026-production.up.railway.app`
+- Health: `https://hackmelbourne2026-production.up.railway.app/health`
+- Swagger UI: `https://hackmelbourne2026-production.up.railway.app/docs`
+- OpenAPI: `https://hackmelbourne2026-production.up.railway.app/openapi.json`
+
+The production health check currently returns `{"status":"ok","database":"ok"}`. Clients should keep the base URL in environment-specific configuration rather than repeating it throughout the codebase.
+
 ## Checks
 
 The Compose database creates both `melbhack` and `melbhack_test` on first startup. Run these commands from `backend/`:
@@ -55,12 +64,22 @@ Do not use runtime `create_all` for application schema changes.
 
 ## Railway
 
-Create separate Railway services for the backend and PostgreSQL. Set the backend service root directory to `backend/` and provide these environment variables through Railway rather than committing a `.env` file:
+Create separate Railway services for the backend and PostgreSQL. The backend service deploys the `main` branch with root directory `/backend`, health-check path `/health`, and a public domain that targets the injected application port.
+
+Provide these environment variables through Railway rather than committing a `.env` file:
 
 - `DATABASE_URL`, provided by the PostgreSQL service reference;
 - `ENVIRONMENT=production`;
 - `CORS_ORIGINS`, as a JSON array of allowed dashboard origins;
 - `PAIRING_CODE_SECRET`, a random value containing at least 32 characters.
+
+The current local dashboard origin can be configured as:
+
+```text
+CORS_ORIGINS=["http://localhost:5173"]
+```
+
+Add the production dashboard origin to this JSON array once it is deployed. Do not use `*` for production.
 
 Requests are limited to 20 MiB by default. Set `MAX_REQUEST_BYTES` to change that limit.
 

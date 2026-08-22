@@ -2,20 +2,34 @@
 
 A Manifest V3 Chrome extension combining dyslexia-friendly typography, high-contrast/de-clutter restyling, an AI (Gemini) vision-powered alt-text/ARIA enricher, and a keyboard-driven screen reader with synchronized highlighting.
 
+## Production backend
+
+The FastAPI backend is deployed at [hackmelbourne2026-production.up.railway.app](https://hackmelbourne2026-production.up.railway.app). Useful links:
+
+- [Health check](https://hackmelbourne2026-production.up.railway.app/health)
+- [Interactive API documentation](https://hackmelbourne2026-production.up.railway.app/docs)
+- [OpenAPI schema](https://hackmelbourne2026-production.up.railway.app/openapi.json)
+- [Frontend integration guide](docs/README.md)
+- [Full API contract](docs/api.md)
+
+The deployed API supports anonymous guest sessions, one-time extension/dashboard pairing, and user-owned saved-page CRUD. Gemini transformations, image descriptions, profiles, and PDF export are still planned.
+
 ## Load the extension
 
 1. Open `chrome://extensions`.
 2. Enable **Developer mode** (top right).
-3. Click **Load unpacked** and select this folder (`ScreenReader`).
+3. Click **Load unpacked** and select `extension/`.
 4. Pin the extension from the toolbar puzzle-piece icon for quick access.
 
-## Set up AI vision (optional but recommended)
+## Set up legacy AI vision (optional prototype)
 
 1. Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 2. Click the extension icon → **AI Vision (Gemini)** section → paste the key → **Save Key**.
 3. The key is stored locally via `chrome.storage.local` and never leaves the browser except in direct calls to `generativelanguage.googleapis.com`.
 
-Without a key, all typography/contrast/screen-reader features still work — only the AI alt-text/ARIA scan is disabled.
+Without a key, all typography, contrast, and screen-reader features still work. Only the AI alt-text and ARIA scan is disabled.
+
+This direct browser-to-Gemini path is legacy prototype behaviour. Do not build new features on it or ship its API key flow. Gemini calls will move behind the backend API so provider credentials remain on the server.
 
 ## Using it
 

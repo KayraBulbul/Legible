@@ -1,6 +1,21 @@
 # Frontend API integration guide
 
-This document is the integration contract for the browser extension and dashboard. The first FastAPI persistence slice is implemented: health, guest-session creation, saved-page creation, saved-page listing, and saved-page detail. Its Pydantic schemas and generated `/openapi.json` are authoritative for implemented endpoints. Other endpoints below are marked as planned.
+This document is the integration contract for the browser extension and dashboard. The deployed FastAPI API implements health, guest sessions, session revocation, extension/dashboard pairing, and the complete saved-page lifecycle. Its Pydantic schemas and generated `/openapi.json` are authoritative for implemented endpoints. Other endpoints below are marked as planned.
+
+## Environments
+
+| Environment | Base URL |
+|---|---|
+| Production | `https://hackmelbourne2026-production.up.railway.app` |
+| Local backend | `http://127.0.0.1:8000` |
+
+Production links:
+
+- Swagger UI: `https://hackmelbourne2026-production.up.railway.app/docs`
+- OpenAPI JSON: `https://hackmelbourne2026-production.up.railway.app/openapi.json`
+- Health: `https://hackmelbourne2026-production.up.railway.app/health`
+
+Clients should read the base URL from environment-specific configuration rather than hard-coding it. The suggested dashboard variable is `VITE_API_BASE_URL`. The extension must grant host permission for the production origin and route requests through its service worker.
 
 ## System boundary
 
@@ -17,7 +32,7 @@ The backend does not fetch `originalUrl`. Clients send extracted semantic conten
 
 ## Common conventions
 
-- Local base URL: `http://127.0.0.1:8000`. The Railway production URL is not assigned yet. Read either URL from client configuration rather than hard-coding it.
+- Read the base URL from client configuration and append the paths documented below.
 - Application routes start with `/api/v1`. Health is available at `/health`.
 - Send JSON with `Content-Type: application/json`, except PDF responses.
 - Authenticated requests use `Authorization: Bearer <accessToken>`.
@@ -29,7 +44,7 @@ The backend does not fetch `originalUrl`. Clients send extracted semantic conten
 
 The backend rejects request bodies larger than 20 MiB with `413 payload_too_large`.
 
-The dashboard origin must be in the backend CORS allowlist. The extension manifest must grant host permission for the API origin. Extension requests should set `credentials: "omit"` so cookies from browsed sites are never forwarded.
+The dashboard origin must be in the backend CORS allowlist. Production currently allows local dashboard development from `http://localhost:5173`; add the final dashboard origin when it is deployed. The extension manifest must grant host permission for the API origin. Extension requests should set `credentials: "omit"` so cookies from browsed sites are never forwarded.
 
 `GET /health` returns `200 OK` when the application and database are ready:
 
@@ -521,19 +536,18 @@ The backend sanitises stored HTML, but clients must still treat it as untrusted:
 
 For the implemented backend:
 
-- FastAPI exposes interactive documentation at `/docs` and its schema at `/openapi.json`.
+- FastAPI exposes interactive documentation at [the production `/docs`](https://hackmelbourne2026-production.up.railway.app/docs) and its schema at [the production `/openapi.json`](https://hackmelbourne2026-production.up.railway.app/openapi.json).
 - Export the generated schema to `shared/openapi.json` for clients and fixtures.
 - Generate TypeScript types from OpenAPI if the dashboard and extension build setups support it.
 - Do not hand-edit generated types or OpenAPI output.
 - Contract changes require backend schema tests plus coordinated extension/dashboard updates.
 
-Until then, this README is the integration draft. Mock handlers should use these shapes and must be replaced or checked against generated OpenAPI as soon as it is available.
+Mock handlers should use these shapes and must be replaced or checked against generated OpenAPI before integration.
 
 ## Decisions still open
 
 Frontend and backend owners need to settle these before implementation reaches the affected endpoint:
 
-- the Railway deployment URL;
 - dashboard token persistence and recovery behaviour for lost guest sessions;
 - spacing and reading-width units and validation ranges;
 - content and image size limits plus accepted image MIME types;
