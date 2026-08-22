@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import Protocol, cast
 
@@ -19,6 +20,25 @@ from api.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+_PROVIDER_REASON = re.compile(r"\A[A-Z][A-Z0-9_]{0,79}\Z")
+
+
+def _provider_reason(error: Exception) -> str | None:
+    if not isinstance(error, genai_errors.APIError) or not isinstance(error.details, dict):
+        return None
+    provider_error = error.details.get("error", error.details)
+    if not isinstance(provider_error, dict):
+        return None
+    details = provider_error.get("details")
+    if not isinstance(details, list):
+        return None
+    for detail in details:
+        if not isinstance(detail, dict):
+            continue
+        reason = detail.get("reason")
+        if isinstance(reason, str) and _PROVIDER_REASON.fullmatch(reason):
+            return reason
+    return None
 
 
 def _log_provider_failure(
@@ -35,6 +55,7 @@ def _log_provider_failure(
         "exception_type": type(error).__name__,
         "provider_code": provider_code,
         "provider_status": provider_status,
+        "provider_reason": _provider_reason(error),
         "model": model,
     }
     logger.error(

@@ -251,6 +251,12 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
                     "error": {
                         "status": "PERMISSION_DENIED",
                         "message": "provider detail containing private page text",
+                        "details": [
+                            {
+                                "reason": "API_KEY_INVALID",
+                                "metadata": {"apiKey": "secret-api-key"},
+                            }
+                        ],
                     }
                 },
             ),
@@ -260,6 +266,7 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
                 "exception_type": "ClientError",
                 "provider_code": 403,
                 "provider_status": "PERMISSION_DENIED",
+                "provider_reason": "API_KEY_INVALID",
                 "model": "gemini-3.6-flash",
             },
         ),
@@ -271,6 +278,7 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
                 "exception_type": "ValueError",
                 "provider_code": None,
                 "provider_status": None,
+                "provider_reason": None,
                 "model": "gemini-3.6-flash",
             },
         ),
@@ -282,6 +290,7 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
                 "exception_type": "ValidationError",
                 "provider_code": None,
                 "provider_status": None,
+                "provider_reason": None,
                 "model": "gemini-3.6-flash",
             },
         ),
