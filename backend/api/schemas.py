@@ -56,6 +56,12 @@ class TransformationOperation(StrEnum):
     IMAGE_DESCRIPTION = "image-description"
 
 
+class PdfContentMode(StrEnum):
+    PREFERRED = "preferred"
+    SOURCE = "source"
+    TRANSFORMED = "transformed"
+
+
 class AiPreferences(ApiModel):
     simplification_level: SimplificationLevel = SimplificationLevel.MODERATE
     preserve_technical_terms: bool = True

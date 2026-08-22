@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
+        expose_headers=["Content-Disposition", "X-Exported-Content"],
     )
     register_error_handlers(application)
     application.include_router(router)

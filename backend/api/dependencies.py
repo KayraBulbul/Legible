@@ -1,13 +1,17 @@
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.config import get_settings
 from api.errors import AppError
 from api.services.auth import AuthenticatedSession, find_authenticated_session
+from api.services.pdf_exports import PdfExportService
 from database.models import User
 from database.session import get_database_session
+from pdf.renderers import WeasyPrintRenderer
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -35,3 +39,13 @@ async def get_current_user(authenticated: CurrentSession) -> User:
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+@lru_cache
+def get_pdf_export_service() -> PdfExportService:
+    settings = get_settings()
+    renderer = WeasyPrintRenderer(settings.pdf_render_timeout_seconds)
+    return PdfExportService(renderer, settings.pdf_render_concurrency)
+
+
+PdfExporter = Annotated[PdfExportService, Depends(get_pdf_export_service)]

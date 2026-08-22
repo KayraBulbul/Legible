@@ -43,6 +43,23 @@ async def test_guest_can_save_list_and_retrieve_page(
     assert detail_response.json() == created
 
 
+async def test_saved_page_sanitizer_preserves_safe_text_direction(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    saved_page_payload["sourceDocument"]["html"] = (
+        '<article dir="RTL"><p dir="sideways">محتوى عربي</p></article>'
+    )
+    saved_page_payload["sourceDocument"]["language"] = "ar"
+
+    response = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    assert response.status_code == 201
+    saved_html = response.json()["sourceDocument"]["html"]
+    assert '<article dir="rtl">' in saved_html
+    assert "sideways" not in saved_html
+
+
 async def test_repeated_client_save_id_is_idempotent(
     client: AsyncClient, saved_page_payload: dict[str, Any]
 ) -> None:

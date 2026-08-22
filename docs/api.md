@@ -79,7 +79,7 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 | `DELETE` | `/api/v1/profiles/{id}` | Yes | Planned | Delete a profile |
 | `POST` | `/api/v1/transformations` | Yes | Planned | Run a text/content transformation |
 | `POST` | `/api/v1/image-descriptions` | Yes | Planned | Generate alt text or an accessible label |
-| `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Planned | Generate and download a PDF |
+| `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Current | Generate and download a PDF |
 
 Profiles may follow saved-page CRUD if time is tight. Their schema is still defined here so clients do not invent a second settings format.
 
@@ -200,7 +200,7 @@ Current enum values are:
 - `contrastMode`: `none`, `dark`, or `light`;
 - `aiPreferences.simplificationLevel`: `light`, `moderate`, or `strong`.
 
-`fontScale` is a percentage. `lineHeight` is unitless. Proposed units for `letterSpacing` and `wordSpacing` are `em`; proposed units for `readingWidth` are `ch`. Those three units and their validation ranges need human confirmation before implementation. API responses should return the full settings object with defaults applied.
+`fontScale` is a percentage and `lineHeight` is unitless. `letterSpacing` and `wordSpacing` use `em`; `readingWidth` uses `ch`. The PDF renderer bounds these values to safe print ranges: `-0.1` to `1em` for letter spacing, `-0.1` to `2em` for word spacing, and `30` to `120ch` for reading width. API responses return the full settings object with defaults applied.
 
 ### Transformation metadata
 
@@ -496,17 +496,59 @@ Image-description endpoints are planned.
 
 ## PDF export
 
-PDF export is planned.
+`GET /api/v1/saved-pages/{id}/export.pdf?content=preferred` generates a PDF on demand. It returns `200 OK` with these headers:
 
-`GET /api/v1/saved-pages/{id}/export.pdf` returns `200 OK` with `Content-Type: application/pdf` and a download filename in `Content-Disposition`.
+- `Content-Type: application/pdf`
+- `Content-Disposition`, with ASCII and RFC 5987 UTF-8 filenames derived from the saved title
+- `X-Exported-Content: source` or `X-Exported-Content: transformed`
+
+The `content` query accepts:
+
+- `preferred`, the default, uses transformed content when present and source content otherwise;
+- `source`, which always uses the saved source document;
+- `transformed`, which returns `409 transformed_content_unavailable` when the saved page has no transformed document.
+
+Missing pages and pages owned by another user return the same `404 saved_page_not_found` response. Rendering failures return `502 pdf_export_failed`. A render that exceeds 20 seconds returns `503 pdf_export_timeout`. When both renderer slots are occupied and a slot does not open within two seconds, the API returns `503 pdf_export_busy`.
 
 Because an anchor cannot attach the bearer token, the dashboard should fetch the endpoint with the authorization header, read the response as a blob, and then create a temporary object URL for download. Revoke the object URL after use.
 
-PDF generation is synchronous for the MVP. Show an in-progress state and handle timeouts. A `404` means the page is absent or belongs to another user. The exact accessibility acceptance criteria for generated PDFs still need agreement.
+```ts
+async function downloadSavedPagePdf(pageId: string, accessToken: string) {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/api/v1/saved-pages/${pageId}/export.pdf?content=preferred`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      credentials: "omit",
+    },
+  );
+
+  if (!response.ok) {
+    throw await response.json();
+  }
+
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const encodedFilename = /filename\*=UTF-8''([^;]+)/.exec(disposition)?.[1];
+  const filename = encodedFilename
+    ? decodeURIComponent(encodedFilename)
+    : "saved-page.pdf";
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+```
+
+PDF generation is synchronous and exports are not stored. The document uses A4 pages, heading bookmarks, clickable links, page numbers, and the selected document's language or `en` as a fallback. The renderer derives the base text direction from that language and preserves safe `dir` attributes in semantic content. Print output applies the saved dyslexia font, font scale, spacing, line height, and reading width. It always uses black text on white. Speech, motion, contrast, HUD, and other screen-only settings do not affect the PDF. Railway installs Noto Sans and Noto Sans CJK for Unicode fallback glyphs.
+
+Remote images are replaced with visible alt-text placeholders. The renderer does not fetch page assets or arbitrary local files. Supporting source images would need a separate asset pipeline and security review.
+
+The backend asks WeasyPrint for tagged PDF/UA-1 output. This is a best-effort accessibility aid, not a claim of PDF/UA certification. WeasyPrint notes that conformance still depends on the source document and the PDF features used. See [WeasyPrint's PDF support](https://doc.courtbouillon.org/weasyprint/stable/api_reference.html#pdf).
 
 ## Errors and status codes
 
-The planned error envelope is:
+The API error envelope is:
 
 ```json
 {
@@ -533,7 +575,7 @@ The planned error envelope is:
 | `400` | Malformed request outside normal schema validation |
 | `401` | Missing, invalid, expired, or revoked token |
 | `404` | Resource absent or owned by another user |
-| `409` | Idempotency or profile-state conflict that cannot return an existing result |
+| `409` | Idempotency conflict or requested transformed export content is unavailable |
 | `413` | Page or image payload too large |
 | `415` | Unsupported image or content type |
 | `422` | Pydantic validation failure |
@@ -571,9 +613,8 @@ Mock handlers should use these shapes and must be replaced or checked against ge
 Frontend and backend owners need to settle these before implementation reaches the affected endpoint:
 
 - dashboard token persistence and recovery behaviour for lost guest sessions;
-- spacing and reading-width units and validation ranges;
+- whether spacing and reading-width ranges should also be enforced when saving a page;
 - content and image size limits plus accepted image MIME types;
-- the HTML allowlist and treatment of remote images;
-- PDF renderer choice and the definition of an accessible exported PDF;
+- the HTML allowlist and treatment of remote images outside PDF export;
 - whether profiles ship in the MVP;
 - whether list pagination stays offset-based if the library grows beyond demo size.

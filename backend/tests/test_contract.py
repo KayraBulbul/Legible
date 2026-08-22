@@ -15,6 +15,7 @@ async def test_openapi_exposes_vertical_slice(client: AsyncClient) -> None:
     assert "/api/v1/auth/pairing-codes/redeem" in paths
     assert "/api/v1/saved-pages" in paths
     assert "/api/v1/saved-pages/{page_id}" in paths
+    assert "/api/v1/saved-pages/{page_id}/export.pdf" in paths
 
 
 async def test_openapi_publishes_custom_validation_envelope(client: AsyncClient) -> None:
@@ -119,3 +120,40 @@ async def test_openapi_publishes_payload_limit_for_saved_pages(client: AsyncClie
             "application/json"
         ]["schema"]
         assert schema == expected
+
+
+async def test_openapi_publishes_pdf_export_contract(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    operation = response.json()["paths"]["/api/v1/saved-pages/{page_id}/export.pdf"]["get"]
+    content_parameter = next(
+        parameter for parameter in operation["parameters"] if parameter["name"] == "content"
+    )
+    assert content_parameter["required"] is False
+    assert content_parameter["schema"]["default"] == "preferred"
+    assert content_parameter["schema"]["$ref"] == "#/components/schemas/PdfContentMode"
+
+    success = operation["responses"]["200"]
+    assert success["content"]["application/pdf"]["schema"] == {
+        "type": "string",
+        "format": "binary",
+    }
+    assert set(success["headers"]) == {"Content-Disposition", "X-Exported-Content"}
+
+    expected_error = {"$ref": "#/components/schemas/ErrorResponse"}
+    for status in ("401", "404", "409", "413", "422", "502", "503"):
+        schema = operation["responses"][status]["content"]["application/json"]["schema"]
+        assert schema == expected_error
+
+
+async def test_cors_exposes_pdf_download_headers(client: AsyncClient) -> None:
+    response = await client.get(
+        "/api/v1/saved-pages/62f44fe6-e6d2-44cc-9b38-e2d49bd15ace/export.pdf",
+        headers={"Origin": "http://localhost:5173"},
+    )
+
+    assert response.status_code == 401
+    exposed = response.headers["access-control-expose-headers"].lower()
+    assert "content-disposition" in exposed
+    assert "x-exported-content" in exposed
