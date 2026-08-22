@@ -3,17 +3,37 @@
   const STYLE_FILES = {
     'dyslexia-lexend': 'styles/dyslexia-lexend.css',
     'dyslexia-opendyslexic': 'styles/dyslexia-opendyslexic.css',
-    'contrast-dark': 'styles/theme-high-contrast-dark.css',
-    'contrast-light': 'styles/theme-high-contrast-light.css',
+    'font-arial': 'styles/font-arial.css',
+    'font-atkinson': 'styles/font-atkinson.css',
+    'font-verdana': 'styles/font-verdana.css',
+    'font-opensans': 'styles/font-opensans.css',
+    'font-comicsans': 'styles/font-comicsans.css',
+    'theme-invert': 'styles/theme-invert.css',
+    'theme-dark': 'styles/theme-dark.css',
+    'theme-light': 'styles/theme-light.css',
+    'theme-contrast': 'styles/theme-high-contrast-dark.css',
     'declutter': 'styles/clean-layout.css',
+    'pause-animations': 'styles/pause-animations.css',
+    'highlight-links': 'styles/highlight-links.css',
+    'hide-images': 'styles/hide-images.css',
   };
 
   const CLASS_MAP = {
     'dyslexia-lexend': 'a11y-dyslexia-lexend',
     'dyslexia-opendyslexic': 'a11y-dyslexia-opendyslexic',
-    'contrast-dark': 'a11y-contrast-dark',
-    'contrast-light': 'a11y-contrast-light',
+    'font-arial': 'a11y-font-arial',
+    'font-atkinson': 'a11y-font-atkinson',
+    'font-verdana': 'a11y-font-verdana',
+    'font-opensans': 'a11y-font-opensans',
+    'font-comicsans': 'a11y-font-comicsans',
+    'theme-invert': 'a11y-theme-invert',
+    'theme-dark': 'a11y-theme-dark',
+    'theme-light': 'a11y-theme-light',
+    'theme-contrast': 'a11y-contrast-dark',
     'declutter': 'a11y-declutter',
+    'pause-animations': 'a11y-pause-animations',
+    'highlight-links': 'a11y-highlight-links',
+    'hide-images': 'a11y-hide-images',
   };
 
   const linkEls = {};
@@ -85,20 +105,79 @@
     document.head.appendChild(style);
   }
 
+  function setLetterSpacing(value) {
+    const root = document.documentElement;
+    if (!value) {
+      root.style.removeProperty('--a11y-letter-spacing');
+      root.classList.remove('a11y-letter-spacing-custom');
+      return;
+    }
+    root.style.setProperty('--a11y-letter-spacing', `${value}em`);
+    root.classList.add('a11y-letter-spacing-custom');
+    injectLetterSpacingRuleOnce();
+  }
+
+  let letterSpacingRuleInjected = false;
+  function injectLetterSpacingRuleOnce() {
+    if (letterSpacingRuleInjected) return;
+    letterSpacingRuleInjected = true;
+    const style = document.createElement('style');
+    style.textContent = `
+      html.a11y-letter-spacing-custom body, html.a11y-letter-spacing-custom body * {
+        letter-spacing: var(--a11y-letter-spacing, 0) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function setPauseAnimations(enabled) {
+    setPreset('pause-animations', enabled);
+    if (enabled) {
+      document.querySelectorAll('video, audio').forEach((m) => {
+        try { m.pause(); } catch (e) { /* ignore */ }
+      });
+    }
+  }
+
   function applyState(state) {
     if (!state) return;
-    setPreset('dyslexia-lexend', state.dyslexiaFont === 'lexend');
-    setPreset('dyslexia-opendyslexic', state.dyslexiaFont === 'opendyslexic');
-    setPreset('contrast-dark', state.contrastMode === 'dark');
-    setPreset('contrast-light', state.contrastMode === 'light');
+    const font = state.dyslexiaFont || 'none';
+    setPreset('dyslexia-lexend', font === 'lexend' || font === 'dyslexia-lexend');
+    setPreset('dyslexia-opendyslexic', font === 'opendyslexic' || font === 'dyslexia-opendyslexic');
+    setPreset('font-arial', font === 'arial' || font === 'font-arial');
+    setPreset('font-atkinson', font === 'atkinson' || font === 'font-atkinson');
+    setPreset('font-verdana', font === 'verdana' || font === 'font-verdana');
+    setPreset('font-opensans', font === 'opensans' || font === 'font-opensans');
+    setPreset('font-comicsans', font === 'comicsans' || font === 'font-comicsans');
+
+    const theme = state.themeMode || 'none';
+    setPreset('theme-invert', theme === 'invert');
+    setPreset('theme-dark', theme === 'dark');
+    setPreset('theme-light', theme === 'light');
+    setPreset('theme-contrast', theme === 'contrast');
+
     setPreset('declutter', !!state.declutter);
+    setPauseAnimations(!!state.pauseAnimations);
+    setPreset('highlight-links', !!state.highlightLinks);
+    setPreset('hide-images', !!state.hideImages);
+
     setFontScale(state.fontScale || 100);
     setLineHeight(state.lineHeight || null);
+    setLetterSpacing(state.letterSpacing || 0);
 
     if (window.A11yBionic) {
       window.A11yBionic.setEnabled(!!state.bionicReading);
     }
+
+    if (window.A11yCursor) {
+      window.A11yCursor.setState({
+        enabled: !!state.cursorEnabled,
+        style: state.cursorStyle || 'ring',
+        size: state.cursorSize || 32,
+        color: state.cursorColor || '#5b3cdc',
+      });
+    }
   }
 
-  window.A11yRestyler = { applyState, setPreset, setFontScale, setLineHeight };
+  window.A11yRestyler = { applyState, setPreset, setFontScale, setLineHeight, setLetterSpacing };
 })();

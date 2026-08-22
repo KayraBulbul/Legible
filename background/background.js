@@ -1,5 +1,9 @@
 import { analyzeImage } from './gemini-client.js';
 
+if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+}
+
 const CACHE_KEY = 'a11yImageCache';
 const MAX_CACHE_ENTRIES = 500;
 
@@ -73,11 +77,19 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.local.set({
         a11ySettings: {
           dyslexiaFont: 'none',
-          contrastMode: 'none',
+          themeMode: 'none',
           declutter: false,
+          pauseAnimations: false,
           bionicReading: false,
           fontScale: 100,
+          letterSpacing: 0,
           lineHeight: null,
+          highlightLinks: false,
+          hideImages: false,
+          cursorEnabled: false,
+          cursorStyle: 'ring',
+          cursorSize: 32,
+          cursorColor: '#5b3cdc',
           ttsRate: 1,
           ttsPitch: 1,
           voiceURI: null,

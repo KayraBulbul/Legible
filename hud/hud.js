@@ -48,19 +48,49 @@
     panel.appendChild(title);
 
     const row1 = el('div', 'a11y-hud-row');
-    row1.appendChild(buildToggle('Lexend', 'dyslexiaFont', 'lexend', 'none'));
-    row1.appendChild(buildToggle('OpenDyslexic', 'dyslexiaFont', 'opendyslexic', 'none'));
+    const fontSelect = el('select', 'a11y-hud-select', { 'aria-label': 'Select accessible font' });
+    const fontOptions = [
+      { val: 'none', label: 'Font: Default' },
+      { val: 'lexend', label: 'Font: Lexend' },
+      { val: 'opendyslexic', label: 'Font: OpenDyslexic' },
+      { val: 'atkinson', label: 'Font: Atkinson Hyperlegible' },
+      { val: 'arial', label: 'Font: Arial / Helvetica' },
+      { val: 'verdana', label: 'Font: Verdana' },
+      { val: 'opensans', label: 'Font: Open Sans' },
+      { val: 'comicsans', label: 'Font: Comic Sans MS' },
+    ];
+    fontOptions.forEach((opt) => {
+      const optEl = el('option');
+      optEl.value = opt.val;
+      optEl.textContent = opt.label;
+      fontSelect.appendChild(optEl);
+    });
+    fontSelect.dataset.key = 'dyslexiaFont';
+    fontSelect.addEventListener('change', () => {
+      updateSettingFn({ dyslexiaFont: fontSelect.value });
+    });
+    row1.appendChild(fontSelect);
     panel.appendChild(row1);
 
     const row2 = el('div', 'a11y-hud-row');
-    row2.appendChild(buildToggle('Dark Contrast', 'contrastMode', 'dark', 'none'));
-    row2.appendChild(buildToggle('Warm Contrast', 'contrastMode', 'light', 'none'));
+    row2.appendChild(buildToggle('Invert', 'themeMode', 'invert', 'none'));
+    row2.appendChild(buildToggle('Dark', 'themeMode', 'dark', 'none'));
     panel.appendChild(row2);
+
+    const row2b = el('div', 'a11y-hud-row');
+    row2b.appendChild(buildToggle('Light', 'themeMode', 'light', 'none'));
+    row2b.appendChild(buildToggle('High Contrast', 'themeMode', 'contrast', 'none'));
+    panel.appendChild(row2b);
 
     const row3 = el('div', 'a11y-hud-row');
     row3.appendChild(buildToggle('De-clutter', 'declutter', true, false));
     row3.appendChild(buildToggle('Bionic Read', 'bionicReading', true, false));
     panel.appendChild(row3);
+
+    const row3b = el('div', 'a11y-hud-row');
+    row3b.appendChild(buildToggle('Highlight Links', 'highlightLinks', true, false));
+    row3b.appendChild(buildToggle('Hide Images', 'hideImages', true, false));
+    panel.appendChild(row3b);
 
     const row4 = el('div', 'a11y-hud-row');
     const readBtn = el('button', 'a11y-hud-toggle a11y-hud-primary');
@@ -107,6 +137,11 @@
       btn.setAttribute('aria-pressed', String(isActive));
       btn.classList.toggle('a11y-active', isActive);
     });
+
+    const fontSelect = panel.querySelector('.a11y-hud-select[data-key="dyslexiaFont"]');
+    if (fontSelect && settings.dyslexiaFont) {
+      fontSelect.value = settings.dyslexiaFont;
+    }
   }
 
   function setVisible(visible) {

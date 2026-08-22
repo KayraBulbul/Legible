@@ -19,8 +19,8 @@ Without a key, all typography/contrast/screen-reader features still work — onl
 
 ## Using it
 
-- **Popup**: toggle dyslexia fonts (Lexend / OpenDyslexic), contrast themes, de-clutter mode, bionic reading, font size/line height, TTS voice/rate/pitch, and trigger an AI scan of the current page.
-- **Floating HUD**: click the ♿ pill in the bottom-right corner of any page for the same controls without opening the popup.
+- **Sidebar**: click the toolbar icon to open the side panel — theme presets (invert, dark, light, high-contrast), accessible & dyslexia fonts (**Lexend, OpenDyslexic, Atkinson Hyperlegible, Arial/Helvetica, Verdana, Open Sans, Comic Sans MS**), fine-grained text size/letter spacing/line height controls, highlight links, hide images, pause animations, de-clutter mode, bionic reading, a customizable on-page cursor, TTS voice/rate/pitch, and an AI scan of the current page.
+- **Floating HUD**: click the ♿ pill in the bottom-right corner of any page for quick access to the same theme, highlight/hide, de-clutter, and bionic reading toggles without opening the sidebar.
 - **Keyboard shortcuts** (customizable at `chrome://extensions/shortcuts`):
   - `Alt+R` — start/stop reading from the current position
   - `Alt+N` / `Alt+P` — next/previous readable element

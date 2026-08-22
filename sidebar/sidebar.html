@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Web Accessibility</title>
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+
+<body>
+  <header class="header">
+    <span class="header-icon">♿</span>
+    <h1>Web Accessibility</h1>
+  </header>
+
+  <main>
+    <section class="section">
+      <h2>Theme</h2>
+      <div class="card-grid" id="themeGrid">
+        <button type="button" class="card" data-theme="invert">
+          <span class="card-icon">◐</span>
+          <span class="card-label">Invert Colors</span>
+        </button>
+        <button type="button" class="card" data-theme="dark">
+          <span class="card-icon">🌙</span>
+          <span class="card-label">Dark Mode</span>
+        </button>
+        <button type="button" class="card" data-theme="light">
+          <span class="card-icon">☀️</span>
+          <span class="card-label">Light Mode</span>
+        </button>
+        <button type="button" class="card" data-theme="contrast">
+          <span class="card-icon">◑</span>
+          <span class="card-label">High Contrast</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Typography</h2>
+      <label class="field">
+        <span>Accessible / Dyslexia font</span>
+        <select id="dyslexiaFont">
+          <option value="none">Off (Original Page Font)</option>
+          <option value="lexend">Lexend</option>
+          <option value="opendyslexic">OpenDyslexic</option>
+          <option value="atkinson">Atkinson Hyperlegible</option>
+          <option value="arial">Arial / Helvetica</option>
+          <option value="verdana">Verdana</option>
+          <option value="opensans">Open Sans</option>
+          <option value="comicsans">Comic Sans MS</option>
+        </select>
+      </label>
+
+      <div class="stepper-field">
+        <span class="stepper-label">Text size <output id="fontScaleOut">100%</output></span>
+        <div class="stepper-row">
+          <button type="button" class="stepper-btn" id="fontScaleDown" aria-label="Decrease text size">−</button>
+          <input type="range" id="fontScale" min="70" max="200" step="5" value="100" />
+          <button type="button" class="stepper-btn" id="fontScaleUp" aria-label="Increase text size">+</button>
+        </div>
+      </div>
+
+      <div class="stepper-field">
+        <span class="stepper-label">Letter spacing <output id="letterSpacingOut">Default</output></span>
+        <div class="stepper-row">
+          <button type="button" class="stepper-btn" id="letterSpacingDown" aria-label="Decrease letter spacing">−</button>
+          <input type="range" id="letterSpacing" min="0" max="0.3" step="0.01" value="0" />
+          <button type="button" class="stepper-btn" id="letterSpacingUp" aria-label="Increase letter spacing">+</button>
+        </div>
+      </div>
+
+      <div class="stepper-field">
+        <span class="stepper-label">Line height <output id="lineHeightOut">Default</output></span>
+        <div class="stepper-row">
+          <button type="button" class="stepper-btn" id="lineHeightDown" aria-label="Decrease line height">−</button>
+          <input type="range" id="lineHeight" min="1.2" max="3" step="0.1" value="1.8" />
+          <button type="button" class="stepper-btn" id="lineHeightUp" aria-label="Increase line height">+</button>
+        </div>
+      </div>
+
+      <label class="checkbox-field">
+        <input type="checkbox" id="bionicReading" />
+        <span>Bionic reading (bold word starts)</span>
+      </label>
+    </section>
+
+    <section class="section">
+      <h2>Visual Comfort</h2>
+      <h4>⚠ Might be incompatible with certain websites</h4>
+      <div class="card-grid">
+        <button type="button" class="card" id="highlightLinksCard">
+          <span class="card-icon">🔗</span>
+          <span class="card-label">Highlight Links</span>
+        </button>
+        <button type="button" class="card" id="hideImagesCard">
+          <span class="card-icon">🖼️</span>
+          <span class="card-label">Hide Images</span>
+        </button>
+        <button type="button" class="card" id="pauseAnimationsCard">
+          <span class="card-icon">⏸️</span>
+          <span class="card-label">Pause Animations</span>
+        </button>
+        <button type="button" class="card" id="declutterCard">
+          <span class="card-icon">✨</span>
+          <span class="card-label">Reduce Clutter</span>
+        </button>
+      </div>
+      <label class="checkbox-field">
+        <input type="checkbox" id="hudVisible" checked />
+        <span>Show floating on-page toolbar</span>
+      </label>
+    </section>
+
+    <section class="section">
+      <h2>Cursor</h2>
+      <label class="checkbox-field">
+        <input type="checkbox" id="cursorEnabled" />
+        <span>Customizable cursor</span>
+      </label>
+      <label class="field">
+        <span>Look</span>
+        <select id="cursorStyle">
+          <option value="ring">Ring</option>
+          <option value="dot">Dot</option>
+          <option value="crosshair">Crosshair</option>
+        </select>
+      </label>
+      <div class="stepper-field">
+        <span class="stepper-label">Size <output id="cursorSizeOut">32px</output></span>
+        <div class="stepper-row">
+          <button type="button" class="stepper-btn" id="cursorSizeDown" aria-label="Decrease cursor size">−</button>
+          <input type="range" id="cursorSize" min="16" max="64" step="2" value="32" />
+          <button type="button" class="stepper-btn" id="cursorSizeUp" aria-label="Increase cursor size">+</button>
+        </div>
+      </div>
+      <label class="field">
+        <span>Color</span>
+        <input type="color" id="cursorColor" value="#5b3cdc" />
+      </label>
+    </section>
+
+    <section class="section">
+      <h2>Screen Reader</h2>
+      <label class="field">
+        <span>Voice</span>
+        <select id="voiceSelect">
+          <option value="">System default</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Speech rate <output id="ttsRateOut">1.0x</output></span>
+        <input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" />
+      </label>
+      <label class="field">
+        <span>Pitch <output id="ttsPitchOut">1.0</output></span>
+        <input type="range" id="ttsPitch" min="0" max="2" step="0.1" value="1" />
+      </label>
+      <button id="toggleReadBtn" class="btn btn-primary">▶ Start / Stop Reading (Alt+R)</button>
+      <p class="hint">Alt+N / Alt+P move to the next / previous element.</p>
+    </section>
+
+    <section class="section">
+      <h2>AI Vision (Gemini)</h2>
+      <label class="field">
+        <span>Gemini API key</span>
+        <input type="password" id="apiKey" placeholder="Paste your Gemini API key" autocomplete="off" />
+      </label>
+      <div class="row">
+        <button id="saveKeyBtn" class="btn">Save Key</button>
+        <span id="keyStatus" class="status-text"></span>
+      </div>
+      <label class="checkbox-field">
+        <input type="checkbox" id="aiEnabled" checked />
+        <span>Enable AI alt-text / ARIA generation</span>
+      </label>
+      <button id="scanBtn" class="btn btn-primary">✨ Scan This Page with AI</button>
+      <p id="scanStatus" class="hint"></p>
+    </section>
+  </main>
+
+  <footer>
+    <button id="resetBtn" class="btn btn-link">Reset all settings</button>
+  </footer>
+
+  <script src="sidebar.js"></script>
+</body>
+
+</html>

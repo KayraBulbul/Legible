@@ -10,7 +10,6 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -18,13 +17,17 @@
       "128": "icons/icon128.png"
     }
   },
+  "side_panel": {
+    "default_path": "sidebar/sidebar.html"
+  },
   "background": {
     "service_worker": "background/background.js",
     "type": "module"
   },
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*"
@@ -35,6 +38,7 @@
       "js": [
         "content/restyler.js",
         "content/bionic-reader.js",
+        "content/custom-cursor.js",
         "content/ai-scanner.js",
         "content/screen-reader.js",
         "hud/hud.js",
@@ -72,6 +76,5 @@
       "suggested_key": { "default": "Alt+A" },
       "description": "Run AI vision scan on the focused/hovered image"
     }
-  },
-  "options_page": "popup/popup.html"
+  }
 }
