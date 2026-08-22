@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from google.genai import errors as genai_errors
+from google.genai import types
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
@@ -119,8 +120,14 @@ async def test_gemini_transform_preserves_unknown_language(
 ) -> None:
     provider = GoogleGeminiService(api_key="test-key", model="fake-gemini")
 
-    async def generate(_contents: object, response_schema: Any) -> Any:
-        return response_schema(html="<p>Clear</p>", text="Clear", language=None)
+    async def generate(
+        _contents: object,
+        response_model: Any,
+        *,
+        response_json_schema: dict[str, object],
+    ) -> Any:
+        assert response_json_schema
+        return response_model(html="<p>Clear</p>", text="Clear", language=None)
 
     monkeypatch.setattr(provider, "_generate", generate)
     result = await provider.transform(
@@ -130,6 +137,108 @@ async def test_gemini_transform_preserves_unknown_language(
     )
 
     assert result.document.language is None
+
+
+async def test_gemini_transform_uses_supported_response_json_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_configs: list[types.GenerateContentConfig] = []
+
+    async def generate_content(
+        *,
+        model: str,
+        contents: object,
+        config: types.GenerateContentConfig,
+    ) -> object:
+        assert model == "gemini-3.6-flash"
+        assert contents
+        captured_configs.append(config)
+        return SimpleNamespace(
+            parsed=None,
+            text='{"html":"<p>Clear</p>","text":"Clear","language":"en"}',
+        )
+
+    fake_client = SimpleNamespace(
+        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    )
+    monkeypatch.setattr("ai.gemini_service.genai.Client", lambda **_kwargs: fake_client)
+    provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
+
+    await provider.transform(
+        TextTransformationOperation.SIMPLIFY,
+        SemanticDocument(html="<p>Dense</p>", text="Dense", language="en"),
+        AiPreferences(),
+    )
+
+    assert len(captured_configs) == 1
+    config = captured_configs[0]
+    assert config.response_schema is None
+    assert config.response_json_schema == {
+        "type": "object",
+        "properties": {
+            "html": {"type": "string"},
+            "text": {"type": "string"},
+            "language": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+            },
+        },
+        "required": ["html", "text"],
+        "additionalProperties": False,
+    }
+
+
+async def test_gemini_image_description_uses_supported_response_json_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_configs: list[types.GenerateContentConfig] = []
+
+    async def generate_content(
+        *,
+        model: str,
+        contents: object,
+        config: types.GenerateContentConfig,
+    ) -> object:
+        assert model == "gemini-3.6-flash"
+        assert contents
+        captured_configs.append(config)
+        return SimpleNamespace(
+            parsed=None,
+            text='{"altText":"A red dot.","role":"img"}',
+        )
+
+    fake_client = SimpleNamespace(
+        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    )
+    monkeypatch.setattr("ai.gemini_service.genai.Client", lambda **_kwargs: fake_client)
+    provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
+
+    await provider.describe_image(
+        ImageDescriptionKind.IMAGE,
+        TINY_PNG,
+        "image/png",
+        None,
+    )
+
+    assert len(captured_configs) == 1
+    config = captured_configs[0]
+    assert config.response_schema is None
+    assert config.response_json_schema == {
+        "type": "object",
+        "properties": {
+            "altText": {"type": "string"},
+            "role": {
+                "anyOf": [
+                    {
+                        "type": "string",
+                        "enum": ["img", "figure", "graphics-document"],
+                    },
+                    {"type": "null"},
+                ],
+            },
+        },
+        "required": ["altText"],
+        "additionalProperties": False,
+    }
 
 
 @pytest.mark.parametrize(
