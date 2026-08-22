@@ -31,3 +31,14 @@ Without a key, all typography/contrast/screen-reader features still work — onl
 - `fonts/` bundles real Lexend (Google Fonts, OFL) and OpenDyslexic (OpenDyslexic project, OFL) font files for offline use.
 - The AI scanner fetches each unlabeled image as a blob and sends it inline (base64) to Gemini — cross-origin images without CORS headers may fail to fetch; those get a dotted red outline instead of a dashed green one.
 - Analysis results are cached in `chrome.storage.local` by a hash of the image source to avoid re-billing repeat scans.
+
+## Dashboard development
+
+This repository has multiple packages. To run the React dashboard locally:
+
+```bash
+cd dashboard
+npm run dev
+```
+
+Vite will print a local URL (typically `http://localhost:5173`).
