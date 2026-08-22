@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, and user-owned saved accessibility snapshots. Saved pages support create, list, retrieve, rename, and delete operations.
+FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, and user-owned saved accessibility snapshots. Saved pages support create, list, retrieve, update, favourite, and delete operations.
 
 ## Requirements
 

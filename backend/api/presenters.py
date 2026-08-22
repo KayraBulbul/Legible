@@ -16,6 +16,7 @@ def saved_page_response(page: SavedPage) -> SavedPageResponse:
         original_url=page.original_url,
         title=page.title,
         excerpt=page.excerpt,
+        is_favourited=page.is_favourited,
         source_document=SemanticDocument.model_validate(page.source_document),
         transformed_document=(
             SemanticDocument.model_validate(page.transformed_document)
@@ -40,6 +41,7 @@ def saved_page_summary(record: SavedPageSummaryRecord) -> SavedPageSummary:
         original_url=record.original_url,
         title=record.title,
         excerpt=record.excerpt,
+        is_favourited=record.is_favourited,
         profile_id=record.profile_id,
         has_transformed_content=record.has_transformed_content,
         captured_at=record.captured_at,
