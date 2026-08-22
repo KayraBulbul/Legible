@@ -5,10 +5,20 @@ from fastapi import APIRouter, Query, Response
 
 from api.dependencies import CurrentUser, DatabaseSession
 from api.presenters import saved_page_response, saved_page_summary
-from api.schemas import Pagination, SavedPageCreate, SavedPageListResponse, SavedPageResponse
+from api.schemas import (
+    ErrorResponse,
+    Pagination,
+    SavedPageCreate,
+    SavedPageListResponse,
+    SavedPageResponse,
+)
 from api.services.saved_pages import create_saved_page, get_saved_page, list_saved_pages
 
-router = APIRouter(prefix="/api/v1/saved-pages", tags=["saved pages"])
+router = APIRouter(
+    prefix="/api/v1/saved-pages",
+    tags=["saved pages"],
+    responses={422: {"model": ErrorResponse, "description": "Validation error"}},
+)
 
 
 @router.post("", response_model=SavedPageResponse, status_code=201)

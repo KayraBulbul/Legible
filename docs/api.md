@@ -248,6 +248,8 @@ A saved page is a user-owned snapshot. It is not unique by URL. The same user ma
 
 `clientSaveId` is generated once by the service worker before its first attempt. Retrying the same payload with the same authenticated user and `clientSaveId` returns `200 OK` with the existing saved page rather than creating a duplicate. Reusing that identifier for a different payload returns `409 Conflict`.
 
+`profileId` must be `null` until the profiles API is implemented. The backend rejects non-null values rather than storing an ID it cannot validate for existence and ownership.
+
 The backend returns `201 Created` for a new snapshot and a full saved-page response:
 
 ```json

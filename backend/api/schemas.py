@@ -116,7 +116,7 @@ class SavedPageCreate(ApiModel):
     transformed_document: SemanticDocument | None = None
     accessibility_settings: AccessibilitySettings = Field(default_factory=AccessibilitySettings)
     transformations: list[TransformationRecord] = Field(default_factory=list, max_length=20)
-    profile_id: UUID | None = None
+    profile_id: None = None
 
     @field_validator("title")
     @classmethod

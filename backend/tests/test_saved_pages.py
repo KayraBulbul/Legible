@@ -139,6 +139,19 @@ async def test_original_url_credentials_are_rejected(
     assert any(field["path"] == "originalUrl" for field in response.json()["error"]["fields"])
 
 
+async def test_profile_id_is_rejected_until_profiles_exist(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    invalid_payload = deepcopy(saved_page_payload)
+    invalid_payload["profileId"] = "4d3f60a5-6f8a-4b7c-af90-2905cc2cb7fb"
+
+    response = await client.post("/api/v1/saved-pages", json=invalid_payload, headers=headers)
+
+    assert response.status_code == 422
+    assert any(field["path"] == "profileId" for field in response.json()["error"]["fields"])
+
+
 async def test_unknown_page_returns_not_found(client: AsyncClient) -> None:
     headers = await create_guest_headers(client)
 
