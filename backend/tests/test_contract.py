@@ -16,6 +16,8 @@ async def test_openapi_exposes_vertical_slice(client: AsyncClient) -> None:
     assert "/api/v1/saved-pages" in paths
     assert "/api/v1/saved-pages/{page_id}" in paths
     assert "/api/v1/saved-pages/{page_id}/export.pdf" in paths
+    assert "/api/v1/transformations" in paths
+    assert "/api/v1/image-descriptions" in paths
 
 
 async def test_openapi_publishes_custom_validation_envelope(client: AsyncClient) -> None:
@@ -157,3 +159,37 @@ async def test_cors_exposes_pdf_download_headers(client: AsyncClient) -> None:
     exposed = response.headers["access-control-expose-headers"].lower()
     assert "content-disposition" in exposed
     assert "x-exported-content" in exposed
+
+
+async def test_openapi_publishes_ai_endpoint_contract(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    expected_error = {"$ref": "#/components/schemas/ErrorResponse"}
+
+    transformations = paths["/api/v1/transformations"]["post"]
+    assert transformations["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/TransformationRequest"
+    }
+    assert transformations["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/TransformationResponse"
+    }
+    for status in ("401", "413", "422", "429", "502", "503"):
+        assert (
+            transformations["responses"][status]["content"]["application/json"]["schema"]
+            == expected_error
+        )
+
+    descriptions = paths["/api/v1/image-descriptions"]["post"]
+    assert descriptions["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ImageDescriptionRequest"
+    }
+    assert descriptions["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ImageDescriptionResponse"
+    }
+    for status in ("401", "413", "415", "422", "429", "502", "503"):
+        assert (
+            descriptions["responses"][status]["content"]["application/json"]["schema"]
+            == expected_error
+        )

@@ -5,8 +5,10 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ai.gemini_service import GoogleGeminiService
 from api.config import get_settings
 from api.errors import AppError
+from api.services.ai import AiApplicationService
 from api.services.auth import AuthenticatedSession, find_authenticated_session
 from api.services.pdf_exports import PdfExportService
 from database.models import User
@@ -49,3 +51,24 @@ def get_pdf_export_service() -> PdfExportService:
 
 
 PdfExporter = Annotated[PdfExportService, Depends(get_pdf_export_service)]
+
+
+@lru_cache
+def get_ai_service() -> AiApplicationService:
+    settings = get_settings()
+    api_key = (
+        settings.gemini_api_key.get_secret_value() if settings.gemini_api_key is not None else None
+    )
+    provider = GoogleGeminiService(api_key=api_key, model=settings.gemini_model)
+    return AiApplicationService(
+        provider,
+        timeout_seconds=settings.ai_request_timeout_seconds,
+        concurrency=settings.ai_request_concurrency,
+        capacity_wait_seconds=settings.ai_capacity_wait_seconds,
+        requests_per_minute=settings.ai_requests_per_minute,
+        requests_per_ip_per_minute=settings.ai_requests_per_ip_per_minute,
+        global_requests_per_minute=settings.ai_global_requests_per_minute,
+    )
+
+
+AiService = Annotated[AiApplicationService, Depends(get_ai_service)]
