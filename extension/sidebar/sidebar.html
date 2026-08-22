@@ -174,7 +174,14 @@
 
     <section class="section">
       <h2>AI Vision (Gemini)</h2>
-      <p class="hint">AI requests are handled securely by the accessibility backend.</p>
+      <label class="field">
+        <span>Gemini API key</span>
+        <input type="password" id="apiKey" placeholder="Paste your Gemini API key" autocomplete="off" />
+      </label>
+      <div class="row">
+        <button id="saveKeyBtn" class="btn">Save Key</button>
+        <span id="keyStatus" class="status-text"></span>
+      </div>
       <label class="checkbox-field">
         <input type="checkbox" id="aiEnabled" checked />
         <span>Enable AI alt-text / ARIA generation</span>

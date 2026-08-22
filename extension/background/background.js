@@ -1,4 +1,4 @@
-import { analyzeImage } from './backend-client.js';
+import { analyzeImage } from './gemini-client.js';
 import { ApiError, createGuestSession, ensureSession, authedFetchWithRetry } from './api-client.js';
 import { mapA11ySettingsToBackend } from './settings-mapper.js';
 
@@ -37,6 +37,10 @@ async function setCacheEntry(key, value) {
 
 async function handleAnalyzeImage(payload) {
   const { dataUrl, kind, cacheKey } = payload;
+  const { geminiApiKey } = await chrome.storage.local.get(['geminiApiKey']);
+  if (!geminiApiKey) {
+    return { ok: false, error: 'missing-api-key' };
+  }
 
   const key = await hashKey(`${kind}:${cacheKey || dataUrl.slice(0, 512)}`);
   const cache = await getCache();
@@ -45,11 +49,11 @@ async function handleAnalyzeImage(payload) {
   }
 
   try {
-    const result = await analyzeImage({ dataUrl, kind });
+    const result = await analyzeImage({ dataUrl, kind }, geminiApiKey);
     await setCacheEntry(key, result);
     return { ok: true, result };
   } catch (err) {
-    return { ok: false, error: (err instanceof ApiError && err.code) || 'analysis-failed' };
+    return { ok: false, error: err.message || 'analysis-failed' };
   }
 }
 
@@ -128,7 +132,6 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.remove('geminiApiKey');
   chrome.storage.local.get(['a11ySettings'], (res) => {
     if (!res.a11ySettings) {
       chrome.storage.local.set({
