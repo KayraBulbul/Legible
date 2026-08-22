@@ -1,0 +1,8 @@
+/* Verdana / Geneva Wide-Spacing Typography */
+html.a11y-font-verdana body,
+html.a11y-font-verdana body * {
+  font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+  letter-spacing: 0.06em !important;
+  line-height: 1.7 !important;
+  word-spacing: 0.1em !important;
+}

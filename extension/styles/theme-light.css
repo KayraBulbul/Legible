@@ -1,0 +1,33 @@
+/* Light Mode: forces a clean light palette, useful on pages stuck in a dark theme */
+html.a11y-theme-light,
+html.a11y-theme-light body {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
+}
+
+html.a11y-theme-light body * {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
+  border-color: #d5d5dd !important;
+}
+
+html.a11y-theme-light a,
+html.a11y-theme-light a * {
+  color: #0044cc !important;
+}
+
+html.a11y-theme-light button,
+html.a11y-theme-light input,
+html.a11y-theme-light select,
+html.a11y-theme-light textarea,
+html.a11y-theme-light [role="button"] {
+  background-color: #f2f2f6 !important;
+  color: #1a1a1a !important;
+  border: 1px solid #cfcfd8 !important;
+}
+
+html.a11y-theme-light *:focus,
+html.a11y-theme-light *:focus-visible {
+  outline: 2px solid #0044cc !important;
+  outline-offset: 2px !important;
+}

@@ -1,10 +1,18 @@
 const DEFAULT_SETTINGS = {
   dyslexiaFont: 'none',
-  contrastMode: 'none',
+  themeMode: 'none',
   declutter: false,
+  pauseAnimations: false,
   bionicReading: false,
   fontScale: 100,
+  letterSpacing: 0,
   lineHeight: null,
+  highlightLinks: false,
+  hideImages: false,
+  cursorEnabled: false,
+  cursorStyle: 'ring',
+  cursorSize: 32,
+  cursorColor: '#5b3cdc',
   ttsRate: 1,
   ttsPitch: 1,
   voiceURI: null,
@@ -14,14 +22,32 @@ const DEFAULT_SETTINGS = {
 
 const els = {
   dyslexiaFont: document.getElementById('dyslexiaFont'),
+  themeGrid: document.getElementById('themeGrid'),
   fontScale: document.getElementById('fontScale'),
   fontScaleOut: document.getElementById('fontScaleOut'),
+  fontScaleDown: document.getElementById('fontScaleDown'),
+  fontScaleUp: document.getElementById('fontScaleUp'),
+  letterSpacing: document.getElementById('letterSpacing'),
+  letterSpacingOut: document.getElementById('letterSpacingOut'),
+  letterSpacingDown: document.getElementById('letterSpacingDown'),
+  letterSpacingUp: document.getElementById('letterSpacingUp'),
   lineHeight: document.getElementById('lineHeight'),
   lineHeightOut: document.getElementById('lineHeightOut'),
+  lineHeightDown: document.getElementById('lineHeightDown'),
+  lineHeightUp: document.getElementById('lineHeightUp'),
   bionicReading: document.getElementById('bionicReading'),
-  contrastMode: document.getElementById('contrastMode'),
-  declutter: document.getElementById('declutter'),
+  highlightLinksCard: document.getElementById('highlightLinksCard'),
+  hideImagesCard: document.getElementById('hideImagesCard'),
+  pauseAnimationsCard: document.getElementById('pauseAnimationsCard'),
+  declutterCard: document.getElementById('declutterCard'),
   hudVisible: document.getElementById('hudVisible'),
+  cursorEnabled: document.getElementById('cursorEnabled'),
+  cursorStyle: document.getElementById('cursorStyle'),
+  cursorSize: document.getElementById('cursorSize'),
+  cursorSizeOut: document.getElementById('cursorSizeOut'),
+  cursorSizeDown: document.getElementById('cursorSizeDown'),
+  cursorSizeUp: document.getElementById('cursorSizeUp'),
+  cursorColor: document.getElementById('cursorColor'),
   voiceSelect: document.getElementById('voiceSelect'),
   ttsRate: document.getElementById('ttsRate'),
   ttsRateOut: document.getElementById('ttsRateOut'),
@@ -39,16 +65,52 @@ const els = {
 
 let settings = { ...DEFAULT_SETTINGS };
 
+function clamp(val, min, max) {
+  return Math.min(max, Math.max(min, val));
+}
+
+function decimalsOf(step) {
+  const s = String(step);
+  const i = s.indexOf('.');
+  return i === -1 ? 0 : s.length - i - 1;
+}
+
+function syncThemeGrid() {
+  els.themeGrid.querySelectorAll('.card').forEach((btn) => {
+    btn.classList.toggle('active', settings.themeMode === btn.dataset.theme);
+  });
+}
+
+function syncFeatureCards() {
+  els.highlightLinksCard.classList.toggle('active', !!settings.highlightLinks);
+  els.hideImagesCard.classList.toggle('active', !!settings.hideImages);
+  els.pauseAnimationsCard.classList.toggle('active', !!settings.pauseAnimations);
+  els.declutterCard.classList.toggle('active', !!settings.declutter);
+}
+
 function populateUI() {
   els.dyslexiaFont.value = settings.dyslexiaFont;
+  syncThemeGrid();
+  syncFeatureCards();
+
   els.fontScale.value = settings.fontScale;
   els.fontScaleOut.textContent = `${settings.fontScale}%`;
+
+  els.letterSpacing.value = settings.letterSpacing || 0;
+  els.letterSpacingOut.textContent = settings.letterSpacing ? `${Number(settings.letterSpacing).toFixed(2)}em` : 'Default';
+
   els.lineHeight.value = settings.lineHeight || 1.8;
   els.lineHeightOut.textContent = settings.lineHeight ? String(settings.lineHeight) : 'Default';
+
   els.bionicReading.checked = !!settings.bionicReading;
-  els.contrastMode.value = settings.contrastMode;
-  els.declutter.checked = !!settings.declutter;
   els.hudVisible.checked = settings.hudVisible !== false;
+
+  els.cursorEnabled.checked = !!settings.cursorEnabled;
+  els.cursorStyle.value = settings.cursorStyle || 'ring';
+  els.cursorSize.value = settings.cursorSize || 32;
+  els.cursorSizeOut.textContent = `${settings.cursorSize || 32}px`;
+  els.cursorColor.value = settings.cursorColor || '#5b3cdc';
+
   els.ttsRate.value = settings.ttsRate;
   els.ttsRateOut.textContent = `${settings.ttsRate.toFixed(1)}x`;
   els.ttsPitch.value = settings.ttsPitch;
@@ -87,20 +149,94 @@ async function sendToContent(message) {
   return chrome.tabs.sendMessage(tab.id, message);
 }
 
+function wireStepper({ rangeEl, downBtn, upBtn, step, key, format }) {
+  const decimals = decimalsOf(step);
+  const min = Number(rangeEl.min);
+  const max = Number(rangeEl.max);
+
+  function commit(rawVal) {
+    const val = Number(Number(rawVal).toFixed(decimals));
+    rangeEl.value = val;
+    if (format) format(val);
+    persist({ [key]: val });
+  }
+
+  rangeEl.addEventListener('input', () => commit(rangeEl.value));
+  downBtn.addEventListener('click', () => commit(clamp(Number(rangeEl.value) - step, min, max)));
+  upBtn.addEventListener('click', () => commit(clamp(Number(rangeEl.value) + step, min, max)));
+}
+
 function wireEvents() {
   els.dyslexiaFont.addEventListener('change', () => persist({ dyslexiaFont: els.dyslexiaFont.value }));
-  els.fontScale.addEventListener('input', () => {
-    els.fontScaleOut.textContent = `${els.fontScale.value}%`;
-    persist({ fontScale: Number(els.fontScale.value) });
+
+  els.themeGrid.querySelectorAll('.card').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.theme;
+      persist({ themeMode: settings.themeMode === val ? 'none' : val });
+      syncThemeGrid();
+    });
   });
-  els.lineHeight.addEventListener('input', () => {
-    els.lineHeightOut.textContent = els.lineHeight.value;
-    persist({ lineHeight: Number(els.lineHeight.value) });
+
+  wireStepper({
+    rangeEl: els.fontScale,
+    downBtn: els.fontScaleDown,
+    upBtn: els.fontScaleUp,
+    step: 5,
+    key: 'fontScale',
+    format: (val) => { els.fontScaleOut.textContent = `${val}%`; },
   });
+
+  wireStepper({
+    rangeEl: els.letterSpacing,
+    downBtn: els.letterSpacingDown,
+    upBtn: els.letterSpacingUp,
+    step: 0.01,
+    key: 'letterSpacing',
+    format: (val) => { els.letterSpacingOut.textContent = val ? `${val.toFixed(2)}em` : 'Default'; },
+  });
+
+  wireStepper({
+    rangeEl: els.lineHeight,
+    downBtn: els.lineHeightDown,
+    upBtn: els.lineHeightUp,
+    step: 0.1,
+    key: 'lineHeight',
+    format: (val) => { els.lineHeightOut.textContent = String(val); },
+  });
+
   els.bionicReading.addEventListener('change', () => persist({ bionicReading: els.bionicReading.checked }));
-  els.contrastMode.addEventListener('change', () => persist({ contrastMode: els.contrastMode.value }));
-  els.declutter.addEventListener('change', () => persist({ declutter: els.declutter.checked }));
+
+  els.highlightLinksCard.addEventListener('click', () => {
+    persist({ highlightLinks: !settings.highlightLinks });
+    syncFeatureCards();
+  });
+  els.hideImagesCard.addEventListener('click', () => {
+    persist({ hideImages: !settings.hideImages });
+    syncFeatureCards();
+  });
+  els.pauseAnimationsCard.addEventListener('click', () => {
+    persist({ pauseAnimations: !settings.pauseAnimations });
+    syncFeatureCards();
+  });
+  els.declutterCard.addEventListener('click', () => {
+    persist({ declutter: !settings.declutter });
+    syncFeatureCards();
+  });
+
   els.hudVisible.addEventListener('change', () => persist({ hudVisible: els.hudVisible.checked }));
+
+  els.cursorEnabled.addEventListener('change', () => persist({ cursorEnabled: els.cursorEnabled.checked }));
+  els.cursorStyle.addEventListener('change', () => persist({ cursorStyle: els.cursorStyle.value }));
+  els.cursorColor.addEventListener('input', () => persist({ cursorColor: els.cursorColor.value }));
+  wireStepper({
+    rangeEl: els.cursorSize,
+    downBtn: els.cursorSizeDown,
+    upBtn: els.cursorSizeUp,
+    step: 2,
+    key: 'cursorSize',
+    format: (val) => { els.cursorSizeOut.textContent = `${val}px`; },
+  });
+
   els.voiceSelect.addEventListener('change', () => persist({ voiceURI: els.voiceSelect.value || null }));
   els.ttsRate.addEventListener('input', () => {
     els.ttsRateOut.textContent = `${Number(els.ttsRate.value).toFixed(1)}x`;

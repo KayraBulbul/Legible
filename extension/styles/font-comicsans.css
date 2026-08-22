@@ -1,0 +1,8 @@
+/* Comic Sans MS Dyslexia-Friendly Typography */
+html.a11y-font-comicsans body,
+html.a11y-font-comicsans body * {
+  font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Comic Neue', cursive, sans-serif !important;
+  letter-spacing: 0.08em !important;
+  line-height: 1.75 !important;
+  word-spacing: 0.12em !important;
+}

@@ -1,6 +1,6 @@
 /* Multimodal prompt builder & caller for Gemini Vision (image -> alt text / ARIA role) */
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const PROMPT_BY_KIND = {

@@ -2,11 +2,19 @@
 (function () {
   const DEFAULT_SETTINGS = {
     dyslexiaFont: 'none',
-    contrastMode: 'none',
+    themeMode: 'none',
     declutter: false,
+    pauseAnimations: false,
     bionicReading: false,
     fontScale: 100,
+    letterSpacing: 0,
     lineHeight: null,
+    highlightLinks: false,
+    hideImages: false,
+    cursorEnabled: false,
+    cursorStyle: 'ring',
+    cursorSize: 32,
+    cursorColor: '#5b3cdc',
     ttsRate: 1,
     ttsPitch: 1,
     voiceURI: null,
@@ -62,7 +70,7 @@
     if (result.scanned === 0) {
       window.A11yHud && window.A11yHud.setStatus('No unlabeled images, icons, or canvases found.');
     } else if (result.results.every((r) => !r.ok && r.reason === 'missing-api-key')) {
-      window.A11yHud && window.A11yHud.setStatus('Add a Gemini API key in the popup to enable AI scanning.');
+      window.A11yHud && window.A11yHud.setStatus('Add a Gemini API key in the sidebar to enable AI scanning.');
     } else {
       const okCount = result.results.filter((r) => r.ok).length;
       window.A11yHud && window.A11yHud.setStatus(`AI scan complete: ${okCount}/${result.scanned} element(s) labeled.`);

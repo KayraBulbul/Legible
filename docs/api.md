@@ -1,6 +1,21 @@
 # Frontend API integration guide
 
-This document is the draft contract for the browser extension and dashboard. The backend has not been implemented yet, so none of these endpoints are available today. Once FastAPI exists, its Pydantic schemas and generated `/openapi.json` are authoritative. Update this guide and shared examples in the same change whenever that contract changes.
+This document is the integration contract for the browser extension and dashboard. The deployed FastAPI API implements health, guest sessions, session revocation, extension/dashboard pairing, and the complete saved-page lifecycle. Its Pydantic schemas and generated `/openapi.json` are authoritative for implemented endpoints. Other endpoints below are marked as planned.
+
+## Environments
+
+| Environment | Base URL |
+|---|---|
+| Production | `https://hackmelbourne2026-production.up.railway.app` |
+| Local backend | `http://127.0.0.1:8000` |
+
+Production links:
+
+- Swagger UI: `https://hackmelbourne2026-production.up.railway.app/docs`
+- OpenAPI JSON: `https://hackmelbourne2026-production.up.railway.app/openapi.json`
+- Health: `https://hackmelbourne2026-production.up.railway.app/health`
+
+Clients should read the base URL from environment-specific configuration rather than hard-coding it. The suggested dashboard variable is `VITE_API_BASE_URL`. The extension must grant host permission for the production origin and route requests through its service worker.
 
 ## System boundary
 
@@ -8,7 +23,7 @@ The API owns:
 
 - guest identity, sessions, and extension/dashboard pairing;
 - per-user saved pages and accessibility profiles;
-- Gemini 3.7 Flash transformations and image descriptions;
+- Gemini 3.6 Flash transformations and image descriptions;
 - PDF generation for saved pages.
 
 The extension owns live page transformations and extraction. Its Manifest V3 service worker makes backend requests. Content scripts should message the service worker instead of calling the API directly. The dashboard consumes saved-page, profile, transformation, and export endpoints.
@@ -17,7 +32,7 @@ The backend does not fetch `originalUrl`. Clients send extracted semantic conten
 
 ## Common conventions
 
-- Base URL: `<API_BASE_URL>`. No development or production URL is configured yet. Read it from client configuration rather than hard-coding it.
+- Read the base URL from client configuration and append the paths documented below.
 - Application routes start with `/api/v1`. Health is available at `/health`.
 - Send JSON with `Content-Type: application/json`, except PDF responses.
 - Authenticated requests use `Authorization: Bearer <accessToken>`.
@@ -27,7 +42,9 @@ The backend does not fetch `originalUrl`. Clients send extracted semantic conten
 - Omitted optional fields and explicit `null` are not interchangeable unless a schema says so.
 - The backend derives ownership from the access token. Never send a `userId` to select an owner.
 
-The dashboard origin must be in the backend CORS allowlist. The extension manifest must grant host permission for the API origin. Extension requests should set `credentials: "omit"` so cookies from browsed sites are never forwarded.
+The backend rejects request bodies larger than 20 MiB with `413 payload_too_large`.
+
+The dashboard origin must be in the backend CORS allowlist. Production currently allows local dashboard development from `http://localhost:5173`; add the final dashboard origin when it is deployed. The extension manifest must grant host permission for the API origin. Extension requests should set `credentials: "omit"` so cookies from browsed sites are never forwarded.
 
 `GET /health` returns `200 OK` when the application and database are ready:
 
@@ -42,33 +59,35 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 
 ## Endpoint summary
 
-| Method | Path | Auth | Purpose |
-|---|---|---:|---|
-| `GET` | `/health` | No | Process and database health |
-| `POST` | `/api/v1/auth/guest` | No | Create a guest user and first session |
-| `GET` | `/api/v1/auth/me` | Yes | Read the current user |
-| `POST` | `/api/v1/auth/pairing-codes` | Yes | Create a one-time dashboard/extension pairing code |
-| `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Exchange a pairing code for another session |
-| `DELETE` | `/api/v1/auth/session` | Yes | Revoke the current session |
-| `POST` | `/api/v1/saved-pages` | Yes | Save a page snapshot |
-| `GET` | `/api/v1/saved-pages` | Yes | List the current user's saved pages |
-| `GET` | `/api/v1/saved-pages/{id}` | Yes | Retrieve one full saved page |
-| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Rename a saved page |
-| `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Delete a saved page |
-| `GET` | `/api/v1/profiles` | Yes | List accessibility profiles |
-| `POST` | `/api/v1/profiles` | Yes | Create a profile |
-| `GET` | `/api/v1/profiles/{id}` | Yes | Retrieve a profile |
-| `PATCH` | `/api/v1/profiles/{id}` | Yes | Update a profile |
-| `DELETE` | `/api/v1/profiles/{id}` | Yes | Delete a profile |
-| `POST` | `/api/v1/transformations` | Yes | Run a text/content transformation |
-| `POST` | `/api/v1/image-descriptions` | Yes | Generate alt text or an accessible label |
-| `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Generate and download a PDF |
+| Method | Path | Auth | Status | Purpose |
+|---|---|---:|---|---|
+| `GET` | `/health` | No | Current | Process and database health |
+| `POST` | `/api/v1/auth/guest` | No | Current | Create a guest user and first session |
+| `GET` | `/api/v1/auth/me` | Yes | Current | Read the current user |
+| `POST` | `/api/v1/auth/pairing-codes` | Yes | Current | Create a one-time dashboard/extension pairing code |
+| `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Current | Exchange a pairing code for another session |
+| `DELETE` | `/api/v1/auth/session` | Yes | Current | Revoke the current session |
+| `POST` | `/api/v1/saved-pages` | Yes | Current | Save a page snapshot |
+| `GET` | `/api/v1/saved-pages` | Yes | Current | List the current user's saved pages |
+| `GET` | `/api/v1/saved-pages/{id}` | Yes | Current | Retrieve one full saved page |
+| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Current | Update a saved page |
+| `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Current | Delete a saved page |
+| `GET` | `/api/v1/profiles` | Yes | Planned | List accessibility profiles |
+| `POST` | `/api/v1/profiles` | Yes | Planned | Create a profile |
+| `GET` | `/api/v1/profiles/{id}` | Yes | Planned | Retrieve a profile |
+| `PATCH` | `/api/v1/profiles/{id}` | Yes | Planned | Update a profile |
+| `DELETE` | `/api/v1/profiles/{id}` | Yes | Planned | Delete a profile |
+| `POST` | `/api/v1/transformations` | Yes | Planned | Run a text/content transformation |
+| `POST` | `/api/v1/image-descriptions` | Yes | Planned | Generate alt text or an accessible label |
+| `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Planned | Generate and download a PDF |
 
 Profiles may follow saved-page CRUD if time is tight. Their schema is still defined here so clients do not invent a second settings format.
 
 ## Authentication and user separation
 
 The MVP uses anonymous guest users. It does not require email, password, login, or signup. Each client gets an opaque access token. A one-time code connects an extension session and dashboard session to the same user.
+
+Guest-session creation, bearer-token validation, current-user lookup, session revocation, and pairing are implemented.
 
 ### Create a guest session
 
@@ -84,7 +103,7 @@ The MVP uses anonymous guest users. It does not require email, password, login, 
   },
   "session": {
     "accessToken": "raw-token-returned-only-at-session-creation",
-    "expiresAt": null
+    "expiresAt": "2026-09-21T04:30:00Z"
   }
 }
 ```
@@ -118,7 +137,9 @@ The other client redeems it:
 }
 ```
 
-Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user. Codes expire quickly and work once.
+Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user.
+
+Codes contain eight uppercase characters, expire after 10 minutes, and work once. Creating a new code invalidates any previous unused code for the same user. A user may create five codes per hour, and one client address may attempt redemption 10 times per 10 minutes.
 
 `DELETE /api/v1/auth/session` revokes only the token used for that request and returns `204 No Content`.
 
@@ -187,7 +208,7 @@ Current enum values are:
 {
   "operation": "simplify",
   "provider": "google",
-  "model": "gemini-3.7-flash",
+  "model": "gemini-3.6-flash",
   "promptVersion": "simplify-v1",
   "parameters": {
     "simplificationLevel": "moderate"
@@ -246,6 +267,8 @@ A saved page is a user-owned snapshot. It is not unique by URL. The same user ma
 
 `clientSaveId` is generated once by the service worker before its first attempt. Retrying the same payload with the same authenticated user and `clientSaveId` returns `200 OK` with the existing saved page rather than creating a duplicate. Reusing that identifier for a different payload returns `409 Conflict`.
 
+`profileId` must be `null` until the profiles API is implemented. The backend rejects non-null values rather than storing an ID it cannot validate for existence and ownership.
+
 The backend returns `201 Created` for a new snapshot and a full saved-page response:
 
 ```json
@@ -255,6 +278,7 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
   "originalUrl": "https://example.com/article",
   "title": "Example article",
   "excerpt": "Original content.",
+  "isFavourited": false,
   "sourceDocument": {
     "format": "semantic_html",
     "html": "<article><h1>Example article</h1><p>Original content.</p></article>",
@@ -305,6 +329,7 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
       "originalUrl": "https://example.com/article",
       "title": "Example article",
       "excerpt": "Original content.",
+      "isFavourited": false,
       "profileId": null,
       "hasTransformedContent": false,
       "capturedAt": "2026-08-22T04:31:00Z",
@@ -322,15 +347,37 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
 
 The planned default is 20 items and maximum is 100. Items sort newest first. List responses do not contain full HTML or text.
 
-### Retrieve, rename, and delete
+### Retrieve, update, and delete
 
 - `GET /api/v1/saved-pages/{id}` returns the full saved-page response.
-- `PATCH /api/v1/saved-pages/{id}` accepts `{ "title": "New title" }` and returns the updated full response.
+- `PATCH /api/v1/saved-pages/{id}` accepts `title`, `isFavourited`, or both and returns the updated full response.
 - `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
+
+Rename a page:
+
+```json
+{
+  "title": "New title"
+}
+```
+
+Favourite or unfavourite a page:
+
+```json
+{
+  "isFavourited": true
+}
+```
+
+Both fields update atomically when sent together. An empty object, explicit `null`, a non-boolean `isFavourited`, or an unknown field returns `422 validation_error`. New pages always start with `isFavourited: false`; the create endpoint does not accept client-supplied favourite state.
+
+List results remain sorted newest first. The API does not filter or reorder the list based on favourite state. A dashboard can use `isFavourited` to mark or group the returned summaries.
 
 A missing page and a page owned by another user both return `404`. Clients must not infer that another user's page exists.
 
 ## Accessibility profiles
+
+Profile endpoints are planned and are not present in the current OpenAPI schema.
 
 Create with `POST /api/v1/profiles`:
 
@@ -369,6 +416,8 @@ Create with `POST /api/v1/profiles`:
 
 ## Gemini transformations
 
+Transformation endpoints are planned. `backend/ai/` is reserved for their implementation and is untouched by the persistence slice.
+
 `POST /api/v1/transformations` runs a synchronous, authenticated transformation. It does not save a page.
 
 ```json
@@ -400,7 +449,7 @@ Supported operations are `simplify`, `summarize`, `restructure`, and `focus`. A 
   "metadata": {
     "operation": "simplify",
     "provider": "google",
-    "model": "gemini-3.7-flash",
+    "model": "gemini-3.6-flash",
     "promptVersion": "simplify-v1",
     "parameters": {
       "simplificationLevel": "moderate",
@@ -414,6 +463,8 @@ Supported operations are `simplify`, `summarize`, `restructure`, and `focus`. A 
 To retain a result, the client includes `output` as `transformedDocument` and `metadata` in `transformations` when creating a saved page. Keep the original source document so users can compare AI output against it.
 
 ## Image descriptions
+
+Image-description endpoints are planned.
 
 `POST /api/v1/image-descriptions` replaces the extension's direct Gemini image call.
 
@@ -434,7 +485,7 @@ To retain a result, the client includes `output` as `transformedDocument` and `m
   "cached": false,
   "metadata": {
     "provider": "google",
-    "model": "gemini-3.7-flash",
+    "model": "gemini-3.6-flash",
     "promptVersion": "image-description-v1",
     "performedAt": "2026-08-22T04:33:00Z"
   }
@@ -444,6 +495,8 @@ To retain a result, the client includes `output` as `transformedDocument` and `m
 `role` may be `null` when no role should be added. The maximum decoded image size and accepted MIME types still need human agreement. Clients must handle `413`, `415`, `422`, `429`, and provider failure without disabling non-AI accessibility features.
 
 ## PDF export
+
+PDF export is planned.
 
 `GET /api/v1/saved-pages/{id}/export.pdf` returns `200 OK` with `Content-Type: application/pdf` and a download filename in `Content-Disposition`.
 
@@ -503,21 +556,20 @@ The backend sanitises stored HTML, but clients must still treat it as untrusted:
 
 ## OpenAPI and generated client types
 
-When the backend exists:
+For the implemented backend:
 
-- FastAPI exposes interactive documentation at `/docs` and its schema at `/openapi.json`.
+- FastAPI exposes interactive documentation at [the production `/docs`](https://hackmelbourne2026-production.up.railway.app/docs) and its schema at [the production `/openapi.json`](https://hackmelbourne2026-production.up.railway.app/openapi.json).
 - Export the generated schema to `shared/openapi.json` for clients and fixtures.
 - Generate TypeScript types from OpenAPI if the dashboard and extension build setups support it.
 - Do not hand-edit generated types or OpenAPI output.
 - Contract changes require backend schema tests plus coordinated extension/dashboard updates.
 
-Until then, this README is the integration draft. Mock handlers should use these shapes and must be replaced or checked against generated OpenAPI as soon as it is available.
+Mock handlers should use these shapes and must be replaced or checked against generated OpenAPI before integration.
 
 ## Decisions still open
 
 Frontend and backend owners need to settle these before implementation reaches the affected endpoint:
 
-- the Python version and actual local/deployment API URLs;
 - dashboard token persistence and recovery behaviour for lost guest sessions;
 - spacing and reading-width units and validation ranges;
 - content and image size limits plus accepted image MIME types;
