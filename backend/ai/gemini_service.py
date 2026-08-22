@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass
 from typing import Protocol, cast
 
@@ -16,6 +17,30 @@ from api.schemas import (
     SemanticDocument,
     TextTransformationOperation,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _log_provider_failure(
+    *,
+    failure_stage: str,
+    error: Exception,
+    model: str,
+    provider_code: int | None = None,
+    provider_status: str | None = None,
+) -> None:
+    diagnostic = {
+        "event": "gemini_provider_failure",
+        "failure_stage": failure_stage,
+        "exception_type": type(error).__name__,
+        "provider_code": provider_code,
+        "provider_status": provider_status,
+        "model": model,
+    }
+    logger.error(
+        json.dumps(diagnostic, separators=(",", ":"), sort_keys=True),
+        extra=diagnostic,
+    )
 
 
 @dataclass(frozen=True)
@@ -155,8 +180,20 @@ class GoogleGeminiService:
         except genai_errors.APIError as exc:
             if exc.code == 429:
                 raise GeminiRateLimitError from exc
+            _log_provider_failure(
+                failure_stage="request",
+                error=exc,
+                model=self._model,
+                provider_code=exc.code,
+                provider_status=exc.status,
+            )
             raise GeminiProviderError from exc
         except Exception as exc:
+            _log_provider_failure(
+                failure_stage="request",
+                error=exc,
+                model=self._model,
+            )
             raise GeminiProviderError from exc
 
         try:
@@ -166,6 +203,11 @@ class GoogleGeminiService:
                 raise GeminiProviderError
             return response_schema.model_validate_json(response.text)
         except (ValidationError, ValueError, GeminiProviderError) as exc:
+            _log_provider_failure(
+                failure_stage="response_validation",
+                error=exc,
+                model=self._model,
+            )
             raise GeminiProviderError from exc
 
     def _get_client(self) -> genai.Client:

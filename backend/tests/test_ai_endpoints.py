@@ -1,9 +1,13 @@
 import asyncio
 import base64
+import json
+import logging
 from collections.abc import Iterator
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from google.genai import errors as genai_errors
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
@@ -126,6 +130,101 @@ async def test_gemini_transform_preserves_unknown_language(
     )
 
     assert result.document.language is None
+
+
+@pytest.mark.parametrize(
+    ("provider_result", "expected_diagnostic"),
+    [
+        (
+            genai_errors.ClientError(
+                403,
+                {
+                    "error": {
+                        "status": "PERMISSION_DENIED",
+                        "message": "provider detail containing private page text",
+                    }
+                },
+            ),
+            {
+                "event": "gemini_provider_failure",
+                "failure_stage": "request",
+                "exception_type": "ClientError",
+                "provider_code": 403,
+                "provider_status": "PERMISSION_DENIED",
+                "model": "gemini-3.6-flash",
+            },
+        ),
+        (
+            ValueError("SDK detail containing private page text"),
+            {
+                "event": "gemini_provider_failure",
+                "failure_stage": "request",
+                "exception_type": "ValueError",
+                "provider_code": None,
+                "provider_status": None,
+                "model": "gemini-3.6-flash",
+            },
+        ),
+        (
+            SimpleNamespace(parsed=None, text="private malformed provider response"),
+            {
+                "event": "gemini_provider_failure",
+                "failure_stage": "response_validation",
+                "exception_type": "ValidationError",
+                "provider_code": None,
+                "provider_status": None,
+                "model": "gemini-3.6-flash",
+            },
+        ),
+    ],
+    ids=["google-api-error", "sdk-error", "response-validation"],
+)
+async def test_gemini_logs_redacted_provider_failure(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    provider_result: object,
+    expected_diagnostic: dict[str, object],
+) -> None:
+    async def generate_content(**_kwargs: object) -> object:
+        if isinstance(provider_result, Exception):
+            raise provider_result
+        return provider_result
+
+    fake_client = SimpleNamespace(
+        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    )
+    monkeypatch.setattr("ai.gemini_service.genai.Client", lambda **_kwargs: fake_client)
+    monkeypatch.setattr("ai.gemini_service.logger.disabled", False)
+    provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
+
+    with (
+        caplog.at_level(logging.ERROR, logger="ai.gemini_service"),
+        pytest.raises(GeminiProviderError),
+    ):
+        await provider.transform(
+            TextTransformationOperation.SIMPLIFY,
+            SemanticDocument(
+                html="<p>private page text</p>",
+                text="private page text",
+                language="en",
+            ),
+            AiPreferences(),
+        )
+
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    diagnostic = json.loads(record.getMessage())
+    assert diagnostic == expected_diagnostic
+    assert {key: record.__dict__[key] for key in diagnostic} == diagnostic
+    logged_record = repr(record.__dict__)
+    for sensitive_value in (
+        "secret-api-key",
+        "private page text",
+        "provider detail",
+        "SDK detail",
+        "private malformed provider response",
+    ):
+        assert sensitive_value not in logged_record
 
 
 @pytest.fixture
