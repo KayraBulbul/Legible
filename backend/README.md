@@ -59,7 +59,8 @@ Create separate Railway services for the backend and PostgreSQL. Set the backend
 
 - `DATABASE_URL`, provided by the PostgreSQL service reference;
 - `ENVIRONMENT=production`;
-- `CORS_ORIGINS`, as a JSON array of allowed dashboard origins.
+- `CORS_ORIGINS`, as a JSON array of allowed dashboard origins;
+- `PAIRING_CODE_SECRET`, a random value containing at least 32 characters.
 
 Use this backend start command:
 

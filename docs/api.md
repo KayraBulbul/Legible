@@ -47,8 +47,8 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 | `GET` | `/health` | No | Current | Process and database health |
 | `POST` | `/api/v1/auth/guest` | No | Current | Create a guest user and first session |
 | `GET` | `/api/v1/auth/me` | Yes | Current | Read the current user |
-| `POST` | `/api/v1/auth/pairing-codes` | Yes | Planned | Create a one-time dashboard/extension pairing code |
-| `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Planned | Exchange a pairing code for another session |
+| `POST` | `/api/v1/auth/pairing-codes` | Yes | Current | Create a one-time dashboard/extension pairing code |
+| `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Current | Exchange a pairing code for another session |
 | `DELETE` | `/api/v1/auth/session` | Yes | Current | Revoke the current session |
 | `POST` | `/api/v1/saved-pages` | Yes | Current | Save a page snapshot |
 | `GET` | `/api/v1/saved-pages` | Yes | Current | List the current user's saved pages |
@@ -70,7 +70,7 @@ Profiles may follow saved-page CRUD if time is tight. Their schema is still defi
 
 The MVP uses anonymous guest users. It does not require email, password, login, or signup. Each client gets an opaque access token. A one-time code connects an extension session and dashboard session to the same user.
 
-Guest-session creation, bearer-token validation, current-user lookup, and session revocation are implemented. Pairing remains planned.
+Guest-session creation, bearer-token validation, current-user lookup, session revocation, and pairing are implemented.
 
 ### Create a guest session
 
@@ -120,7 +120,9 @@ The other client redeems it:
 }
 ```
 
-Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user. Codes expire quickly and work once.
+Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user.
+
+Codes contain eight uppercase characters, expire after 10 minutes, and work once. Creating a new code invalidates any previous unused code for the same user. A user may create five codes per hour, and one client address may attempt redemption 10 times per 10 minutes.
 
 `DELETE /api/v1/auth/session` revokes only the token used for that request and returns `204 No Content`.
 

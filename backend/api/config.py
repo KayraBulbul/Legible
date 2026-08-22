@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     database_url: str = Field(min_length=1)
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    pairing_code_secret: str = Field(min_length=32)
 
     @field_validator("database_url", mode="before")
     @classmethod

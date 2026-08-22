@@ -8,6 +8,10 @@ async def test_openapi_exposes_vertical_slice(client: AsyncClient) -> None:
     paths = response.json()["paths"]
     assert "/health" in paths
     assert "/api/v1/auth/guest" in paths
+    assert "/api/v1/auth/me" in paths
+    assert "/api/v1/auth/session" in paths
+    assert "/api/v1/auth/pairing-codes" in paths
+    assert "/api/v1/auth/pairing-codes/redeem" in paths
     assert "/api/v1/saved-pages" in paths
     assert "/api/v1/saved-pages/{page_id}" in paths
 
@@ -37,3 +41,18 @@ async def test_openapi_requires_null_profile_id_on_create(client: AsyncClient) -
         "profileId"
     ]
     assert profile_id["type"] == "null"
+
+
+async def test_openapi_publishes_pairing_error_envelopes(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    expected = {"$ref": "#/components/schemas/ErrorResponse"}
+    create_responses = paths["/api/v1/auth/pairing-codes"]["post"]["responses"]
+    redeem_responses = paths["/api/v1/auth/pairing-codes/redeem"]["post"]["responses"]
+
+    assert create_responses["401"]["content"]["application/json"]["schema"] == expected
+    assert create_responses["429"]["content"]["application/json"]["schema"] == expected
+    for status in ("400", "422", "429"):
+        assert redeem_responses[status]["content"]["application/json"]["schema"] == expected

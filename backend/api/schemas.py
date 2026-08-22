@@ -198,6 +198,19 @@ class GuestSessionResponse(ApiModel):
     session: SessionResponse
 
 
+class PairingCodeResponse(ApiModel):
+    code: str
+    expires_at: datetime
+
+
+class PairingCodeRedeem(ApiModel):
+    code: str = Field(
+        min_length=8,
+        max_length=8,
+        pattern=r"^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$",
+    )
+
+
 class HealthResponse(ApiModel):
     status: Literal["ok"]
     database: Literal["ok"]

@@ -38,6 +38,23 @@ class UserSession(Base):
     )
 
 
+class PairingCode(Base):
+    __tablename__ = "pairing_codes"
+    __table_args__ = (Index("ix_pairing_codes_user_created_at", "user_id", "created_at"),)
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class SavedPage(Base):
     __tablename__ = "saved_pages"
     __table_args__ = (
