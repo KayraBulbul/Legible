@@ -46,10 +46,10 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 |---|---|---:|---|---|
 | `GET` | `/health` | No | Current | Process and database health |
 | `POST` | `/api/v1/auth/guest` | No | Current | Create a guest user and first session |
-| `GET` | `/api/v1/auth/me` | Yes | Planned | Read the current user |
+| `GET` | `/api/v1/auth/me` | Yes | Current | Read the current user |
 | `POST` | `/api/v1/auth/pairing-codes` | Yes | Planned | Create a one-time dashboard/extension pairing code |
 | `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Planned | Exchange a pairing code for another session |
-| `DELETE` | `/api/v1/auth/session` | Yes | Planned | Revoke the current session |
+| `DELETE` | `/api/v1/auth/session` | Yes | Current | Revoke the current session |
 | `POST` | `/api/v1/saved-pages` | Yes | Current | Save a page snapshot |
 | `GET` | `/api/v1/saved-pages` | Yes | Current | List the current user's saved pages |
 | `GET` | `/api/v1/saved-pages/{id}` | Yes | Current | Retrieve one full saved page |
@@ -70,7 +70,7 @@ Profiles may follow saved-page CRUD if time is tight. Their schema is still defi
 
 The MVP uses anonymous guest users. It does not require email, password, login, or signup. Each client gets an opaque access token. A one-time code connects an extension session and dashboard session to the same user.
 
-Guest-session creation and bearer-token validation are implemented. Pairing, session revocation, and `/auth/me` remain planned.
+Guest-session creation, bearer-token validation, current-user lookup, and session revocation are implemented. Pairing remains planned.
 
 ### Create a guest session
 
@@ -86,7 +86,7 @@ Guest-session creation and bearer-token validation are implemented. Pairing, ses
   },
   "session": {
     "accessToken": "raw-token-returned-only-at-session-creation",
-    "expiresAt": null
+    "expiresAt": "2026-09-21T04:30:00Z"
   }
 }
 ```

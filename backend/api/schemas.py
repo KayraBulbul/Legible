@@ -190,7 +190,7 @@ class UserResponse(ApiModel):
 
 class SessionResponse(ApiModel):
     access_token: str
-    expires_at: datetime | None
+    expires_at: datetime
 
 
 class GuestSessionResponse(ApiModel):
