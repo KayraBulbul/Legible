@@ -56,5 +56,23 @@ async def test_openapi_publishes_pairing_error_envelopes(client: AsyncClient) ->
 
     assert create_responses["401"]["content"]["application/json"]["schema"] == expected
     assert create_responses["429"]["content"]["application/json"]["schema"] == expected
-    for status in ("400", "422", "429"):
+    for status in ("400", "413", "422", "429"):
         assert redeem_responses[status]["content"]["application/json"]["schema"] == expected
+
+
+async def test_openapi_publishes_payload_limit_for_saved_pages(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    expected = {"$ref": "#/components/schemas/ErrorResponse"}
+    for method in ("post", "get"):
+        schema = paths["/api/v1/saved-pages"][method]["responses"]["413"]["content"][
+            "application/json"
+        ]["schema"]
+        assert schema == expected
+    for method in ("get", "patch", "delete"):
+        schema = paths["/api/v1/saved-pages/{page_id}"][method]["responses"]["413"]["content"][
+            "application/json"
+        ]["schema"]
+        assert schema == expected

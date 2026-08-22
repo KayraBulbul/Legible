@@ -15,6 +15,7 @@ TEST_DATABASE_URL = os.environ.get(
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["ENVIRONMENT"] = "test"
 os.environ["PAIRING_CODE_SECRET"] = "test-pairing-code-secret-at-least-32-characters"
+os.environ["MAX_REQUEST_BYTES"] = "4096"
 
 from api.main import app  # noqa: E402
 from api.rate_limits import pairing_redemption_limiter  # noqa: E402

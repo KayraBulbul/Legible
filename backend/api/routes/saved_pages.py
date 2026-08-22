@@ -27,6 +27,7 @@ router = APIRouter(
     responses={
         401: {"model": ErrorResponse, "description": "Authentication failed"},
         404: {"model": ErrorResponse, "description": "Saved page not found"},
+        413: {"model": ErrorResponse, "description": "Request body is too large"},
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )

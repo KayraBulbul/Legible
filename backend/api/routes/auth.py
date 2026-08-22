@@ -103,6 +103,7 @@ async def create_code(
     status_code=201,
     responses={
         400: {"model": ErrorResponse, "description": "Pairing code is invalid"},
+        413: {"model": ErrorResponse, "description": "Request body is too large"},
         422: {"model": ErrorResponse, "description": "Validation error"},
         429: {"model": ErrorResponse, "description": "Pairing rate limit reached"},
     },

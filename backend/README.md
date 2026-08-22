@@ -62,6 +62,8 @@ Create separate Railway services for the backend and PostgreSQL. Set the backend
 - `CORS_ORIGINS`, as a JSON array of allowed dashboard origins;
 - `PAIRING_CODE_SECRET`, a random value containing at least 32 characters.
 
+Requests are limited to 20 MiB by default. Set `MAX_REQUEST_BYTES` to change that limit.
+
 Use this backend start command:
 
 ```bash
