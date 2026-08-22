@@ -1,8 +1,5 @@
-"""Exceptions the AI service raises.
-
+"""
 Each maps to one of the HTTP status codes docs/api.md requires (413/415/429/502).
-Whoever wires the actual FastAPI routes (Kayra) is expected to catch these and
-translate them to the right status code for the client.
 """
 
 

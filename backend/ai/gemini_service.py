@@ -1,8 +1,7 @@
 """Gemini-backed implementations of the two AI endpoints in docs/api.md:
 POST /api/v1/transformations and POST /api/v1/image-descriptions.
 
-This module is framework-agnostic: it knows nothing about FastAPI, auth, or the
-database. It's meant to be imported and called from the actual route handlers.
+meant to be imported and called from the actual route handlers.
 """
 import base64
 import binascii
@@ -23,14 +22,8 @@ from .errors import (
 )
 from .prompts import IMAGE_PROMPTS, TRANSFORM_PROMPTS
 
-# gemini-2.5-flash are dead (404, "no longer available").
-# gemini-3.7-flash returned repeated 503s ("high demand")
-# The extension's gemini-client.js still needs updating separately (J's file).
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
-
-# ASSUMPTION: limits not yet agreed (docs/api.md lists these as "still need human
-# agreement"). Placeholder values — change once the team decides.
-MAX_IMAGE_BYTES = 8 * 1024 * 1024  # 8 MB
+MAX_IMAGE_BYTES = 8 * 1024 * 1024  # 8 MB (gemini max 20mb i reckon per request)
 ALLOWED_IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/webp", "image/svg+xml"}
 
 _DATA_URL_RE = re.compile(r"^data:([^;]+);base64,(.*)$", re.DOTALL)
@@ -74,7 +67,26 @@ def _call_gemini(contents):
 
 
 def transform_content(operation: str, input_document: dict, options: Optional[dict] = None) -> dict:
-    """Implements POST /api/v1/transformations. See docs/api.md for the exact contract."""
+    """Implements POST /api/v1/transformations. See docs/api.md.
+
+    Args:
+        operation: one of "simplify", "summarize", "restructure", "focus".
+        input_document: {"format": "semantic_html", "html": str, "text": str,
+            "language": str | None} — the "semantic document" shape from docs/api.md.
+        options: passthrough dict merged into the prompt and echoed back in
+            metadata.parameters, e.g. {"simplificationLevel": "moderate"}. Optional.
+
+    Returns:
+        {"output": {"format", "html", "text", "language"}, "metadata": {...}} —
+        matches docs/api.md's transformation response shape exactly.
+
+    Raises:
+        ValueError: `operation` isn't one of the four supported strings — a bad-input
+            bug from the caller, not a Gemini failure, so maps to 422, not 502.
+        RateLimitedError, UpstreamServiceError: see errors.py — map to 429 / 502.
+
+    note that this function is SYNCHRONOUS
+    """
     if operation not in TRANSFORM_PROMPTS:
         raise ValueError(f"Unsupported operation: {operation}")
 
@@ -114,11 +126,29 @@ def transform_content(operation: str, input_document: dict, options: Optional[di
 
 
 def describe_image(kind: str, data_url: str, context_text: Optional[str] = None) -> dict:
-    """Implements POST /api/v1/image-descriptions. See docs/api.md for the exact contract.
+    """Implements POST /api/v1/image-descriptions. 
 
-    NOTE: the "cached" field is set to False unconditionally here — this function does
-    not check any cache itself. See docs/ai-part-plan.md's open question about whether
-    caching belongs here or in the backend layer that calls this.
+    Args:
+        kind: one of "img", "icon-button", "canvas" — controls which prompt is used
+            and, for icon-button, forces role=None in the response.
+        data_url: the image as a data: URL, e.g. "data:image/png;base64,....".
+            Must be one of ALLOWED_IMAGE_MIME_TYPES and under MAX_IMAGE_BYTES decoded.
+        context_text: optional nearby page text, appended to the prompt for context.
+
+    Returns:
+        {"altText": str, "role": str | None, "cached": False, "metadata": {...}}.
+        "cached" is always False here — this function never checks a cache itself;
+        see docs/ai-part-plan.md's open question on whether that's this function's
+        job or the caller's.
+
+    Raises:
+        ValueError: `kind` isn't one of the three supported strings — maps to 422.
+        UnsupportedMediaTypeError: bad data: URL, disallowed mime type, or invalid
+            base64 — maps to 415.
+        PayloadTooLargeError: decoded image exceeds MAX_IMAGE_BYTES — maps to 413.
+        RateLimitedError, UpstreamServiceError: see errors.py — map to 429 / 502.
+
+    Same sync/blocking caveat as transform_content().
     """
     if kind not in IMAGE_PROMPTS:
         raise ValueError(f"Unsupported kind: {kind}")
