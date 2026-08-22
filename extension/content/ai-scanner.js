@@ -57,6 +57,30 @@
     }
   }
 
+  async function svgToPngDataUrl(svg) {
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const blobUrl = URL.createObjectURL(new Blob([serialized], { type: 'image/svg+xml' }));
+    try {
+      const image = await new Promise((resolve, reject) => {
+        const loaded = new Image();
+        loaded.onload = () => resolve(loaded);
+        loaded.onerror = reject;
+        loaded.src = blobUrl;
+      });
+      const width = Math.max(1, Math.min(image.naturalWidth || svg.clientWidth || 256, 2048));
+      const height = Math.max(1, Math.min(image.naturalHeight || svg.clientHeight || 256, 2048));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(image, 0, 0, width, height);
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      return null;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
   function markBadge(el, ok) {
     el.classList.add(ok ? 'a11y-ai-labeled' : 'a11y-ai-failed');
   }
@@ -80,12 +104,7 @@
         dataUrl = await toBase64FromUrl(innerImg.src);
       } else if (innerSvg) {
         sourceKey = 'svg:' + (el.outerHTML || '').slice(0, 200);
-        try {
-          const svgString = new XMLSerializer().serializeToString(innerSvg);
-          dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
-        } catch (e) {
-          dataUrl = null;
-        }
+        dataUrl = await svgToPngDataUrl(innerSvg);
       }
     }
 

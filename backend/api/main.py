@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import get_settings
+from api.dependencies import get_ai_service
 from api.errors import register_error_handlers
 from api.request_limits import RequestBodyLimitMiddleware
 from api.router import router
@@ -14,6 +15,8 @@ from database.session import engine
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     yield
+    await get_ai_service().close()
+    get_ai_service.cache_clear()
     await engine.dispose()
 
 

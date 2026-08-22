@@ -30,7 +30,8 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://hackmelbourne2026-production.up.railway.app/*",
+    "http://127.0.0.1:8000/*"
   ],
   "content_scripts": [
     {

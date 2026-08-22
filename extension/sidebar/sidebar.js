@@ -54,9 +54,6 @@ const els = {
   ttsPitch: document.getElementById('ttsPitch'),
   ttsPitchOut: document.getElementById('ttsPitchOut'),
   toggleReadBtn: document.getElementById('toggleReadBtn'),
-  apiKey: document.getElementById('apiKey'),
-  saveKeyBtn: document.getElementById('saveKeyBtn'),
-  keyStatus: document.getElementById('keyStatus'),
   aiEnabled: document.getElementById('aiEnabled'),
   scanBtn: document.getElementById('scanBtn'),
   scanStatus: document.getElementById('scanStatus'),
@@ -256,18 +253,6 @@ function wireEvents() {
     }
   });
 
-  els.saveKeyBtn.addEventListener('click', async () => {
-    const key = els.apiKey.value.trim();
-    if (!key) {
-      els.keyStatus.textContent = 'Enter a key first.';
-      els.keyStatus.className = 'status-text err';
-      return;
-    }
-    await chrome.storage.local.set({ geminiApiKey: key });
-    els.keyStatus.textContent = 'Saved.';
-    els.keyStatus.className = 'status-text ok';
-  });
-
   els.scanBtn.addEventListener('click', async () => {
     els.scanStatus.textContent = 'Scanning...';
     try {
@@ -290,11 +275,8 @@ function wireEvents() {
 }
 
 async function init() {
-  const stored = await chrome.storage.local.get(['a11ySettings', 'geminiApiKey']);
+  const stored = await chrome.storage.local.get(['a11ySettings']);
   settings = { ...DEFAULT_SETTINGS, ...(stored.a11ySettings || {}) };
-  if (stored.geminiApiKey) {
-    els.apiKey.placeholder = 'Key saved (hidden)';
-  }
   populateUI();
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;

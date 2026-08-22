@@ -69,8 +69,8 @@
     const result = await window.A11yScanner.scanPage(document.body);
     if (result.scanned === 0) {
       window.A11yHud && window.A11yHud.setStatus('No unlabeled images, icons, or canvases found.');
-    } else if (result.results.every((r) => !r.ok && r.reason === 'missing-api-key')) {
-      window.A11yHud && window.A11yHud.setStatus('Add a Gemini API key in the sidebar to enable AI scanning.');
+    } else if (result.results.every((r) => !r.ok)) {
+      window.A11yHud && window.A11yHud.setStatus('AI scanning is temporarily unavailable.');
     } else {
       const okCount = result.results.filter((r) => r.ok).length;
       window.A11yHud && window.A11yHud.setStatus(`AI scan complete: ${okCount}/${result.scanned} element(s) labeled.`);

@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, and user-owned saved accessibility snapshots. Saved pages support create, list, retrieve, update, favourite, delete, and synchronous PDF export operations.
+FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, user-owned saved accessibility snapshots, synchronous Gemini transformations, image descriptions, and PDF export.
 
 ## Requirements
 
@@ -74,6 +74,12 @@ Provide these environment variables through Railway rather than committing a `.e
 - `PAIRING_CODE_SECRET`, a random value containing at least 32 characters;
 - `PDF_RENDER_TIMEOUT_SECONDS=20`, the hard limit for each renderer subprocess;
 - `PDF_RENDER_CONCURRENCY=2`, the maximum renders handled by one API instance.
+- `GEMINI_API_KEY`, a Google AI API key kept only on the backend;
+- `GEMINI_MODEL=gemini-3.6-flash`, optional because this is the default;
+- `AI_REQUEST_TIMEOUT_SECONDS=30`, the maximum duration of a provider request;
+- `AI_REQUEST_CONCURRENCY=2`, the maximum concurrent provider calls per API instance;
+- `AI_CAPACITY_WAIT_SECONDS=2`, how long a request waits for local capacity;
+- `AI_REQUESTS_PER_MINUTE=15`, the per-user, per-instance AI request limit.
 
 The current local dashboard origin can be configured as:
 
@@ -84,6 +90,9 @@ CORS_ORIGINS=["http://localhost:5173"]
 Add the production dashboard origin to this JSON array once it is deployed. Do not use `*` for production.
 
 Requests are limited to 20 MiB by default. Set `MAX_REQUEST_BYTES` to change that limit.
+Image descriptions accept PNG, JPEG, and WebP data URLs up to 8 MiB after decoding. SVG
+is rejected. AI calls are synchronous, are not cached or persisted by these endpoints,
+and return safe errors without exposing provider responses.
 
 `railpack.json` extends Railpack's runtime Apt packages with Pango, HarfBuzz font subsetting, and Noto fonts required by WeasyPrint, including CJK fallback fonts. Keep the `"..."` entry so Railpack retains its generated defaults. See [Railpack's package configuration](https://railpack.com/guides/installing-packages/).
 

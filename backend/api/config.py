@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     max_request_bytes: int = Field(default=20 * 1024 * 1024, ge=1024)
     pdf_render_timeout_seconds: float = Field(default=20, gt=0)
     pdf_render_concurrency: int = Field(default=2, ge=1)
+    gemini_api_key: SecretStr | None = None
+    gemini_model: str = Field(default="gemini-3.6-flash", min_length=1, max_length=120)
+    ai_request_timeout_seconds: float = Field(default=30, gt=0)
+    ai_request_concurrency: int = Field(default=2, ge=1)
+    ai_capacity_wait_seconds: float = Field(default=2, gt=0)
+    ai_requests_per_minute: int = Field(default=15, ge=1)
 
     @field_validator("database_url", mode="before")
     @classmethod

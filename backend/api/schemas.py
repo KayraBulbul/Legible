@@ -56,6 +56,25 @@ class TransformationOperation(StrEnum):
     IMAGE_DESCRIPTION = "image-description"
 
 
+class TextTransformationOperation(StrEnum):
+    SIMPLIFY = "simplify"
+    SUMMARIZE = "summarize"
+    RESTRUCTURE = "restructure"
+    FOCUS = "focus"
+
+
+class ImageDescriptionKind(StrEnum):
+    IMAGE = "img"
+    ICON_BUTTON = "icon-button"
+    CANVAS = "canvas"
+
+
+class ImageDescriptionRole(StrEnum):
+    IMAGE = "img"
+    FIGURE = "figure"
+    GRAPHICS_DOCUMENT = "graphics-document"
+
+
 class PdfContentMode(StrEnum):
     PREFERRED = "preferred"
     SOURCE = "source"
@@ -121,6 +140,47 @@ class TransformationRecord(ApiModel):
         if value.utcoffset() is None:
             raise ValueError("a timezone offset is required")
         return value
+
+
+class TransformationRequest(ApiModel):
+    operation: TextTransformationOperation
+    input: SemanticDocument
+    options: AiPreferences = Field(default_factory=AiPreferences)
+
+
+class TransformationResponse(ApiModel):
+    output: SemanticDocument
+    metadata: TransformationRecord
+
+
+ImageDataUrl = Annotated[str, StringConstraints(min_length=1, max_length=12_000_000)]
+
+
+class ImageDescriptionRequest(ApiModel):
+    kind: ImageDescriptionKind
+    data_url: ImageDataUrl
+    context_text: str | None = Field(default=None, max_length=10_000)
+
+
+class AiProviderMetadata(ApiModel):
+    provider: str = Field(min_length=1, max_length=80)
+    model: str = Field(min_length=1, max_length=120)
+    prompt_version: str = Field(min_length=1, max_length=120)
+    performed_at: datetime
+
+    @field_validator("performed_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("a timezone offset is required")
+        return value
+
+
+class ImageDescriptionResponse(ApiModel):
+    alt_text: str = Field(min_length=1, max_length=2_000)
+    role: ImageDescriptionRole | None = None
+    cached: Literal[False] = False
+    metadata: AiProviderMetadata
 
 
 class SavedPageCreate(ApiModel):

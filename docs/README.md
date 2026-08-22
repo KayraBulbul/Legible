@@ -23,9 +23,12 @@ The deployed API currently provides:
 - saved-page creation with backend HTML sanitisation and idempotent retries;
 - paginated saved-page summaries;
 - saved-page detail, partial updates including favourite state, and deletion;
+- authenticated Gemini transformations and image descriptions;
+- synchronous, best-effort accessible PDF export;
 - ownership isolation for every authenticated operation.
 
-Profiles, Gemini transformations, image descriptions, and PDF exports are documented as planned. They do not appear in the current OpenAPI schema and clients must not call them yet.
+Profiles remain planned. Gemini transformations, image descriptions, and PDF exports
+appear in the current OpenAPI schema and may be called by authenticated clients.
 
 ## Client setup
 
@@ -42,6 +45,8 @@ Do not commit `.env.local`. The extension should grant host permission for:
 ```
 
 Extension HTTP requests must go through the Manifest V3 service worker. Content scripts should send typed runtime messages to the service worker instead of calling the backend directly.
+The extension creates and stores a backend guest session on its first AI request. It no
+longer asks users for a Gemini key or calls Google's API directly.
 
 ## Authentication flow
 
@@ -81,7 +86,7 @@ const library = await response.json();
 - Treat `404` as unavailable. The API intentionally returns the same result for missing and other-user resources.
 - Request bodies are limited to 20 MiB.
 
-The full settings shape, request examples, pairing flow, pagination contract, error envelope, and planned endpoints are in [api.md](api.md).
+The full settings shape, request examples, pairing flow, pagination contract, error envelope, AI limits, and planned endpoints are in [api.md](api.md).
 
 ## CORS and deployment
 
