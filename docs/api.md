@@ -1,6 +1,6 @@
 # Frontend API integration guide
 
-This document is the draft contract for the browser extension and dashboard. The backend has not been implemented yet, so none of these endpoints are available today. Once FastAPI exists, its Pydantic schemas and generated `/openapi.json` are authoritative. Update this guide and shared examples in the same change whenever that contract changes.
+This document is the integration contract for the browser extension and dashboard. The first FastAPI persistence slice is implemented: health, guest-session creation, saved-page creation, saved-page listing, and saved-page detail. Its Pydantic schemas and generated `/openapi.json` are authoritative for implemented endpoints. Other endpoints below are marked as planned.
 
 ## System boundary
 
@@ -17,7 +17,7 @@ The backend does not fetch `originalUrl`. Clients send extracted semantic conten
 
 ## Common conventions
 
-- Base URL: `<API_BASE_URL>`. No development or production URL is configured yet. Read it from client configuration rather than hard-coding it.
+- Local base URL: `http://127.0.0.1:8000`. The Railway production URL is not assigned yet. Read either URL from client configuration rather than hard-coding it.
 - Application routes start with `/api/v1`. Health is available at `/health`.
 - Send JSON with `Content-Type: application/json`, except PDF responses.
 - Authenticated requests use `Authorization: Bearer <accessToken>`.
@@ -42,33 +42,35 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 
 ## Endpoint summary
 
-| Method | Path | Auth | Purpose |
-|---|---|---:|---|
-| `GET` | `/health` | No | Process and database health |
-| `POST` | `/api/v1/auth/guest` | No | Create a guest user and first session |
-| `GET` | `/api/v1/auth/me` | Yes | Read the current user |
-| `POST` | `/api/v1/auth/pairing-codes` | Yes | Create a one-time dashboard/extension pairing code |
-| `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Exchange a pairing code for another session |
-| `DELETE` | `/api/v1/auth/session` | Yes | Revoke the current session |
-| `POST` | `/api/v1/saved-pages` | Yes | Save a page snapshot |
-| `GET` | `/api/v1/saved-pages` | Yes | List the current user's saved pages |
-| `GET` | `/api/v1/saved-pages/{id}` | Yes | Retrieve one full saved page |
-| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Rename a saved page |
-| `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Delete a saved page |
-| `GET` | `/api/v1/profiles` | Yes | List accessibility profiles |
-| `POST` | `/api/v1/profiles` | Yes | Create a profile |
-| `GET` | `/api/v1/profiles/{id}` | Yes | Retrieve a profile |
-| `PATCH` | `/api/v1/profiles/{id}` | Yes | Update a profile |
-| `DELETE` | `/api/v1/profiles/{id}` | Yes | Delete a profile |
-| `POST` | `/api/v1/transformations` | Yes | Run a text/content transformation |
-| `POST` | `/api/v1/image-descriptions` | Yes | Generate alt text or an accessible label |
-| `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Generate and download a PDF |
+| Method | Path | Auth | Status | Purpose |
+|---|---|---:|---|---|
+| `GET` | `/health` | No | Current | Process and database health |
+| `POST` | `/api/v1/auth/guest` | No | Current | Create a guest user and first session |
+| `GET` | `/api/v1/auth/me` | Yes | Planned | Read the current user |
+| `POST` | `/api/v1/auth/pairing-codes` | Yes | Planned | Create a one-time dashboard/extension pairing code |
+| `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Planned | Exchange a pairing code for another session |
+| `DELETE` | `/api/v1/auth/session` | Yes | Planned | Revoke the current session |
+| `POST` | `/api/v1/saved-pages` | Yes | Current | Save a page snapshot |
+| `GET` | `/api/v1/saved-pages` | Yes | Current | List the current user's saved pages |
+| `GET` | `/api/v1/saved-pages/{id}` | Yes | Current | Retrieve one full saved page |
+| `PATCH` | `/api/v1/saved-pages/{id}` | Yes | Planned | Rename a saved page |
+| `DELETE` | `/api/v1/saved-pages/{id}` | Yes | Planned | Delete a saved page |
+| `GET` | `/api/v1/profiles` | Yes | Planned | List accessibility profiles |
+| `POST` | `/api/v1/profiles` | Yes | Planned | Create a profile |
+| `GET` | `/api/v1/profiles/{id}` | Yes | Planned | Retrieve a profile |
+| `PATCH` | `/api/v1/profiles/{id}` | Yes | Planned | Update a profile |
+| `DELETE` | `/api/v1/profiles/{id}` | Yes | Planned | Delete a profile |
+| `POST` | `/api/v1/transformations` | Yes | Planned | Run a text/content transformation |
+| `POST` | `/api/v1/image-descriptions` | Yes | Planned | Generate alt text or an accessible label |
+| `GET` | `/api/v1/saved-pages/{id}/export.pdf` | Yes | Planned | Generate and download a PDF |
 
 Profiles may follow saved-page CRUD if time is tight. Their schema is still defined here so clients do not invent a second settings format.
 
 ## Authentication and user separation
 
 The MVP uses anonymous guest users. It does not require email, password, login, or signup. Each client gets an opaque access token. A one-time code connects an extension session and dashboard session to the same user.
+
+Guest-session creation and bearer-token validation are implemented. Pairing, session revocation, and `/auth/me` remain planned.
 
 ### Create a guest session
 
@@ -325,12 +327,14 @@ The planned default is 20 items and maximum is 100. Items sort newest first. Lis
 ### Retrieve, rename, and delete
 
 - `GET /api/v1/saved-pages/{id}` returns the full saved-page response.
-- `PATCH /api/v1/saved-pages/{id}` accepts `{ "title": "New title" }` and returns the updated full response.
-- `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
+- Planned: `PATCH /api/v1/saved-pages/{id}` accepts `{ "title": "New title" }` and returns the updated full response.
+- Planned: `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
 
 A missing page and a page owned by another user both return `404`. Clients must not infer that another user's page exists.
 
 ## Accessibility profiles
+
+Profile endpoints are planned and are not present in the current OpenAPI schema.
 
 Create with `POST /api/v1/profiles`:
 
@@ -368,6 +372,8 @@ Create with `POST /api/v1/profiles`:
 `PATCH /api/v1/profiles/{id}` accepts any combination of `name`, `settings`, and `isDefault`. `DELETE` returns `204`. Deleting or editing a profile does not alter the settings snapshot already stored with a saved page.
 
 ## Gemini transformations
+
+Transformation endpoints are planned. `backend/ai/` is reserved for their implementation and is untouched by the persistence slice.
 
 `POST /api/v1/transformations` runs a synchronous, authenticated transformation. It does not save a page.
 
@@ -415,6 +421,8 @@ To retain a result, the client includes `output` as `transformedDocument` and `m
 
 ## Image descriptions
 
+Image-description endpoints are planned.
+
 `POST /api/v1/image-descriptions` replaces the extension's direct Gemini image call.
 
 ```json
@@ -444,6 +452,8 @@ To retain a result, the client includes `output` as `transformedDocument` and `m
 `role` may be `null` when no role should be added. The maximum decoded image size and accepted MIME types still need human agreement. Clients must handle `413`, `415`, `422`, `429`, and provider failure without disabling non-AI accessibility features.
 
 ## PDF export
+
+PDF export is planned.
 
 `GET /api/v1/saved-pages/{id}/export.pdf` returns `200 OK` with `Content-Type: application/pdf` and a download filename in `Content-Disposition`.
 
@@ -503,7 +513,7 @@ The backend sanitises stored HTML, but clients must still treat it as untrusted:
 
 ## OpenAPI and generated client types
 
-When the backend exists:
+For the implemented backend:
 
 - FastAPI exposes interactive documentation at `/docs` and its schema at `/openapi.json`.
 - Export the generated schema to `shared/openapi.json` for clients and fixtures.
@@ -517,7 +527,7 @@ Until then, this README is the integration draft. Mock handlers should use these
 
 Frontend and backend owners need to settle these before implementation reaches the affected endpoint:
 
-- the Python version and actual local/deployment API URLs;
+- the Railway deployment URL;
 - dashboard token persistence and recovery behaviour for lost guest sessions;
 - spacing and reading-width units and validation ranges;
 - content and image size limits plus accepted image MIME types;
