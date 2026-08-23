@@ -385,6 +385,7 @@ async def test_invalid_tags_do_not_change_other_fields(
         {"tags": [1]},
         {"tags": ["x" * 51]},
         {"tags": [f"tag-{index}" for index in range(21)]},
+        {"tags": ["research"] * 21},
         {"tags": ["bad\x00tag"]},
         {"unknown": True},
     ],

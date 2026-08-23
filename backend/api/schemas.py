@@ -108,7 +108,8 @@ class AccessibilitySettings(ApiModel):
 
 DocumentText = Annotated[str, StringConstraints(max_length=1_000_000)]
 Tag = Annotated[str, StringConstraints(strict=True, min_length=1, max_length=50)]
-TagList = Annotated[list[Tag], Field(max_length=20)]
+MAX_SAVED_PAGE_TAGS = 20
+TagList = Annotated[list[Tag], Field(max_length=MAX_SAVED_PAGE_TAGS)]
 
 
 class SemanticDocument(ApiModel):
@@ -236,6 +237,8 @@ class SavedPageUpdate(ApiModel):
     def normalize_tags(cls, value: object) -> object:
         if not isinstance(value, list):
             return value
+        if len(value) > MAX_SAVED_PAGE_TAGS:
+            raise ValueError(f"tags must contain at most {MAX_SAVED_PAGE_TAGS} items")
 
         normalized: list[str] = []
         seen: set[str] = set()
