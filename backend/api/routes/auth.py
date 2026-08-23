@@ -14,6 +14,7 @@ from api.schemas import (
     PairingCodeResponse,
     SessionResponse,
     UserResponse,
+    UserUpdate,
 )
 from api.services.auth import (
     IssuedSession,
@@ -21,6 +22,7 @@ from api.services.auth import (
     create_pairing_code,
     redeem_pairing_code,
     revoke_session,
+    update_user_display_name,
 )
 
 UNAUTHORIZED_RESPONSE: dict[int | str, dict[str, Any]] = {
@@ -86,6 +88,24 @@ async def create_guest(request: Request, database: DatabaseSession) -> GuestSess
 
 @router.get("/me", response_model=UserResponse, responses=UNAUTHORIZED_RESPONSE)
 async def read_current_user(authenticated: CurrentSession) -> UserResponse:
+    return user_response(authenticated)
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    responses={
+        **UNAUTHORIZED_RESPONSE,
+        413: {"model": ErrorResponse, "description": "Request body is too large"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+    },
+)
+async def update_current_user(
+    payload: UserUpdate,
+    database: DatabaseSession,
+    authenticated: CurrentSession,
+) -> UserResponse:
+    await update_user_display_name(database, authenticated.user, payload.display_name)
     return user_response(authenticated)
 
 

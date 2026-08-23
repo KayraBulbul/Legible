@@ -11,3 +11,8 @@ _Avoid_: Bookmark, live page
 **Favourite**:
 A user's marker on a saved page that identifies it for distinct presentation or quicker access.
 _Avoid_: Favorite, starred page
+
+**Display name**:
+An optional user-chosen label for an anonymous user. It is presentation metadata, not proof of
+identity or ownership.
+_Avoid_: Username, account name
