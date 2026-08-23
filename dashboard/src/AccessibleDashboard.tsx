@@ -1,6 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { DashboardProvider } from "@/context/DashboardProvider";
-import { useDashboardContext } from "@/context/useDashboardContext";
+import {
+  FOLDER_PATH_PREFIX,
+  HOME_PATH,
+  READER_PATH_PREFIX,
+  VIEW_PATHS,
+} from "@/navigation/views";
+import { ThemeProvider } from "@/context/ThemeProvider";
+import { LibraryProvider } from "@/context/LibraryProvider";
+import { WorkspaceProvider } from "@/context/WorkspaceProvider";
+import { useWorkspace } from "@/context/workspaceContext";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import DashboardContent from "@/components/DashboardContent";
@@ -8,32 +16,40 @@ import NewFolderModal from "@/components/NewFolderModal";
 import ReaderModal from "@/components/ReaderModal";
 
 /* ============================================================================
- * ACCESSIBLE SCREEN READER — DASHBOARD GROUNDWORK
+ * ACCESSIBLE SCREEN READER — DASHBOARD
  * ----------------------------------------------------------------------------
- * Layout/design scaffolding. State lives in DashboardContext, data comes
- * from src/api (currently backed by mock data in src/data) — swap the
- * fetch* functions in src/api for real endpoints and nothing here changes.
+ * Composition root. Three providers, each owning one concern:
+ *   ThemeProvider     light/dark preference
+ *   LibraryProvider   saved pages and folders + the mutations on them
+ *   WorkspaceProvider what is being looked at — view, filters, reader, dialogs
+ *
+ * They nest in dependency order (workspace filters the library's pages), and
+ * nothing below reaches past its own concern. Data comes from src/api, which
+ * is mock-backed until VITE_API_BASE_URL is set — see dashboard/README.md.
  * ==========================================================================*/
 
 function DashboardShell() {
-  const { newFolderOpen, readerPage } = useDashboardContext();
+  const { newFolderOpen, readerPage } = useWorkspace();
 
   return (
-    <div
-      className="flex h-full min-h-[720px] w-full overflow-hidden bg-bg text-text-primary"
-      style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
-    >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@500;600;700&display=swap');`}</style>
+    <div className="flex h-full min-h-[720px] w-full overflow-hidden bg-bg font-sans text-text-primary">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-text-inverse"
+      >
+        Skip to saved pages
+      </a>
 
       <Sidebar />
 
-      <div className="relative flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <DashboardContent />
-
-        {readerPage && <ReaderModal />}
       </div>
 
+      {/* Keyed by page: opening a different page remounts the reader so its
+          controls re-seed from that page's saved settings. */}
+      {readerPage && <ReaderModal key={readerPage.id} page={readerPage} />}
       {newFolderOpen && <NewFolderModal />}
     </div>
   );
@@ -41,17 +57,27 @@ function DashboardShell() {
 
 export default function AccessibleDashboard() {
   return (
-    <DashboardProvider>
-      <Routes>
-        <Route path="/home" element={<DashboardShell />} />
-        <Route path="/pages" element={<DashboardShell />} />
-        <Route path="/pages/:pageId" element={<DashboardShell />} />
-        <Route path="/recent" element={<DashboardShell />} />
-        <Route path="/favorites" element={<DashboardShell />} />
-        <Route path="/trash" element={<DashboardShell />} />
-        <Route path="/folders/:folderId" element={<DashboardShell />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
-      </Routes>
-    </DashboardProvider>
+    <ThemeProvider>
+      <LibraryProvider>
+        <WorkspaceProvider>
+          <Routes>
+            {/* Every view renders the same shell; the URL decides what it shows
+                (see src/navigation/views.ts), so routes stay declarative. */}
+            {Object.values(VIEW_PATHS).map((path) => (
+              <Route key={path} path={path} element={<DashboardShell />} />
+            ))}
+            <Route
+              path={`${READER_PATH_PREFIX}:pageId`}
+              element={<DashboardShell />}
+            />
+            <Route
+              path={`${FOLDER_PATH_PREFIX}:folderId`}
+              element={<DashboardShell />}
+            />
+            <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
+          </Routes>
+        </WorkspaceProvider>
+      </LibraryProvider>
+    </ThemeProvider>
   );
 }

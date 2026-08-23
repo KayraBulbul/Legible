@@ -3,6 +3,12 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      // Loaded in index.html. The fallbacks matter: the app must stay readable
+      // if Google Fonts is blocked or offline.
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Lexend", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       // Preflight (Tailwind's base reset) pre-sets every element's border
       // color to its own built-in gray-200 fallback. It's inert wherever a
       // border-* color utility is used (those override it), but pointing

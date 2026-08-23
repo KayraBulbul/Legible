@@ -1,17 +1,6 @@
 import type { SavedPage } from "@/types";
 
-// Card header colours, cycled by card index — decorative, theme-invariant
-// swatch tokens (see src/index.css), purely presentational.
-export const CARD_HUES = [
-  "bg-swatch-1",
-  "bg-swatch-2",
-  "bg-swatch-3",
-  "bg-swatch-4",
-  "bg-swatch-5",
-  "bg-swatch-6",
-];
-
-// TODO(backend): GET /pages?user=me — shape should match this closely
+/** Fixture data for the mock branch of src/api/pages.ts. */
 export const MOCK_PAGES: SavedPage[] = [
   {
     id: "p1",
@@ -21,7 +10,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: "f2",
     favorited: true,
     trashed: false,
-    fontMode: "lexend",
+    dyslexiaFont: "lexend",
     contrastMode: "none",
     aiLabels: 4,
   },
@@ -33,7 +22,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: "f2",
     favorited: false,
     trashed: false,
-    fontMode: "none",
+    dyslexiaFont: "none",
     contrastMode: "dark",
     aiLabels: 0,
   },
@@ -45,7 +34,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: "f1",
     favorited: true,
     trashed: false,
-    fontMode: "none",
+    dyslexiaFont: "none",
     contrastMode: "warm",
     aiLabels: 2,
   },
@@ -57,7 +46,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: null,
     favorited: false,
     trashed: false,
-    fontMode: "opendyslexic",
+    dyslexiaFont: "opendyslexic",
     contrastMode: "none",
     aiLabels: 7,
   },
@@ -69,7 +58,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: "f1",
     favorited: false,
     trashed: false,
-    fontMode: "lexend",
+    dyslexiaFont: "lexend",
     contrastMode: "none",
     aiLabels: 0,
   },
@@ -81,7 +70,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: null,
     favorited: false,
     trashed: false,
-    fontMode: "none",
+    dyslexiaFont: "none",
     contrastMode: "none",
     aiLabels: 5,
   },
@@ -93,7 +82,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: "f3",
     favorited: false,
     trashed: false,
-    fontMode: "none",
+    dyslexiaFont: "none",
     contrastMode: "none",
     aiLabels: 1,
   },
@@ -105,7 +94,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: "f3",
     favorited: true,
     trashed: false,
-    fontMode: "lexend",
+    dyslexiaFont: "lexend",
     contrastMode: "warm",
     aiLabels: 0,
   },
@@ -117,7 +106,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: null,
     favorited: false,
     trashed: false,
-    fontMode: "none",
+    dyslexiaFont: "none",
     contrastMode: "none",
     aiLabels: 3,
   },
@@ -129,7 +118,7 @@ export const MOCK_PAGES: SavedPage[] = [
     folderId: null,
     favorited: false,
     trashed: true,
-    fontMode: "none",
+    dyslexiaFont: "none",
     contrastMode: "none",
     aiLabels: 0,
   },

@@ -1,15 +1,6 @@
-import { useState, type ChangeEvent } from "react";
-import {
-  X,
-  Sparkles,
-  Wand2,
-  Target,
-  FileDown,
-  Maximize2,
-  Star,
-  Minimize2,
-  Trash2,
-} from "lucide-react";
+import { useCallback, useId, useRef, useState } from "react";
+import { Maximize2, Minimize2, Star, Target, X } from "lucide-react";
+import type { ContrastMode, FontMode, SavedPage, ToolPanel } from "@/types";
 import cn from "@/utils/cn";
 import bionicSpans from "@/utils/bionicSpans";
 import {
@@ -17,304 +8,217 @@ import {
   SAMPLE_SIMPLIFIED,
   SAMPLE_SUMMARY,
 } from "@/data/sampleContent";
-import type { ToolPanel, ContrastMode, FontMode } from "@/types";
-import { useDashboardContext } from "@/context/useDashboardContext";
+import { useDialog } from "@/hooks/useDialog";
+import { useDismiss } from "@/hooks/useDismiss";
+import { useReaderSettings } from "@/hooks/useReaderSettings";
+import { useLibrary } from "@/context/libraryContext";
+import { useWorkspace } from "@/context/workspaceContext";
+import ReaderControls from "@/components/ReaderControls";
 
-// Mirrors extension/popup/popup.html controls 1:1 so the same settings
-// object can drive both surfaces later.
-export default function ReaderModal() {
+const FONT_STACKS: Record<FontMode, string> = {
+  none: "'Inter', sans-serif",
+  lexend: "'Lexend', sans-serif",
+  opendyslexic: "'OpenDyslexic', 'Comic Sans MS', Verdana, sans-serif",
+};
+
+/**
+ * Literal preset swatches previewing how the saved page will render for its
+ * reader — deliberately not theme tokens, since they preview the reader's
+ * chosen contrast rather than the dashboard's own light/dark UI.
+ */
+const CONTRAST_CLASSES: Record<ContrastMode, string> = {
+  none: "bg-white text-stone-800",
+  dark: "bg-black text-yellow-300",
+  warm: "bg-amber-50 text-indigo-950",
+};
+
+/**
+ * Reads one saved page with the accessibility controls applied live.
+ *
+ * Mounted with `key={page.id}` by the shell, so opening a different page
+ * remounts it and its settings re-seed from that page instead of carrying the
+ * previous page's over.
+ */
+export default function ReaderModal({ page }: { page: SavedPage }) {
+  const { setFavorite, moveToTrash } = useLibrary();
   const {
-    readerPage: page,
     closeReader,
     readerFullScreen: fullScreen,
     enterReaderFullScreen,
     exitReaderFullScreen,
-    toggleFavorite,
-    moveToTrash,
-  } = useDashboardContext();
+  } = useWorkspace();
 
-  const [fontMode, setFontMode] = useState<FontMode>(page?.fontMode ?? "none");
-  const [contrastMode, setContrastMode] = useState<ContrastMode>(
-    page?.contrastMode ?? "none",
-  );
-  const [fontScale, setFontScale] = useState(100);
-  const [bionic, setBionic] = useState(false);
+  const { settings, update } = useReaderSettings(page);
   const [activeTool, setActiveTool] = useState<ToolPanel>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
-  if (!page) return null;
+  const focusMode = activeTool === "focus";
 
-  const fontFamily =
-    fontMode === "lexend"
-      ? "'Lexend', sans-serif"
-      : fontMode === "opendyslexic"
-        ? "'Comic Sans MS', Verdana, sans-serif"
-        : "'Inter', sans-serif";
+  // Escape backs out one layer at a time: focus mode first, then the reader.
+  const handleDismiss = useCallback(() => {
+    if (focusMode) setActiveTool(null);
+    else closeReader();
+  }, [focusMode, closeReader]);
 
-  // These are literal preset swatches previewing how the saved page will
-  // render for the reader (dark/warm/none), independent of the dashboard's
-  // own light/dark UI theme — intentionally not tied to theme tokens.
-  const contrastClasses =
-    contrastMode === "dark"
-      ? "bg-black text-yellow-300"
-      : contrastMode === "warm"
-        ? "bg-amber-50 text-indigo-950"
-        : "bg-white text-stone-800";
+  useDialog(panelRef);
+  useDismiss(true, panelRef, handleDismiss);
+
+  const toggleTool = useCallback(
+    (tool: Exclude<ToolPanel, null>) => {
+      setActiveTool((current) => (current === tool ? null : tool));
+      // Focus mode is only meaningful edge to edge.
+      if (tool === "focus") enterReaderFullScreen(page.id);
+    },
+    [enterReaderFullScreen, page.id],
+  );
 
   const bodyText =
     activeTool === "simplify" ? SAMPLE_SIMPLIFIED : SAMPLE_ARTICLE;
-  const focusMode = activeTool === "focus";
   const expanded = fullScreen || focusMode;
-
-  const unfocus = () => setActiveTool(null);
 
   return (
     <div
       className={cn(
         "z-50 flex bg-overlay",
-        focusMode
-          ? "fixed inset-0"
-          : fullScreen
-            ? "absolute inset-0"
-            : "fixed inset-0 items-center justify-center p-4",
+        expanded ? "fixed inset-0" : "fixed inset-0 items-center justify-center p-4",
       )}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
-          "flex overflow-hidden bg-surface",
-          expanded
-            ? "h-full w-full"
-            : "h-[85vh] w-full max-w-4xl rounded-2xl shadow-2xl",
+          "flex overflow-hidden bg-surface outline-none",
+          expanded ? "h-full w-full" : "h-[85vh] w-full max-w-4xl rounded-2xl shadow-2xl",
         )}
       >
-        {/* Controls rail — hidden in focus mode */}
-        {activeTool !== "focus" && (
-          <div className="flex w-56 shrink-0 flex-col gap-4 border-r border-border bg-surface-hover p-4 overflow-y-auto selection-none">
-            <div className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-              Reading controls
-            </div>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
-              Dyslexia-friendly font
-              <select
-                value={fontMode}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                  setFontMode(e.target.value as FontMode)
-                }
-                className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs"
-              >
-                <option value="none">Off</option>
-                <option value="lexend">Lexend</option>
-                <option value="opendyslexic">OpenDyslexic</option>
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
-              Contrast theme
-              <select
-                value={contrastMode}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                  setContrastMode(e.target.value as ContrastMode)
-                }
-                className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs"
-              >
-                <option value="none">Off</option>
-                <option value="dark">Dark (black / yellow)</option>
-                <option value="warm">Warm (cream / navy)</option>
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
-              Font size — {fontScale}%
-              <input
-                type="range"
-                min={80}
-                max={200}
-                step={10}
-                value={fontScale}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setFontScale(Number(e.target.value))
-                }
-                className="accent-accent"
-              />
-            </label>
-
-            <label className="flex items-center gap-2 text-xs font-medium text-text-secondary">
-              <input
-                type="checkbox"
-                checked={bionic}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setBionic(e.target.checked)
-                }
-                className="h-3.5 w-3.5 accent-accent"
-              />
-              Bionic reading
-            </label>
-            <div className="flex flex-col gap-2">
-              <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                Reader tools
-              </div>
-              <button
-                onClick={() =>
-                  setActiveTool(activeTool === "summary" ? null : "summary")
-                }
-                className={cn(
-                  "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs font-medium",
-                  activeTool === "summary"
-                    ? "border-warning-muted bg-warning text-text-inverse"
-                    : "border-border text-text-secondary hover:border-warning-muted hover:bg-warning-subtle",
-                )}
-              >
-                <Sparkles size={13} /> Summarize
-              </button>
-              <button
-                onClick={() =>
-                  setActiveTool(activeTool === "simplify" ? null : "simplify")
-                }
-                className={cn(
-                  "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs font-medium",
-                  activeTool === "simplify"
-                    ? "border-warning-muted bg-warning text-text-inverse"
-                    : "border-border text-text-secondary hover:border-warning-muted hover:bg-warning-subtle",
-                )}
-              >
-                <Wand2 size={13} /> Simplify language
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTool("focus");
-                  if (!fullScreen) enterReaderFullScreen(page.id);
-                }}
-                className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-left text-xs font-medium text-text-secondary hover:border-warning-muted hover:bg-warning-subtle"
-              >
-                <Target size={13} /> Focus mode
-              </button>
-            </div>
-            {/* TODO(backend): POST /pages/:id/export → PDF */}
-            <button className="mt-1 flex items-center gap-2 rounded-lg bg-accent px-2.5 py-3 text-left text-sm font-medium text-text-inverse hover:bg-accent-hover">
-              <FileDown size={16} /> Export as PDF
-            </button>
-            <button
-              onClick={() => {
-                moveToTrash(page.id);
-                closeReader();
-              }}
-              className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-left text-xs font-medium text-danger hover:bg-surface-hover"
-            >
-              <Trash2 size={13} /> Move to trash
-            </button>
-          </div>
+        {!focusMode && (
+          <ReaderControls
+            settings={settings}
+            onChange={update}
+            activeTool={activeTool}
+            onToggleTool={toggleTool}
+            onTrash={() => {
+              moveToTrash(page.id);
+              closeReader();
+            }}
+          />
         )}
 
-        {/* Article preview */}
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            {focusMode ? (
-              <>
-                <div className="truncate text-sm font-semibold text-text-primary">
-                  {page.title}
-                </div>
-                <button
-                  onClick={unfocus}
-                  aria-label="Exit focus mode"
-                  className="rounded-full p-1.5 text-text-secondary hover:bg-surface-hover"
-                >
-                  <Minimize2 size={16} />
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-text-primary">
-                    {page.title}
-                  </div>
-                  <div className="text-xs text-text-secondary">
-                    {page.domain}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      toggleFavorite(page.id);
-                    }}
-                    aria-label={
+          <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
+            <div className="min-w-0">
+              <h2
+                id={titleId}
+                className="truncate text-sm font-semibold text-text-primary"
+              >
+                {page.title}
+              </h2>
+              {!focusMode && (
+                <p className="text-xs text-text-secondary">{page.domain}</p>
+              )}
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1">
+              {focusMode ? (
+                <IconButton
+                  icon={Minimize2}
+                  label="Exit focus mode"
+                  onClick={() => setActiveTool(null)}
+                />
+              ) : (
+                <>
+                  <IconButton
+                    icon={Star}
+                    label={
                       page.favorited
                         ? "Remove from favorites"
                         : "Add to favorites"
                     }
-                    aria-pressed={page.favorited}
-                    className={
-                      "rounded-full p-1.5 text-text-secondary hover:bg-surface-hover"
-                    }
-                  >
-                    <Star
-                      size={18}
-                      className={cn(
-                        page.favorited &&
-                          "fill-text-secondary stroke-text-secondary",
-                      )}
-                    />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTool((prev: ToolPanel) =>
-                        prev === "focus" ? null : "focus",
-                      );
-                      if (!fullScreen) enterReaderFullScreen(page.id);
-                    }}
-                    aria-label="Toggle focus mode"
-                    className="rounded-full p-1.5 text-text-secondary hover:bg-surface-hover"
-                  >
-                    <Target size={18} />
-                  </button>
-                  <button
-                    onClick={() =>
+                    pressed={page.favorited}
+                    iconClassName={cn(page.favorited && "fill-text-secondary")}
+                    onClick={() => setFavorite(page.id, !page.favorited)}
+                  />
+                  <IconButton
+                    icon={Target}
+                    label="Enter focus mode"
+                    onClick={() => toggleTool("focus")}
+                  />
+                  <IconButton
+                    icon={fullScreen ? Minimize2 : Maximize2}
+                    label={fullScreen ? "Exit full screen" : "Enter full screen"}
+                    onClick={
                       fullScreen
-                        ? exitReaderFullScreen()
-                        : enterReaderFullScreen(page.id)
+                        ? exitReaderFullScreen
+                        : () => enterReaderFullScreen(page.id)
                     }
-                    aria-label={
-                      fullScreen ? "Exit full screen" : "Enter full screen"
-                    }
-                    className="rounded-full p-1.5 text-text-secondary hover:bg-surface-hover"
-                  >
-                    {fullScreen ? (
-                      <Minimize2 size={16} />
-                    ) : (
-                      <Maximize2 size={16} />
-                    )}
-                  </button>
-                  <button
+                  />
+                  <IconButton
+                    icon={X}
+                    label="Close reader"
                     onClick={closeReader}
-                    aria-label="Close reader"
-                    className="rounded-full p-1.5 text-text-secondary hover:bg-surface-hover"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              </>
-            )}
+                  />
+                </>
+              )}
+            </div>
           </div>
 
           {activeTool === "summary" && (
+            /* TODO(AI): replace with real output from POST /api/v1/transformations. */
             <div className="m-5 mb-0 rounded-xl border border-warning-muted bg-warning-subtle p-3 text-xs text-warning">
               <span className="font-semibold">AI summary (example)</span> —{" "}
               {SAMPLE_SUMMARY}
-              {/* TODO(AI): replace with real model output from the AI teammate's service */}
             </div>
           )}
 
-          <div
+          {/* TODO(backend): render the saved page's sanitised sourceDocument
+              here — never raw HTML from the source site (docs/api.md). */}
+          <article
             className={cn(
               "m-5 flex-1 rounded-xl p-6 transition-colors",
-              contrastClasses,
+              CONTRAST_CLASSES[settings.contrastMode],
             )}
-            style={{ fontFamily, fontSize: `${fontScale}%`, lineHeight: 1.8 }}
+            style={{
+              fontFamily: FONT_STACKS[settings.dyslexiaFont],
+              fontSize: `${settings.fontScale}%`,
+              lineHeight: 1.8,
+            }}
           >
-            <h2 className="mb-3 text-lg font-bold">{page.title}</h2>
-            <p>{bionic ? bionicSpans(bodyText) : bodyText}</p>
-          </div>
+            <h3 className="mb-3 text-lg font-bold">{page.title}</h3>
+            <p>{settings.bionicReading ? bionicSpans(bodyText) : bodyText}</p>
+          </article>
         </div>
       </div>
     </div>
+  );
+}
+
+interface IconButtonProps {
+  icon: typeof Star;
+  label: string;
+  onClick: () => void;
+  pressed?: boolean;
+  iconClassName?: string;
+}
+
+function IconButton({
+  icon: Icon,
+  label,
+  onClick,
+  pressed,
+  iconClassName,
+}: IconButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      className="rounded-full p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+    >
+      <Icon size={17} className={iconClassName} />
+    </button>
   );
 }

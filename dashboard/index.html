@@ -4,7 +4,39 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>dashboard</title>
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Read, organise and restyle the pages you saved with A11y Reader."
+    />
+    <title>A11y Reader — Dashboard</title>
+
+    <!-- Fonts are linked here rather than @import-ed from a component: the
+         browser can start fetching them alongside the HTML, and no component
+         re-render can inject a duplicate stylesheet. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@500;600;700&display=swap"
+    />
+
+    <!-- Applies the saved theme before first paint. Without it the app renders
+         light, then flips on hydration — a jarring flash for exactly the users
+         who chose dark for comfort. Keep the key in sync with themeContext.ts. -->
+    <script>
+      try {
+        var stored = localStorage.getItem("a11y-reader-theme");
+        document.documentElement.dataset.theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+      } catch (e) {
+        /* Storage blocked — the app falls back to the system preference. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

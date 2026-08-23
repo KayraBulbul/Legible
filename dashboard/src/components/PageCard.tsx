@@ -1,102 +1,56 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  ExternalLink,
-  MoreVertical,
-  RotateCcw,
-  Star,
-  Trash2,
-  FileDown,
-} from "lucide-react";
+import { ExternalLink, RotateCcw, Star } from "lucide-react";
+import type { SavedPage } from "@/types";
 import cn from "@/utils/cn";
 import formatDate from "@/utils/formatDate";
-import type { SavedPage } from "@/types";
+import { swatchForId } from "@/theme/swatches";
 import ModeBadges from "@/components/ModeBadges";
-import PopupTooltip from "@/components/PopupTooltip";
-import { useDashboardContext } from "@/context/useDashboardContext";
+import PageActionsMenu from "@/components/PageActionsMenu";
+import { useLibrary } from "@/context/libraryContext";
+import { useWorkspace } from "@/context/workspaceContext";
 
-export interface PageItemActionsProps {
-  page: SavedPage;
-  onOpen: () => void;
-  onRestore: () => void;
-  onDeleteForever: () => void;
-  onMoveToTrash: () => void;
-  isTrash: boolean;
-}
-
-interface PageCardProps extends PageItemActionsProps {
-  hue: string;
-  onToggleFavorite: () => void;
-}
-
-export default function PageCard({
-  page,
-  hue,
-  onOpen,
-  onRestore,
-  onDeleteForever,
-  onMoveToTrash,
-  onToggleFavorite,
-  isTrash,
-}: PageCardProps) {
-  const { enterReaderFullScreen } = useDashboardContext();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
+/**
+ * Grid tile for one saved page. Reads its own actions from context rather than
+ * taking a callback per action, so the grid above it stays a plain list.
+ */
+export default function PageCard({ page }: { page: SavedPage }) {
+  const { setFavorite, restorePage, deleteForever } = useLibrary();
+  const { openReader, enterReaderFullScreen, isTrashView } = useWorkspace();
 
   return (
-    <div className="group relative flex flex-col rounded-xl border border-border bg-surface transition-shadow hover:shadow-md">
-      {!isTrash && (
-        <div className="absolute right-2 top-2 z-10">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite();
-            }}
-            aria-label={
-              page.favorited ? "Remove from favorites" : "Add to favorites"
-            }
-            aria-pressed={page.favorited}
-            className={
-              "flex items-center justify-center rounded-full p-1.5 text-text-inverse hover:scale-110"
-            }
-          >
-            <Star
-              size={18}
-              className={cn(
-                page.favorited && "fill-text-inverse stroke-text-inverse",
-              )}
-            />
-          </button>
-        </div>
+    <div className="group relative flex h-full flex-col rounded-xl border border-border bg-surface transition-shadow hover:shadow-md">
+      {!isTrashView && (
+        <button
+          onClick={() => setFavorite(page.id, !page.favorited)}
+          aria-label={
+            page.favorited
+              ? `Remove ${page.title} from favorites`
+              : `Add ${page.title} to favorites`
+          }
+          aria-pressed={page.favorited}
+          // Literal white: this sits on a swatch, which is the same colour in
+          // both themes, so a theme token would go unreadable in one of them.
+          className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-white drop-shadow hover:scale-110"
+        >
+          <Star size={18} className={cn(page.favorited && "fill-white")} />
+        </button>
       )}
 
-      {/* hue is a decorative, theme-invariant swatch class (see CARD_HUES) —
-          paired with literal white text since the swatches are chosen to
-          have enough contrast for white overlays regardless of app theme.
-          overflow-hidden is scoped to this header (not the whole card) so it
-          still clips to the rounded top corners without clipping the actions
-          dropdown below. */}
+      {/* overflow-hidden is scoped to the header, not the card, so it clips to
+          the rounded corners without also clipping the actions menu below. */}
       <button
-        onClick={onOpen}
+        onClick={() => openReader(page)}
+        aria-label={`Open ${page.title}`}
         className={cn(
           "flex h-24 items-center justify-center overflow-hidden rounded-t-xl text-2xl font-bold text-white/90",
-          hue,
+          swatchForId(page.id),
         )}
       >
-        {page.title.charAt(0)}
+        <span aria-hidden="true">{Array.from(page.title)[0] ?? "?"}</span>
       </button>
 
       <div className="flex flex-1 flex-col gap-2 p-3">
         <button
-          onClick={onOpen}
+          onClick={() => openReader(page)}
           className="truncate text-left text-sm font-semibold text-text-primary hover:text-accent"
         >
           {page.title}
@@ -111,16 +65,16 @@ export default function PageCard({
       </div>
 
       <div className="flex items-center justify-between border-t border-border px-3 py-2">
-        {isTrash ? (
+        {isTrashView ? (
           <>
             <button
-              onClick={onRestore}
+              onClick={() => restorePage(page.id)}
               className="flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-accent"
             >
-              <RotateCcw size={13} /> Restore
+              <RotateCcw size={13} aria-hidden="true" /> Restore
             </button>
             <button
-              onClick={onDeleteForever}
+              onClick={() => deleteForever(page.id)}
               className="text-xs font-medium text-danger hover:underline"
             >
               Delete forever
@@ -130,38 +84,14 @@ export default function PageCard({
           <>
             <button
               onClick={() => enterReaderFullScreen(page.id)}
+              // Without the title, a screen reader hears a page of buttons all
+              // called "Open" with nothing to tell them apart.
+              aria-label={`Open ${page.title} full screen`}
               className="flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-accent"
             >
-              <ExternalLink size={13} /> Open
+              <ExternalLink size={13} aria-hidden="true" /> Open
             </button>
-            <div ref={menuRef} className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen((open) => !open);
-                }}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                aria-label="More actions"
-                className="rounded p-1 text-text-secondary hover:bg-surface-hover"
-              >
-                <MoreVertical size={14} />
-              </button>
-              {menuOpen && (
-                <PopupTooltip
-                  onClose={() => setMenuOpen(false)}
-                  items={[
-                    { label: "Export to PDF", icon: FileDown, onClick: () => {} },
-                    {
-                      label: "Move to trash",
-                      icon: Trash2,
-                      onClick: onMoveToTrash,
-                      danger: true,
-                    },
-                  ]}
-                />
-              )}
-            </div>
+            <PageActionsMenu page={page} />
           </>
         )}
       </div>
