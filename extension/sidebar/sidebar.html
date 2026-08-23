@@ -40,6 +40,42 @@
         </button>
       </div>
       <p id="saveStatus" class="hint"></p>
+
+      <div class="subsection" id="pairingSection">
+        <h3><span class="micon" aria-hidden="true">devices</span>Linked devices</h3>
+        <p class="hint">Link another browser or the dashboard to this same library. Pages are
+          not copied - both devices simply see the one library.</p>
+
+        <button id="pairCreateBtn" class="btn" disabled>
+          <span class="micon" aria-hidden="true">qr_code_2</span>
+          <span>Show a linking code</span>
+        </button>
+        <div id="pairCodeBox" class="pair-code-box" hidden>
+          <output id="pairCode" class="pair-code"></output>
+          <div class="row">
+            <button id="pairCopyBtn" class="btn btn-small">
+              <span class="micon" aria-hidden="true">content_copy</span>
+              <span>Copy</span>
+            </button>
+            <span id="pairExpiry" class="status-text" role="timer"></span>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="field-label">
+            <span class="label-text"><span class="micon" aria-hidden="true">link</span>Have a code?</span>
+          </span>
+          <input type="text" id="pairCodeInput" placeholder="8-character code" autocomplete="off"
+            spellcheck="false" maxlength="11" aria-describedby="pairRedeemWarning" />
+        </label>
+        <p id="pairRedeemWarning" class="hint">Using a code replaces this device's library with
+          the other device's. Anything saved here first stays with the old session.</p>
+        <button id="pairRedeemBtn" class="btn">
+          <span class="micon" aria-hidden="true">link</span>
+          <span>Link this device</span>
+        </button>
+        <p id="pairStatus" class="hint" role="status"></p>
+      </div>
     </section>
 
     <section class="section">
@@ -290,33 +326,7 @@
         <span>Start / Stop Reading (Alt+R)</span>
       </button>
       <p class="hint">Alt+N / Alt+P move to the next / previous element.</p>
-    </section>
-
-    <section class="section">
-      <h2><span class="micon" aria-hidden="true">auto_awesome</span>AI Vision (Gemini)</h2>
-      <label class="field">
-        <span class="field-label">
-          <span class="label-text"><span class="micon" aria-hidden="true">key</span>Gemini API key</span>
-        </span>
-        <input type="password" id="apiKey" placeholder="Paste your Gemini API key" autocomplete="off" />
-      </label>
-      <div class="row">
-        <button id="saveKeyBtn" class="btn">
-          <span class="micon" aria-hidden="true">save</span>
-          <span>Save Key</span>
-        </button>
-        <span id="keyStatus" class="status-text"></span>
-      </div>
-      <label class="checkbox-field">
-        <input type="checkbox" id="aiEnabled" checked />
-        <span class="micon" aria-hidden="true">smart_toy</span>
-        <span>Enable AI alt-text / ARIA generation</span>
-      </label>
-      <button id="scanBtn" class="btn btn-primary">
-        <span class="micon" aria-hidden="true">document_scanner</span>
-        <span>Scan This Page with AI</span>
-      </button>
-      <p id="scanStatus" class="hint"></p>
+      <p id="readStatus" class="hint" role="status"></p>
     </section>
 
     <section class="section" id="extensionSettingsSection">

@@ -21,7 +21,6 @@
     voiceURI: null,
     toolbarVisible: true,
     extTheme: 'light',
-    aiEnabled: true,
   };
 
   // Values forced while the extension is switched off from the sidebar. The user's own
@@ -87,22 +86,6 @@
     applyAll();
   });
 
-  async function runAiScan() {
-    if (!window.A11yScanner) return { ok: false };
-    if (!isEnabled()) return { ok: false, reason: 'extension-off' };
-    if (!settings.aiEnabled) {
-      return { ok: false, reason: 'ai-disabled' };
-    }
-    const result = await window.A11yScanner.scanPage(document.body);
-    return { ok: true, result };
-  }
-
-  async function runAiScanFocused() {
-    const el = window.A11yScreenReader && window.A11yScreenReader.getFocusedOrHoveredImage();
-    if (!el) return;
-    return await window.A11yScanner.scanSingleElement(el);
-  }
-
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.type) return;
 
@@ -119,9 +102,6 @@
           case 'prev-element':
             window.A11yScreenReader && window.A11yScreenReader.prev();
             break;
-          case 'ai-scan-focused':
-            runAiScanFocused();
-            break;
         }
         break;
       }
@@ -135,9 +115,6 @@
       case 'GET_SETTINGS':
         sendResponse({ settings });
         break;
-      case 'RUN_AI_SCAN':
-        runAiScan().then(sendResponse);
-        return true;
       case 'TOGGLE_READ':
         if (!isEnabled()) {
           sendResponse({ ok: false, reason: 'extension-off' });
@@ -153,14 +130,13 @@
         settings = { ...DEFAULT_SETTINGS };
         applyAll();
         if (window.A11yScreenReader) window.A11yScreenReader.stopReading();
-        if (window.A11yScanner && window.A11yScanner.revertLabels) window.A11yScanner.revertLabels();
         sendResponse({ ok: true });
         break;
     }
     return undefined;
   });
 
-  window.A11yContent = { updateSetting, runAiScan, runAiScanFocused, getSettings: () => settings };
+  window.A11yContent = { updateSetting, getSettings: () => settings };
 
   loadSettings(() => {
     applyAll();

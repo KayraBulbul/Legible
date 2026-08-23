@@ -117,6 +117,20 @@ body {
   font-weight: 700;
   flex: 1 1 auto;
 }
+.header .icon-btn {
+  color: var(--color-accent);
+}
+.header .icon-btn .micon {
+  color: var(--color-accent);
+}
+.header .icon-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent-hover);
+}
+.header .icon-btn:hover .micon {
+  color: var(--color-accent-hover);
+}
 
 .icon-btn {
   flex: 0 0 auto;
@@ -140,6 +154,9 @@ body {
 .icon-btn.is-off {
   background: var(--color-accent);
   border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.icon-btn.is-off .micon {
   color: var(--color-on-accent);
 }
 .icon-btn.is-off:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
@@ -174,7 +191,10 @@ body.is-off main {
   color: var(--color-text-muted);
   margin: 0 0 10px;
 }
-.section h2 .micon { font-size: 17px; }
+.section h2 .micon {
+  font-size: 17px;
+  color: var(--color-accent);
+}
 
 .note {
   display: flex;
@@ -643,3 +663,64 @@ html[data-ext-theme="contrast"] .checkbox-field input {
 }
 
 
+
+/* Pairing ("Linked devices") lives as a subsection inside Account rather than a section of
+   its own, because it is a property of the connection above it, not a separate feature.
+   Everything below is built from the existing custom properties so it themes for free. */
+.subsection {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.subsection h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: 0 0 8px;
+}
+
+.subsection h3 .micon {
+  font-size: 16px;
+  color: var(--color-accent);
+}
+
+.btn.btn-small {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+.pair-code-box {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-hover);
+}
+
+/* The code is read off one screen and typed into another, so it is set large, monospaced
+   and widely tracked: the backend alphabet already drops I/O/0/1, and this keeps the
+   remaining lookalikes (5/S, 8/B) distinguishable. */
+.pair-code {
+  display: block;
+  margin-bottom: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: var(--color-text-primary);
+  user-select: all;
+}
+
+#pairCodeInput {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}

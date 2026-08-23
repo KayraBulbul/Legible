@@ -46,7 +46,6 @@ function mapA11ySettingsToBackend(a11ySettings) {
     ttsRate: Math.min(2, Math.max(0.5, Number(s.ttsRate) || 1)),
     ttsPitch: Math.min(2, Math.max(0, Number(s.ttsPitch) || 1)),
     voiceURI: s.voiceURI || null,
-    aiEnabled: s.aiEnabled !== false,
   };
 }
 

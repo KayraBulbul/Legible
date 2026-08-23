@@ -171,24 +171,6 @@
     settings = { ...settings, ...next };
   }
 
-  function getFocusedOrHoveredImage() {
-    const active = document.activeElement;
-    if (active && (active.tagName === 'IMG' || active.tagName === 'CANVAS')) return active;
-    if (window.__a11yLastHovered) return window.__a11yLastHovered;
-    return null;
-  }
-
-  document.addEventListener(
-    'mouseover',
-    (e) => {
-      const target = e.target;
-      if (target && (target.tagName === 'IMG' || target.tagName === 'CANVAS')) {
-        window.__a11yLastHovered = target;
-      }
-    },
-    { passive: true }
-  );
-
   window.speechSynthesis.onvoiceschanged = () => {};
 
   window.A11yScreenReader = {
@@ -198,7 +180,6 @@
     next,
     prev,
     updateSettings,
-    getFocusedOrHoveredImage,
     isReading: () => isReading,
     rebuild: buildElementList,
   };

@@ -1,5 +1,11 @@
-import { analyzeImage } from './gemini-client.js';
-import { ApiError, createGuestSession, ensureSession, authedFetchWithRetry } from './api-client.js';
+import {
+  ApiError,
+  createGuestSession,
+  createPairingCode,
+  ensureSession,
+  redeemPairingCode,
+  authedFetchWithRetry,
+} from './api-client.js';
 import { mapA11ySettingsToBackend } from './settings-mapper.js';
 
 // The settings panel is injected into the page as a floating overlay rather than opened in
@@ -12,57 +18,6 @@ chrome.action.onClicked.addListener(async (tab) => {
     // No content script on this tab (e.g. chrome:// pages) - ignore.
   }
 });
-
-const CACHE_KEY = 'a11yImageCache';
-const MAX_CACHE_ENTRIES = 500;
-
-async function hashKey(str) {
-  const enc = new TextEncoder().encode(str);
-  const digest = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function getCache() {
-  const { [CACHE_KEY]: cache } = await chrome.storage.local.get([CACHE_KEY]);
-  return cache || {};
-}
-
-async function setCacheEntry(key, value) {
-  const cache = await getCache();
-  cache[key] = { ...value, ts: Date.now() };
-  const keys = Object.keys(cache);
-  if (keys.length > MAX_CACHE_ENTRIES) {
-    keys
-      .sort((a, b) => cache[a].ts - cache[b].ts)
-      .slice(0, keys.length - MAX_CACHE_ENTRIES)
-      .forEach((k) => delete cache[k]);
-  }
-  await chrome.storage.local.set({ [CACHE_KEY]: cache });
-}
-
-async function handleAnalyzeImage(payload) {
-  const { dataUrl, kind, cacheKey } = payload;
-  const { geminiApiKey } = await chrome.storage.local.get(['geminiApiKey']);
-  if (!geminiApiKey) {
-    return { ok: false, error: 'missing-api-key' };
-  }
-
-  const key = await hashKey(`${kind}:${cacheKey || dataUrl.slice(0, 512)}`);
-  const cache = await getCache();
-  if (cache[key]) {
-    return { ok: true, result: cache[key], cached: true };
-  }
-
-  try {
-    const result = await analyzeImage({ dataUrl, kind }, geminiApiKey);
-    await setCacheEntry(key, result);
-    return { ok: true, result };
-  } catch (err) {
-    return { ok: false, error: err.message || 'analysis-failed' };
-  }
-}
 
 async function handleBackendConnect() {
   try {
@@ -107,13 +62,30 @@ async function handleBackendSavePage(payload) {
   }
 }
 
+async function handleBackendCreatePairingCode() {
+  const session = await ensureSession();
+  if (!session) return { ok: false, error: 'not_connected' };
+  try {
+    const { code, expiresAt } = await createPairingCode();
+    return { ok: true, code, expiresAt };
+  } catch (err) {
+    return { ok: false, error: (err instanceof ApiError && err.code) || 'pairing-failed' };
+  }
+}
+
+async function handleBackendRedeemPairingCode(payload) {
+  try {
+    const session = await redeemPairingCode(payload.code);
+    return { ok: true, userId: session.userId };
+  } catch (err) {
+    return { ok: false, error: (err instanceof ApiError && err.code) || 'pairing-failed' };
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) return undefined;
 
   switch (message.type) {
-    case 'AI_ANALYZE_IMAGE':
-      handleAnalyzeImage(message.payload).then(sendResponse);
-      return true;
     case 'BACKEND_CONNECT':
       handleBackendConnect().then(sendResponse);
       return true;
@@ -122,6 +94,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     case 'BACKEND_SAVE_PAGE':
       handleBackendSavePage(message.payload || {}).then(sendResponse);
+      return true;
+    case 'BACKEND_CREATE_PAIRING_CODE':
+      handleBackendCreatePairingCode().then(sendResponse);
+      return true;
+    case 'BACKEND_REDEEM_PAIRING_CODE':
+      handleBackendRedeemPairingCode(message.payload || {}).then(sendResponse);
       return true;
     default:
       return undefined;
@@ -139,6 +117,10 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
+  // Left over from the removed AI vision scan: drop the user's Gemini API key and the
+  // cached image descriptions so neither lingers in local storage after the upgrade.
+  chrome.storage.local.remove(['geminiApiKey', 'a11yImageCache']);
+
   chrome.storage.local.get(['a11ySettings'], (res) => {
     if (!res.a11ySettings) {
       chrome.storage.local.set({
@@ -163,7 +145,6 @@ chrome.runtime.onInstalled.addListener(() => {
           voiceURI: null,
           toolbarVisible: true,
           extTheme: 'light',
-          aiEnabled: true,
         },
       });
     }

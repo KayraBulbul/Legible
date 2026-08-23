@@ -66,13 +66,3 @@ html.a11y-cursor-hidden * {
 }
 /* Shape styling (ring, dot, crosshair, arrow) lives inside the cursor's shadow root in
    content/custom-cursor.js, out of reach of page CSS and of this extension's own presets. */
-
-/* AI-labeled element badges */
-img.a11y-ai-labeled, [role="button"].a11y-ai-labeled, button.a11y-ai-labeled, a.a11y-ai-labeled, canvas.a11y-ai-labeled {
-  outline: 2px dashed #22c55e !important;
-  outline-offset: 2px;
-}
-img.a11y-ai-failed, [role="button"].a11y-ai-failed, button.a11y-ai-failed, a.a11y-ai-failed, canvas.a11y-ai-failed {
-  outline: 2px dotted #ef4444 !important;
-  outline-offset: 2px;
-}
