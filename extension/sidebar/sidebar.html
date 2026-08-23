@@ -17,10 +17,6 @@
     <button type="button" id="hidePanelBtn" class="icon-btn" title="Hide panel" aria-label="Hide panel">
       <span class="micon" aria-hidden="true">keyboard_double_arrow_right</span>
     </button>
-    <button type="button" id="powerBtn" class="icon-btn" title="Save settings and turn off"
-      aria-label="Save settings and turn off">
-      <span class="micon" id="powerIcon" aria-hidden="true">close</span>
-    </button>
   </header>
 
   <main>
@@ -43,8 +39,8 @@
 
       <div class="subsection" id="pairingSection">
         <h3><span class="micon" aria-hidden="true">devices</span>Linked devices</h3>
-        <p class="hint">Link another browser or the dashboard to this same library. Pages are
-          not copied - both devices simply see the one library.</p>
+        <p class="hint">Show a code here, then enter it on the dashboard to point it at this
+          same library. Pages are not copied - both simply see the one library.</p>
 
         <button id="pairCreateBtn" class="btn" disabled>
           <span class="micon" aria-hidden="true">qr_code_2</span>
@@ -60,20 +56,6 @@
             <span id="pairExpiry" class="status-text" role="timer"></span>
           </div>
         </div>
-
-        <label class="field">
-          <span class="field-label">
-            <span class="label-text"><span class="micon" aria-hidden="true">link</span>Have a code?</span>
-          </span>
-          <input type="text" id="pairCodeInput" placeholder="8-character code" autocomplete="off"
-            spellcheck="false" maxlength="11" aria-describedby="pairRedeemWarning" />
-        </label>
-        <p id="pairRedeemWarning" class="hint">Using a code replaces this device's library with
-          the other device's. Anything saved here first stays with the old session.</p>
-        <button id="pairRedeemBtn" class="btn">
-          <span class="micon" aria-hidden="true">link</span>
-          <span>Link this device</span>
-        </button>
         <p id="pairStatus" class="hint" role="status"></p>
       </div>
     </section>
@@ -359,11 +341,7 @@
   </main>
 
   <footer>
-    <button type="button" id="resetAllBtn" class="btn" style="width: 100%; margin-bottom: 8px;">
-      <span class="micon" aria-hidden="true">restart_alt</span>
-      <span>Reset All Settings</span>
-    </button>
-    <p id="powerHint" class="hint">Changes are saved as you make them.</p>
+    <p id="resetHint" class="hint" role="status">Changes are saved as you make them.</p>
   </footer>
 
   <script src="sidebar.js"></script>
