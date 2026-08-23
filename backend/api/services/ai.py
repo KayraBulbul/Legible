@@ -2,9 +2,7 @@ import asyncio
 import base64
 import binascii
 import re
-from collections import deque
-from datetime import UTC, datetime
-from time import monotonic
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ai.errors import GeminiProviderError, GeminiRateLimitError, GeminiUnavailableError
 from ai.gemini_service import GeminiService
 from api.errors import AppError
+from api.rate_limits import RateLimitRule, consume_rate_limits, rate_limit_key
 from api.schemas import (
     AiProviderMetadata,
     ImageDescriptionKind,
@@ -48,8 +47,6 @@ class AiApplicationService:
         self._requests_per_minute = requests_per_minute
         self._requests_per_ip_per_minute = requests_per_ip_per_minute
         self._global_requests_per_minute = global_requests_per_minute
-        self._attempts: dict[str, deque[float]] = {}
-        self._rate_lock = asyncio.Lock()
 
     async def transform(
         self,
@@ -60,7 +57,7 @@ class AiApplicationService:
     ) -> TransformationResponse:
         document = sanitize_document(payload.input)
         await database.rollback()
-        await self._consume_rate_limit(user_id, client_key)
+        await self._consume_rate_limit(database, user_id, client_key)
         await self._acquire_capacity()
         try:
             result = await asyncio.wait_for(
@@ -109,7 +106,7 @@ class AiApplicationService:
     ) -> ImageDescriptionResponse:
         mime_type, image = decode_image_data_url(payload.data_url)
         await database.rollback()
-        await self._consume_rate_limit(user_id, client_key)
+        await self._consume_rate_limit(database, user_id, client_key)
         await self._acquire_capacity()
         try:
             result = await asyncio.wait_for(
@@ -155,35 +152,35 @@ class AiApplicationService:
     async def close(self) -> None:
         await self._provider.close()
 
-    async def reset_rate_limits(self) -> None:
-        async with self._rate_lock:
-            self._attempts.clear()
-
-    async def _consume_rate_limit(self, user_id: UUID, client_key: str) -> None:
-        now = monotonic()
-        cutoff = now - 60
-        async with self._rate_lock:
-            for key, attempts in tuple(self._attempts.items()):
-                while attempts and attempts[0] <= cutoff:
-                    attempts.popleft()
-                if not attempts:
-                    del self._attempts[key]
-
-            limits = (
-                (f"user:{user_id}", self._requests_per_minute),
-                (f"client:{client_key}", self._requests_per_ip_per_minute),
-                ("global", self._global_requests_per_minute),
-            )
-            buckets = [(self._attempts.setdefault(key, deque()), limit) for key, limit in limits]
-            for attempts, limit in buckets:
-                if len(attempts) >= limit:
-                    raise AppError(
-                        429,
-                        "ai_rate_limited",
-                        "Too many AI requests. Try again later.",
-                    )
-            for attempts, _limit in buckets:
-                attempts.append(now)
+    async def _consume_rate_limit(
+        self,
+        database: AsyncSession,
+        user_id: UUID,
+        client_key: str,
+    ) -> None:
+        window = timedelta(minutes=1)
+        await consume_rate_limits(
+            database,
+            (
+                RateLimitRule(
+                    rate_limit_key("ai-user", str(user_id)),
+                    self._requests_per_minute,
+                    window,
+                ),
+                RateLimitRule(
+                    rate_limit_key("ai-client", client_key),
+                    self._requests_per_ip_per_minute,
+                    window,
+                ),
+                RateLimitRule(
+                    rate_limit_key("ai-global", "all"),
+                    self._global_requests_per_minute,
+                    window,
+                ),
+            ),
+            error_code="ai_rate_limited",
+            error_message="Too many AI requests. Try again later.",
+        )
 
     async def _acquire_capacity(self) -> None:
         try:

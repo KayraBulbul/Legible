@@ -1,10 +1,11 @@
+from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
 from api.config import get_settings
 from api.dependencies import CurrentSession, DatabaseSession
-from api.rate_limits import pairing_redemption_limiter
+from api.rate_limits import RateLimitRule, consume_rate_limits, rate_limit_key
 from api.schemas import (
     ErrorResponse,
     GuestSessionResponse,
@@ -52,8 +53,32 @@ def issued_session_response(issued: IssuedSession) -> GuestSessionResponse:
     )
 
 
-@router.post("/guest", response_model=GuestSessionResponse, status_code=201)
-async def create_guest(database: DatabaseSession) -> GuestSessionResponse:
+@router.post(
+    "/guest",
+    response_model=GuestSessionResponse,
+    status_code=201,
+    responses={429: {"model": ErrorResponse, "description": "Guest session rate limit reached"}},
+)
+async def create_guest(request: Request, database: DatabaseSession) -> GuestSessionResponse:
+    settings = get_settings()
+    client_key = request.client.host if request.client is not None else "unknown"
+    await consume_rate_limits(
+        database,
+        (
+            RateLimitRule(
+                rate_limit_key("guest-client", client_key),
+                settings.guest_sessions_per_ip_per_hour,
+                timedelta(hours=1),
+            ),
+            RateLimitRule(
+                rate_limit_key("guest-global", "all"),
+                settings.guest_sessions_global_per_hour,
+                timedelta(hours=1),
+            ),
+        ),
+        error_code="guest_session_rate_limited",
+        error_message="Too many guest sessions were created. Try again later.",
+    )
     created = await create_guest_session(database)
     return issued_session_response(created)
 
@@ -114,6 +139,17 @@ async def redeem_code(
     database: DatabaseSession,
 ) -> GuestSessionResponse:
     client_key = request.client.host if request.client is not None else "unknown"
-    await pairing_redemption_limiter.consume(client_key)
+    await consume_rate_limits(
+        database,
+        (
+            RateLimitRule(
+                rate_limit_key("pairing-client", client_key),
+                10,
+                timedelta(minutes=10),
+            ),
+        ),
+        error_code="pairing_rate_limited",
+        error_message="Too many pairing attempts. Try again later.",
+    )
     issued = await redeem_pairing_code(database, payload.code, get_settings().pairing_code_secret)
     return issued_session_response(issued)

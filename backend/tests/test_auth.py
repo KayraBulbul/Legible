@@ -1,10 +1,13 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
 
-from httpx import AsyncClient
-from sqlalchemy import select, update
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import func, select, update
 
-from database.models import PairingCode
+from api.config import get_settings
+from api.main import app
+from database.models import PairingCode, User
 from database.session import session_factory
 
 
@@ -17,6 +20,48 @@ async def test_guest_session_expires_in_thirty_days(client: AsyncClient) -> None
     assert response.status_code == 201
     expires_at = datetime.fromisoformat(response.json()["session"]["expiresAt"])
     assert before <= expires_at <= after
+
+
+async def test_guest_session_creation_is_rate_limited_by_client(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_settings().model_copy(
+        update={
+            "guest_sessions_per_ip_per_hour": 2,
+            "guest_sessions_global_per_hour": 100,
+        }
+    )
+    monkeypatch.setattr("api.routes.auth.get_settings", lambda: settings)
+
+    responses = [await client.post("/api/v1/auth/guest") for _ in range(3)]
+
+    assert [response.status_code for response in responses] == [201, 201, 429]
+    assert responses[-1].json()["error"]["code"] == "guest_session_rate_limited"
+    async with session_factory() as database:
+        assert await database.scalar(select(func.count()).select_from(User)) == 2
+
+
+async def test_guest_session_creation_is_rate_limited_globally(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_settings().model_copy(
+        update={
+            "guest_sessions_per_ip_per_hour": 100,
+            "guest_sessions_global_per_hour": 1,
+        }
+    )
+    monkeypatch.setattr("api.routes.auth.get_settings", lambda: settings)
+    other_transport = ASGITransport(app=app, client=("203.0.113.20", 4312))
+
+    first = await client.post("/api/v1/auth/guest")
+    async with AsyncClient(transport=other_transport, base_url="http://test") as other_client:
+        limited = await other_client.post("/api/v1/auth/guest")
+
+    assert first.status_code == 201
+    assert limited.status_code == 429
+    assert limited.json()["error"]["code"] == "guest_session_rate_limited"
 
 
 async def test_authenticated_user_can_read_self(client: AsyncClient) -> None:

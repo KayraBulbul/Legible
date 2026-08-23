@@ -19,6 +19,7 @@ Reference links:
 The backend currently provides:
 
 - guest-session creation, lookup, and revocation;
+- PostgreSQL-backed guest, pairing-redemption, and Gemini rate limits shared by API instances;
 - one-time pairing between an extension session and a dashboard session;
 - saved-page creation with backend HTML sanitisation and idempotent retries;
 - paginated saved-page summaries;
@@ -27,8 +28,9 @@ The backend currently provides:
 - synchronous PDF export;
 - ownership isolation for every authenticated operation.
 
-Profiles remain planned. Gemini transformations, image descriptions, and PDF exports
-appear in OpenAPI when the corresponding backend version is deployed.
+Profiles remain planned. The repository OpenAPI includes Gemini transformations, image
+descriptions, and PDF export. Check the production OpenAPI before assuming a deployment has
+the same revision as `main`.
 
 ## Client setup
 
@@ -53,6 +55,10 @@ Extension HTTP requests must go through the Manifest V3 service worker. Content 
 3. Send `Authorization: Bearer <accessToken>` on authenticated requests.
 4. Use the pairing endpoints when the extension and dashboard need to share one user.
 5. Clear a token after a `401` response or successful session revocation.
+
+Guest creation defaults to 60 sessions per client address per hour and 1,000 sessions per
+hour across the deployment. A rejected request returns `429 guest_session_rate_limited`.
+Clients should reuse an existing valid token instead of creating a session on every launch.
 
 Never log access tokens, place them in URLs, or expose them to browsed pages. Use `credentials: "omit"` for browser requests so source-site cookies are never sent to this backend.
 

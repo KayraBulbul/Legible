@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     database_url: str = Field(min_length=1)
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     pairing_code_secret: str = Field(min_length=32)
+    guest_sessions_per_ip_per_hour: int = Field(default=60, ge=1)
+    guest_sessions_global_per_hour: int = Field(default=1_000, ge=1)
     max_request_bytes: int = Field(default=20 * 1024 * 1024, ge=1024)
     pdf_render_timeout_seconds: float = Field(default=20, gt=0)
     pdf_render_concurrency: int = Field(default=2, ge=1)

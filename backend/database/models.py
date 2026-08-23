@@ -4,9 +4,11 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -63,6 +65,20 @@ class PairingCode(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class RateLimitBucket(Base):
+    __tablename__ = "rate_limit_buckets"
+    __table_args__ = (
+        CheckConstraint(
+            "request_count >= 0",
+            name="ck_rate_limit_buckets_request_count_nonnegative",
+        ),
+    )
+
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    request_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class SavedPage(Base):

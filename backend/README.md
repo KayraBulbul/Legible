@@ -72,6 +72,8 @@ Provide these environment variables through Railway rather than committing a `.e
 - `ENVIRONMENT=production`;
 - `CORS_ORIGINS`, as a JSON array of allowed dashboard origins;
 - `PAIRING_CODE_SECRET`, a random value containing at least 32 characters;
+- `GUEST_SESSIONS_PER_IP_PER_HOUR=60`, the guest-session limit for one client address;
+- `GUEST_SESSIONS_GLOBAL_PER_HOUR=1000`, the guest-session limit across the deployment;
 - `PDF_RENDER_TIMEOUT_SECONDS=20`, the hard limit for each renderer subprocess;
 - `PDF_RENDER_CONCURRENCY=2`, the maximum renders handled by one API instance.
 - `GEMINI_API_KEY`, a Google AI API key kept only on the backend;
@@ -81,7 +83,7 @@ Provide these environment variables through Railway rather than committing a `.e
 - `AI_CAPACITY_WAIT_SECONDS=2`, how long a request waits for local capacity;
 - `AI_REQUESTS_PER_MINUTE=15`, the per-user AI request limit;
 - `AI_REQUESTS_PER_IP_PER_MINUTE=15`, the per-client-IP request limit;
-- `AI_GLOBAL_REQUESTS_PER_MINUTE=15`, the total request limit per API instance.
+- `AI_GLOBAL_REQUESTS_PER_MINUTE=15`, the total request limit across the deployment.
 
 The current local dashboard origin can be configured as:
 
@@ -95,6 +97,11 @@ Requests are limited to 20 MiB by default. Set `MAX_REQUEST_BYTES` to change tha
 Image descriptions accept PNG, JPEG, and WebP data URLs up to 8 MiB after decoding. SVG
 is rejected. AI calls are synchronous, are not cached or persisted by these endpoints,
 and return safe errors without exposing provider responses.
+
+Guest creation, pairing redemption, and AI request limits use fixed-window counters in
+PostgreSQL. The `rate_limit_buckets` table stores hashed subjects rather than raw client
+addresses, and row locks keep concurrent API instances within the same limits. Run Alembic
+upgrade `20260823_0005` before deploying this version.
 
 `railpack.json` extends Railpack's runtime Apt packages with Pango, HarfBuzz font subsetting, and Noto fonts required by WeasyPrint, including CJK fallback fonts. Keep the `"..."` entry so Railpack retains its generated defaults. See [Railpack's package configuration](https://railpack.com/guides/installing-packages/).
 
