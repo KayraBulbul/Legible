@@ -2,9 +2,16 @@ import { analyzeImage } from './gemini-client.js';
 import { ApiError, createGuestSession, ensureSession, authedFetchWithRetry } from './api-client.js';
 import { mapA11ySettingsToBackend } from './settings-mapper.js';
 
-if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-}
+// The settings panel is injected into the page as a floating overlay rather than opened in
+// Chrome's side panel, so it never reflows the site underneath it. The toolbar icon toggles it.
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab || !tab.id) return;
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_PANEL' });
+  } catch (e) {
+    // No content script on this tab (e.g. chrome:// pages) - ignore.
+  }
+});
 
 const CACHE_KEY = 'a11yImageCache';
 const MAX_CACHE_ENTRIES = 500;
@@ -136,6 +143,7 @@ chrome.runtime.onInstalled.addListener(() => {
     if (!res.a11ySettings) {
       chrome.storage.local.set({
         a11ySettings: {
+          extensionEnabled: true,
           dyslexiaFont: 'none',
           themeMode: 'none',
           declutter: false,
@@ -147,9 +155,9 @@ chrome.runtime.onInstalled.addListener(() => {
           highlightLinks: false,
           hideImages: false,
           cursorEnabled: false,
-          cursorStyle: 'ring',
+          cursorStyle: 'arrow',
           cursorSize: 32,
-          cursorColor: '#5b3cdc',
+          cursorColor: '#2563eb',
           ttsRate: 1,
           ttsPitch: 1,
           voiceURI: null,

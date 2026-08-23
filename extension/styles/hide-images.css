@@ -7,3 +7,13 @@ html.a11y-hide-images svg:not(.a11y-hud):not(.a11y-hud *),
 html.a11y-hide-images [style*="background-image"] {
   visibility: hidden !important;
 }
+
+/* The extension's own overlays are chrome, not page content. The custom cursor keeps its
+   visuals in a shadow root so this rule cannot reach them, but exclude the hosts anyway so a
+   future non-shadow overlay does not silently disappear here. */
+html.a11y-hide-images .a11y-custom-cursor,
+html.a11y-hide-images .a11y-panel-host,
+html.a11y-hide-images .a11y-hud,
+html.a11y-hide-images .a11y-hud * {
+  visibility: inherit !important;
+}

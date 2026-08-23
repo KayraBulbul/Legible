@@ -9,190 +9,323 @@
 
 <body>
   <header class="header">
-    <span class="header-icon">♿</span>
+    <span class="micon icon-lg" aria-hidden="true">accessibility_new</span>
     <h1>Web Accessibility</h1>
+    <button type="button" id="hidePanelBtn" class="icon-btn" title="Hide panel" aria-label="Hide panel">
+      <span class="micon" aria-hidden="true">keyboard_double_arrow_right</span>
+    </button>
+    <button type="button" id="powerBtn" class="icon-btn" title="Save settings and turn off"
+      aria-label="Save settings and turn off">
+      <span class="micon" id="powerIcon" aria-hidden="true">close</span>
+    </button>
   </header>
 
   <main>
     <section class="section">
-      <h2>Account</h2>
+      <h2><span class="micon" aria-hidden="true">account_circle</span>Account</h2>
       <div class="row">
         <span id="backendStatus" class="status-text">Not connected</span>
       </div>
       <div class="row">
-        <button id="connectBtn" class="btn">Connect</button>
-        <button id="savePageBtn" class="btn btn-primary" disabled>Save This Page</button>
+        <button id="connectBtn" class="btn">
+          <span class="micon" aria-hidden="true">login</span>
+          <span>Connect</span>
+        </button>
+        <button id="savePageBtn" class="btn btn-primary" disabled>
+          <span class="micon" aria-hidden="true">cloud_upload</span>
+          <span>Save This Page</span>
+        </button>
       </div>
       <p id="saveStatus" class="hint"></p>
     </section>
 
     <section class="section">
-      <h2>Theme</h2>
+      <h2><span class="micon" aria-hidden="true">palette</span>Theme</h2>
       <div class="card-grid" id="themeGrid">
-        <button type="button" class="card" data-theme="invert">
-          <span class="card-icon">◐</span>
+        <button type="button" class="card" data-theme="invert" data-icon="invert_colors_off"
+          data-icon-on="invert_colors">
+          <span class="micon card-icon" aria-hidden="true">invert_colors_off</span>
           <span class="card-label">Invert Colors</span>
         </button>
-        <button type="button" class="card" data-theme="dark">
-          <span class="card-icon">🌙</span>
+        <button type="button" class="card" data-theme="dark" data-icon="bedtime_off" data-icon-on="bedtime">
+          <span class="micon card-icon" aria-hidden="true">bedtime_off</span>
           <span class="card-label">Dark Mode</span>
         </button>
-        <button type="button" class="card" data-theme="light">
-          <span class="card-icon">☀️</span>
+        <button type="button" class="card" data-theme="light" data-icon="brightness_low" data-icon-on="sunny">
+          <span class="micon card-icon" aria-hidden="true">brightness_low</span>
           <span class="card-label">Light Mode</span>
         </button>
-        <button type="button" class="card" data-theme="contrast">
-          <span class="card-icon">◑</span>
+        <button type="button" class="card" data-theme="contrast" data-icon="tonality" data-icon-on="contrast">
+          <span class="micon card-icon" aria-hidden="true">tonality</span>
           <span class="card-label">High Contrast</span>
         </button>
       </div>
     </section>
 
     <section class="section">
-      <h2>Typography</h2>
-      <label class="field">
-        <span>Accessible / Dyslexia font</span>
-        <select id="dyslexiaFont">
-          <option value="none">Off (Original Page Font)</option>
-          <option value="lexend">Lexend</option>
-          <option value="opendyslexic">OpenDyslexic</option>
-          <option value="atkinson">Atkinson Hyperlegible</option>
-          <option value="arial">Arial / Helvetica</option>
-          <option value="verdana">Verdana</option>
-          <option value="opensans">Open Sans</option>
-          <option value="comicsans">Comic Sans MS</option>
-        </select>
-      </label>
+      <h2><span class="micon" aria-hidden="true">text_fields</span>Typography</h2>
+      <div class="field">
+        <span class="field-label" id="fontPickerLabel">
+          <span class="label-text"><span class="micon" aria-hidden="true">font_download</span>Accessible / Dyslexia
+            font</span>
+        </span>
+        <div class="fontpicker" id="fontPicker">
+          <button type="button" class="fontpicker-trigger" id="fontPickerTrigger" aria-haspopup="listbox"
+            aria-expanded="false" aria-labelledby="fontPickerLabel fontPickerValue">
+            <span class="fontpicker-value" id="fontPickerValue">Off (Original Page Font)</span>
+            <span class="micon fontpicker-chevron" aria-hidden="true">expand_more</span>
+          </button>
+          <ul class="fontpicker-list" id="fontPickerList" role="listbox" aria-labelledby="fontPickerLabel" tabindex="-1"
+            hidden>
+            <li class="fontpicker-option" role="option" id="font-opt-none" data-value="none" aria-selected="true">
+              <span class="fontpicker-name">Off (Original Page Font)</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-lexend" role="option" id="font-opt-lexend" data-value="lexend"
+              aria-selected="false">
+              <span class="fontpicker-name">Lexend</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-opendyslexic" role="option" id="font-opt-opendyslexic"
+              data-value="opendyslexic" aria-selected="false">
+              <span class="fontpicker-name">OpenDyslexic</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-atkinson" role="option" id="font-opt-atkinson" data-value="atkinson"
+              aria-selected="false">
+              <span class="fontpicker-name">Atkinson Hyperlegible</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-arial" role="option" id="font-opt-arial" data-value="arial"
+              aria-selected="false">
+              <span class="fontpicker-name">Arial / Helvetica</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-verdana" role="option" id="font-opt-verdana" data-value="verdana"
+              aria-selected="false">
+              <span class="fontpicker-name">Verdana</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-opensans" role="option" id="font-opt-opensans" data-value="opensans"
+              aria-selected="false">
+              <span class="fontpicker-name">Open Sans</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-comicsans" role="option" id="font-opt-comicsans" data-value="comicsans"
+              aria-selected="false">
+              <span class="fontpicker-name">Comic Sans MS</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+          </ul>
+        </div>
+      </div>
 
       <div class="stepper-field">
-        <span class="stepper-label">Text size <output id="fontScaleOut">100%</output></span>
+        <span class="stepper-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">format_size</span>Text size</span>
+          <output id="fontScaleOut">100%</output>
+        </span>
         <div class="stepper-row">
-          <button type="button" class="stepper-btn" id="fontScaleDown" aria-label="Decrease text size">−</button>
+          <div class="stepper-btns">
+            <button type="button" class="stepper-btn" id="fontScaleDown" aria-label="Decrease text size">−</button>
+            <button type="button" class="stepper-btn" id="fontScaleUp" aria-label="Increase text size">+</button>
+          </div>
           <input type="range" id="fontScale" min="70" max="200" step="5" value="100" />
-          <button type="button" class="stepper-btn" id="fontScaleUp" aria-label="Increase text size">+</button>
         </div>
       </div>
 
       <div class="stepper-field">
-        <span class="stepper-label">Letter spacing <output id="letterSpacingOut">Default</output></span>
+        <span class="stepper-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">format_letter_spacing</span>Letter
+            spacing</span>
+          <output id="letterSpacingOut">Default</output>
+        </span>
         <div class="stepper-row">
-          <button type="button" class="stepper-btn" id="letterSpacingDown" aria-label="Decrease letter spacing">−</button>
+          <div class="stepper-btns">
+            <button type="button" class="stepper-btn" id="letterSpacingDown"
+              aria-label="Decrease letter spacing">−</button>
+            <button type="button" class="stepper-btn" id="letterSpacingUp"
+              aria-label="Increase letter spacing">+</button>
+          </div>
           <input type="range" id="letterSpacing" min="0" max="0.3" step="0.01" value="0" />
-          <button type="button" class="stepper-btn" id="letterSpacingUp" aria-label="Increase letter spacing">+</button>
         </div>
       </div>
 
       <div class="stepper-field">
-        <span class="stepper-label">Line height <output id="lineHeightOut">Default</output></span>
+        <span class="stepper-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">format_line_spacing</span>Line height</span>
+          <output id="lineHeightOut">Default</output>
+        </span>
         <div class="stepper-row">
-          <button type="button" class="stepper-btn" id="lineHeightDown" aria-label="Decrease line height">−</button>
+          <div class="stepper-btns">
+            <button type="button" class="stepper-btn" id="lineHeightDown" aria-label="Decrease line height">−</button>
+            <button type="button" class="stepper-btn" id="lineHeightUp" aria-label="Increase line height">+</button>
+          </div>
           <input type="range" id="lineHeight" min="1.2" max="3" step="0.1" value="1.8" />
-          <button type="button" class="stepper-btn" id="lineHeightUp" aria-label="Increase line height">+</button>
         </div>
       </div>
 
       <label class="checkbox-field">
         <input type="checkbox" id="bionicReading" />
+        <span class="micon" aria-hidden="true">format_bold</span>
         <span>Bionic reading (bold word starts)</span>
       </label>
     </section>
 
     <section class="section">
-      <h2>Visual Comfort</h2>
-      <h4>⚠ Might be incompatible with certain websites</h4>
+      <h2><span class="micon" aria-hidden="true">visibility</span>Visual Comfort</h2>
+      <p class="note">
+        <span class="micon" aria-hidden="true">warning</span>
+        <span>Might be incompatible with certain websites</span>
+      </p>
       <div class="card-grid">
-        <button type="button" class="card" id="highlightLinksCard">
-          <span class="card-icon">🔗</span>
+        <button type="button" class="card" id="highlightLinksCard" data-icon="link_off" data-icon-on="link">
+          <span class="micon card-icon" aria-hidden="true">link_off</span>
           <span class="card-label">Highlight Links</span>
         </button>
-        <button type="button" class="card" id="hideImagesCard">
-          <span class="card-icon">🖼️</span>
+        <button type="button" class="card" id="hideImagesCard" data-icon="image" data-icon-on="hide_image">
+          <span class="micon card-icon" aria-hidden="true">image</span>
           <span class="card-label">Hide Images</span>
         </button>
-        <button type="button" class="card" id="pauseAnimationsCard">
-          <span class="card-icon">⏸️</span>
+        <button type="button" class="card" id="pauseAnimationsCard" data-icon="play_circle"
+          data-icon-on="pause_circle">
+          <span class="micon card-icon" aria-hidden="true">play_circle</span>
           <span class="card-label">Pause Animations</span>
         </button>
-        <button type="button" class="card" id="declutterCard">
-          <span class="card-icon">✨</span>
+        <button type="button" class="card" id="declutterCard" data-icon="auto_fix_off"
+          data-icon-on="auto_fix_high">
+          <span class="micon card-icon" aria-hidden="true">auto_fix_off</span>
           <span class="card-label">Reduce Clutter</span>
         </button>
       </div>
       <label class="checkbox-field">
         <input type="checkbox" id="hudVisible" checked />
+        <span class="micon" aria-hidden="true">widgets</span>
         <span>Show floating on-page toolbar</span>
       </label>
     </section>
 
     <section class="section">
-      <h2>Cursor</h2>
+      <h2><span class="micon" aria-hidden="true">mouse</span>Cursor</h2>
       <label class="checkbox-field">
         <input type="checkbox" id="cursorEnabled" />
+        <span class="micon" aria-hidden="true">arrow_selector_tool</span>
         <span>Customizable cursor</span>
       </label>
       <label class="field">
-        <span>Look</span>
+        <span class="field-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">design_services</span>Look</span>
+        </span>
         <select id="cursorStyle">
+          <option value="arrow">Arrow (large pointer)</option>
           <option value="ring">Ring</option>
           <option value="dot">Dot</option>
           <option value="crosshair">Crosshair</option>
         </select>
       </label>
       <div class="stepper-field">
-        <span class="stepper-label">Size <output id="cursorSizeOut">32px</output></span>
+        <span class="stepper-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">straighten</span>Size</span>
+          <output id="cursorSizeOut">32px</output>
+        </span>
         <div class="stepper-row">
-          <button type="button" class="stepper-btn" id="cursorSizeDown" aria-label="Decrease cursor size">−</button>
-          <input type="range" id="cursorSize" min="16" max="64" step="2" value="32" />
-          <button type="button" class="stepper-btn" id="cursorSizeUp" aria-label="Increase cursor size">+</button>
+          <div class="stepper-btns">
+            <button type="button" class="stepper-btn" id="cursorSizeDown" aria-label="Decrease cursor size">−</button>
+            <button type="button" class="stepper-btn" id="cursorSizeUp" aria-label="Increase cursor size">+</button>
+          </div>
+          <input type="range" id="cursorSize" min="16" max="96" step="2" value="32" />
         </div>
       </div>
-      <label class="field">
-        <span>Color</span>
-        <input type="color" id="cursorColor" value="#5b3cdc" />
-      </label>
+      <div class="field">
+        <span class="field-label" id="cursorColorLabel">
+          <span class="label-text"><span class="micon" aria-hidden="true">format_color_fill</span>Color</span>
+        </span>
+        <div class="palette" id="cursorPalette" role="radiogroup" aria-labelledby="cursorColorLabel">
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#1c1c1e"
+            style="--swatch: #1c1c1e" title="Ink" aria-label="Ink"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#ffffff"
+            style="--swatch: #ffffff" title="White" aria-label="White"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#ef4444"
+            style="--swatch: #ef4444" title="Red" aria-label="Red"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#f97316"
+            style="--swatch: #f97316" title="Orange" aria-label="Orange"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#eab308"
+            style="--swatch: #eab308" title="Yellow" aria-label="Yellow"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#22c55e"
+            style="--swatch: #22c55e" title="Green" aria-label="Green"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#06b6d4"
+            style="--swatch: #06b6d4" title="Cyan" aria-label="Cyan"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="true" data-color="#2563eb"
+            style="--swatch: #2563eb" title="Blue" aria-label="Blue"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#7c3aed"
+            style="--swatch: #7c3aed" title="Violet" aria-label="Violet"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#ec4899"
+            style="--swatch: #ec4899" title="Pink" aria-label="Pink"></button>
+        </div>
+      </div>
     </section>
 
     <section class="section">
-      <h2>Screen Reader</h2>
+      <h2><span class="micon" aria-hidden="true">hearing</span>Screen Reader</h2>
       <label class="field">
-        <span>Voice</span>
+        <span class="field-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">record_voice_over</span>Voice</span>
+        </span>
         <select id="voiceSelect">
           <option value="">System default</option>
         </select>
       </label>
       <label class="field">
-        <span>Speech rate <output id="ttsRateOut">1.0x</output></span>
+        <span class="field-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">speed</span>Speech rate</span>
+          <output id="ttsRateOut">1.0x</output>
+        </span>
         <input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1" />
       </label>
       <label class="field">
-        <span>Pitch <output id="ttsPitchOut">1.0</output></span>
+        <span class="field-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">graphic_eq</span>Pitch</span>
+          <output id="ttsPitchOut">1.0</output>
+        </span>
         <input type="range" id="ttsPitch" min="0" max="2" step="0.1" value="1" />
       </label>
-      <button id="toggleReadBtn" class="btn btn-primary">▶ Start / Stop Reading (Alt+R)</button>
+      <button id="toggleReadBtn" class="btn btn-primary">
+        <span class="micon" aria-hidden="true">play_arrow</span>
+        <span>Start / Stop Reading (Alt+R)</span>
+      </button>
       <p class="hint">Alt+N / Alt+P move to the next / previous element.</p>
     </section>
 
     <section class="section">
-      <h2>AI Vision (Gemini)</h2>
+      <h2><span class="micon" aria-hidden="true">auto_awesome</span>AI Vision (Gemini)</h2>
       <label class="field">
-        <span>Gemini API key</span>
+        <span class="field-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">key</span>Gemini API key</span>
+        </span>
         <input type="password" id="apiKey" placeholder="Paste your Gemini API key" autocomplete="off" />
       </label>
       <div class="row">
-        <button id="saveKeyBtn" class="btn">Save Key</button>
+        <button id="saveKeyBtn" class="btn">
+          <span class="micon" aria-hidden="true">save</span>
+          <span>Save Key</span>
+        </button>
         <span id="keyStatus" class="status-text"></span>
       </div>
       <label class="checkbox-field">
         <input type="checkbox" id="aiEnabled" checked />
+        <span class="micon" aria-hidden="true">smart_toy</span>
         <span>Enable AI alt-text / ARIA generation</span>
       </label>
-      <button id="scanBtn" class="btn btn-primary">✨ Scan This Page with AI</button>
+      <button id="scanBtn" class="btn btn-primary">
+        <span class="micon" aria-hidden="true">document_scanner</span>
+        <span>Scan This Page with AI</span>
+      </button>
       <p id="scanStatus" class="hint"></p>
     </section>
   </main>
 
   <footer>
-    <button id="resetBtn" class="btn btn-link">Reset all settings</button>
+    <p id="powerHint" class="hint">Changes are saved as you make them.</p>
   </footer>
 
   <script src="sidebar.js"></script>

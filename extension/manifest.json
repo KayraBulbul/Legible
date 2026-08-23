@@ -17,17 +17,13 @@
       "128": "icons/icon128.png"
     }
   },
-  "side_panel": {
-    "default_path": "sidebar/sidebar.html"
-  },
   "background": {
     "service_worker": "background/background.js",
     "type": "module"
   },
   "permissions": [
     "storage",
-    "activeTab",
-    "sidePanel"
+    "activeTab"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
@@ -35,7 +31,9 @@
   ],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
         "content/restyler.js",
         "content/bionic-reader.js",
@@ -43,10 +41,13 @@
         "content/ai-scanner.js",
         "content/screen-reader.js",
         "content/extractor.js",
+        "content/panel.js",
         "hud/hud.js",
         "content/content.js"
       ],
-      "css": ["hud/hud.css"],
+      "css": [
+        "hud/hud.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -56,26 +57,37 @@
         "fonts/*",
         "styles/*",
         "hud/*",
-        "icons/*"
+        "icons/*",
+        "sidebar/*"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "commands": {
     "toggle-read": {
-      "suggested_key": { "default": "Alt+R" },
+      "suggested_key": {
+        "default": "Alt+R"
+      },
       "description": "Start/stop reading from current position"
     },
     "next-element": {
-      "suggested_key": { "default": "Alt+N" },
+      "suggested_key": {
+        "default": "Alt+N"
+      },
       "description": "Jump to next readable element"
     },
     "prev-element": {
-      "suggested_key": { "default": "Alt+P" },
+      "suggested_key": {
+        "default": "Alt+P"
+      },
       "description": "Jump to previous readable element"
     },
     "ai-scan-focused": {
-      "suggested_key": { "default": "Alt+A" },
+      "suggested_key": {
+        "default": "Alt+A"
+      },
       "description": "Run AI vision scan on the focused/hovered image"
     }
   }
