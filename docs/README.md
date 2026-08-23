@@ -105,21 +105,7 @@ The full settings shape, request examples, pairing flow, pagination contract, er
 
 ## CORS and deployment
 
-The deployed dashboard is available at:
-
-```text
-https://hackmelbourne2026.vercel.app/
-```
-
-Railway's production `CORS_ORIGINS` must include the dashboard origin without its trailing
-slash, alongside the local development origin:
-
-```text
-["http://localhost:5173", "https://hackmelbourne2026.vercel.app"]
-```
-
-Redeploy the backend after changing this Railway variable. Vercel embeds
-`VITE_API_BASE_URL` at build time, so redeploy the dashboard after changing its API URL too.
+The production backend currently accepts the local dashboard origin `http://localhost:5173`. When the dashboard receives a public URL, add that exact origin to Railway's `CORS_ORIGINS` JSON array and redeploy the backend.
 
 Railway must deploy the `main` branch from root directory `/backend`. The backend start command is:
 

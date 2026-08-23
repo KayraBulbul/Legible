@@ -27,54 +27,81 @@
     <section class="section">
       <h2><span class="micon" aria-hidden="true">account_circle</span>Account</h2>
       <div class="row">
-        <span id="backendStatus" class="status-text">Not connected</span>
+        <!-- Carries only what the buttons cannot: progress and failures. The steady
+             connected state is the Connect button's own label, so repeating it here would
+             just print "Connected" twice, one line apart. -->
+        <span id="backendStatus" class="status-text" role="status">Not connected</span>
       </div>
       <div class="row">
+        <!-- Both buttons report their own outcome: the label and the ligature are swapped
+             together, because at 18px the icon is what gets read first. -->
         <button id="connectBtn" class="btn">
-          <span class="micon" aria-hidden="true">login</span>
-          <span>Connect</span>
+          <span class="micon" id="connectIcon" aria-hidden="true">login</span>
+          <span id="connectLabel">Connect</span>
         </button>
         <button id="savePageBtn" class="btn btn-primary" disabled>
-          <span class="micon" aria-hidden="true">cloud_upload</span>
-          <span>Save This Page</span>
+          <span class="micon" id="savePageIcon" aria-hidden="true">cloud_upload</span>
+          <span id="savePageLabel">Save This Page</span>
         </button>
       </div>
-      <p id="saveStatus" class="hint"></p>
+      <p id="saveStatus" class="hint" role="status"></p>
 
       <div class="subsection" id="pairingSection">
-        <h3><span class="micon" aria-hidden="true">devices</span>Linked devices</h3>
-        <p class="hint">Link another browser or the dashboard to this same library. Pages are
-          not copied - both devices simply see the one library.</p>
+        <!-- A disclosure, not a listbox: it reveals a group of controls rather than picking a
+             value, so the button carries aria-expanded/aria-controls and no aria-haspopup.
+             Keeping it inside the h3 preserves the heading, so the section is still reachable
+             by heading navigation while collapsed. -->
+        <h3 class="disclosure-heading">
+          <button type="button" id="pairingToggle" class="disclosure-trigger" aria-expanded="false"
+            aria-controls="pairingBody">
+            <span class="micon" aria-hidden="true">devices</span>
+            <span class="disclosure-title">Linked devices</span>
+            <!-- Surfaces a live code's countdown while the section is shut, so collapsing it
+                 cannot quietly hide the fact that a code is running out. -->
+            <span id="pairingBadge" class="disclosure-badge" aria-hidden="true" hidden></span>
+            <span class="micon disclosure-chevron" aria-hidden="true">expand_more</span>
+          </button>
+        </h3>
 
-        <button id="pairCreateBtn" class="btn" disabled>
-          <span class="micon" aria-hidden="true">qr_code_2</span>
-          <span>Show a linking code</span>
-        </button>
-        <div id="pairCodeBox" class="pair-code-box" hidden>
-          <output id="pairCode" class="pair-code"></output>
-          <div class="row">
-            <button id="pairCopyBtn" class="btn btn-small">
-              <span class="micon" aria-hidden="true">content_copy</span>
-              <span>Copy</span>
-            </button>
-            <span id="pairExpiry" class="status-text" role="timer"></span>
+        <div id="pairingBody" class="disclosure-body" hidden>
+          <p class="hint">Link another browser or the dashboard to this same library. Pages are
+            not copied - both devices simply see the one library.</p>
+
+          <button id="pairCreateBtn" class="btn" disabled>
+            <span class="micon" aria-hidden="true">qr_code_2</span>
+            <span>Show a linking code</span>
+          </button>
+          <div id="pairCodeBox" class="pair-code-box" hidden>
+            <output id="pairCode" class="pair-code"></output>
+            <!-- Decorative twin of the countdown text below: it makes "running out" visible
+                 at a glance, but says nothing a screen reader isn't already told. -->
+            <div class="pair-expiry-track" aria-hidden="true">
+              <div id="pairExpiryBar" class="pair-expiry-bar"></div>
+            </div>
+            <div class="row">
+              <button id="pairCopyBtn" class="btn btn-small">
+                <span class="micon" aria-hidden="true">content_copy</span>
+                <span>Copy</span>
+              </button>
+              <span id="pairExpiry" class="status-text" role="timer"></span>
+            </div>
           </div>
-        </div>
 
-        <label class="field">
-          <span class="field-label">
-            <span class="label-text"><span class="micon" aria-hidden="true">link</span>Have a code?</span>
-          </span>
-          <input type="text" id="pairCodeInput" placeholder="8-character code" autocomplete="off"
-            spellcheck="false" maxlength="11" aria-describedby="pairRedeemWarning" />
-        </label>
-        <p id="pairRedeemWarning" class="hint">Using a code replaces this device's library with
-          the other device's. Anything saved here first stays with the old session.</p>
-        <button id="pairRedeemBtn" class="btn">
-          <span class="micon" aria-hidden="true">link</span>
-          <span>Link this device</span>
-        </button>
-        <p id="pairStatus" class="hint" role="status"></p>
+          <label class="field">
+            <span class="field-label">
+              <span class="label-text"><span class="micon" aria-hidden="true">link</span>Have a code?</span>
+            </span>
+            <input type="text" id="pairCodeInput" placeholder="8-character code" autocomplete="off"
+              spellcheck="false" maxlength="11" aria-describedby="pairRedeemWarning" />
+          </label>
+          <p id="pairRedeemWarning" class="hint">Using a code replaces this device's library with
+            the other device's. Anything saved here first stays with the old session.</p>
+          <button id="pairRedeemBtn" class="btn">
+            <span class="micon" aria-hidden="true">link</span>
+            <span>Link this device</span>
+          </button>
+          <p id="pairStatus" class="hint" role="status"></p>
+        </div>
       </div>
     </section>
 
@@ -230,8 +257,8 @@
           <span class="micon card-icon" aria-hidden="true">pause_circle</span>
           <span class="card-label">Pause Animations</span>
         </button>
-        <button type="button" class="card" id="declutterCard" data-icon="auto_fix_high" data-icon-on="auto_fix_off">
-          <span class="micon card-icon" aria-hidden="true">auto_fix_high</span>
+        <button type="button" class="card" id="declutterCard" data-icon="auto_fix" data-icon-on="auto_fix_off">
+          <span class="micon card-icon" aria-hidden="true">auto_fix</span>
           <span class="card-label">Reduce Clutter</span>
         </button>
       </div>
@@ -365,6 +392,23 @@
     </button>
     <p id="powerHint" class="hint">Changes are saved as you make them.</p>
   </footer>
+
+  <!-- This panel is a chrome-extension:// iframe inside the visited page, which makes it a
+       cross-origin frame. Chrome ignores window.confirm() in those and returns false, so a
+       native confirm here would silently cancel the link every time. <dialog> is in-document
+       and unaffected, and brings its own focus trap and Escape handling. Cancel is first so
+       it is both the initially focused control and what Enter activates. -->
+  <dialog id="pairConfirmDialog" class="confirm-dialog" aria-labelledby="pairConfirmTitle">
+    <form method="dialog">
+      <h3 id="pairConfirmTitle">Link this device?</h3>
+      <p>This device will switch to the other device's saved-page library. Pages you saved
+        here before linking stay with the old session and will not appear here.</p>
+      <div class="row">
+        <button type="submit" value="cancel" class="btn">Cancel</button>
+        <button type="submit" value="confirm" class="btn btn-primary">Link this device</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="sidebar.js"></script>
 </body>
