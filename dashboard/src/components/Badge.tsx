@@ -1,18 +1,18 @@
 import cn from "../utils/cn";
 
-type BadgeTone = "stone" | "violet" | "amber" | "sky";
+type BadgeTone = "neutral" | "accent" | "warning" | "info";
 
 interface BadgeProps {
   children: React.ReactNode;
   tone?: BadgeTone;
 }
 
-export default function Badge({ children, tone = "stone" }: BadgeProps) {
+export default function Badge({ children, tone = "neutral" }: BadgeProps) {
   const tones: Record<BadgeTone, string> = {
-    stone: "bg-stone-100 text-stone-600",
-    violet: "bg-violet-100 text-violet-700",
-    amber: "bg-amber-100 text-amber-700",
-    sky: "bg-sky-100 text-sky-700",
+    neutral: "bg-surface-hover text-text-secondary",
+    accent: "bg-accent-subtle text-accent",
+    warning: "bg-warning-subtle text-warning",
+    info: "bg-info-subtle text-info",
   };
   return (
     <span

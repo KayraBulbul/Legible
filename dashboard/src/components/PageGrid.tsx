@@ -5,11 +5,11 @@ import PageCard from "@/components/PageCard";
 export default function PageGrid() {
   const {
     visiblePages,
-    selected,
-    toggleSelect,
     openReader,
     restorePage,
     deleteForever,
+    moveToTrash,
+    toggleFavorite,
     view,
   } = useDashboardContext();
 
@@ -20,11 +20,11 @@ export default function PageGrid() {
           key={p.id}
           page={p}
           hue={CARD_HUES[i % CARD_HUES.length]}
-          selected={selected.has(p.id)}
-          onToggleSelect={() => toggleSelect(p.id)}
           onOpen={() => openReader(p)}
           onRestore={() => restorePage(p.id)}
           onDeleteForever={() => deleteForever(p.id)}
+          onMoveToTrash={() => moveToTrash(p.id)}
+          onToggleFavorite={() => toggleFavorite(p.id)}
           isTrash={view === "trash"}
         />
       ))}

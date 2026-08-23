@@ -6,7 +6,6 @@ interface NavItemProps {
   label: string;
   active: boolean;
   onClick: () => void;
-  count?: number;
 }
 
 export default function NavItem({
@@ -14,7 +13,6 @@ export default function NavItem({
   label,
   active,
   onClick,
-  count,
 }: NavItemProps) {
   return (
     <button
@@ -22,23 +20,12 @@ export default function NavItem({
       className={cn(
         "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
         active
-          ? "bg-violet-600 text-white"
-          : "text-stone-300 hover:bg-stone-800 hover:text-white",
+          ? "bg-accent text-text-inverse"
+          : "text-text-secondary hover:bg-accent-subtle hover:text-text-primary",
       )}
     >
       <Icon size={17} strokeWidth={2} />
       <span className="flex-1 text-left">{label}</span>
-      {/* Render count badge */}
-      {typeof count === "number" && count > 0 && (
-        <span
-          className={cn(
-            "rounded-full px-1.5 py-0.5 text-[11px]",
-            active ? "bg-white/20" : "bg-stone-800 text-stone-400",
-          )}
-        >
-          {count}
-        </span>
-      )}
     </button>
   );
 }

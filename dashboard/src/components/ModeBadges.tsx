@@ -10,17 +10,17 @@ export default function ModeBadges({ page }: ModeBadgesProps) {
   return (
     <>
       {page.fontMode !== "none" && (
-        <Badge tone="violet">
+        <Badge tone="accent">
           <Type size={11} /> {page.fontMode === "lexend" ? "Lexend" : "OpenDyslexic"}
         </Badge>
       )}
       {page.contrastMode !== "none" && (
-        <Badge tone="sky">
+        <Badge tone="info">
           <Contrast size={11} /> {page.contrastMode === "dark" ? "Dark" : "Warm"}
         </Badge>
       )}
       {page.aiLabels > 0 && (
-        <Badge tone="amber">
+        <Badge tone="warning">
           <Sparkles size={11} /> {page.aiLabels} AI label{page.aiLabels === 1 ? "" : "s"}
         </Badge>
       )}

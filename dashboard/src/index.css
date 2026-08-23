@@ -1,3 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Without an explicit height chain, the app's h-full root div has nothing
+   to fill and only grows to its min-h-[720px] floor — any viewport taller
+   than that shows the browser's default white below/around it, regardless
+   of the active theme. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+}
+
+/*
+ * Theme tokens as hex colours. A few also come in "-subtle"/"-muted"
+ * tints for translucent fills/borders — written as 8-digit hex (alpha
+ * baked in) since Tailwind can't apply opacity modifiers to a color
+ * that resolves through a CSS variable at runtime.
+ *
+ * :root carries the light values as the default/fallback (used before any
+ * theme is applied, or if data-theme is missing). [data-theme="dark"]
+ * overrides them. A future colourblind-friendly theme can be added the same
+ * way, e.g. [data-theme="deuteranopia"] { --color-danger: ...; }.
+ */
+:root,
+[data-theme="light"] {
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f4f4f5;
+  --color-border: #dcdcdc;
+  --color-text-primary: #1c1c1e;
+  --color-text-secondary: #52525b;
+  --color-text-inverse: rgb(250, 250, 250);
+  --color-text-inverse-subtle: #fafafa33;
+  --color-overlay: #18181b99;
+
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-subtle: #2760dc48;
+  --color-accent-muted: #2563eb66;
+  --color-success: #2563eb;
+  --color-danger: #ea580c;
+  --color-danger-muted: #ea580c80;
+  --color-warning: #7c3aed;
+  --color-warning-subtle: #7c3aed26;
+  --color-warning-muted: #7c3aed66;
+  --color-info: #0e7490;
+  --color-info-subtle: #0e749026;
+
+  /* Decorative, theme-invariant swatches for user content (folders, cards) —
+     kept constant across themes and chosen for hue + lightness separation
+     so they stay distinguishable under common colour-vision deficiencies. */
+  --color-swatch-1: #6d28d9;
+  --color-swatch-2: #0e7490;
+  --color-swatch-3: #b45309;
+  --color-swatch-4: #047857;
+  --color-swatch-5: #be185d;
+  --color-swatch-6: #4338ca;
+}
+
+[data-theme="dark"] {
+  --color-bg: #18181b;
+  --color-surface: #27272a;
+  --color-surface-hover: #3f3f46;
+  --color-border: #3f3f46;
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #a1a1aa;
+  --color-text-inverse: #18181b;
+  --color-text-inverse-subtle: #18181b33;
+  --color-overlay: #00000099;
+
+  --color-accent: #60a5fa;
+  --color-accent-hover: #93c5fd;
+  --color-accent-subtle: #60a5fa26;
+  --color-accent-muted: #60a5fa66;
+  --color-success: #60a5fa;
+  --color-danger: #fb923c;
+  --color-danger-muted: #fb923c80;
+  --color-warning: #a78bfa;
+  --color-warning-subtle: #a78bfa26;
+  --color-warning-muted: #a78bfa66;
+  --color-info: #22d3ee;
+  --color-info-subtle: #22d3ee26;
+}

@@ -5,13 +5,15 @@ interface EmptyStateProps {
   view: View;
 }
 
-const COPY_BY_VIEW: Partial<Record<StaticView, { title: string; body: string }>> = {
+const COPY_BY_VIEW: Partial<
+  Record<StaticView, { title: string; body: string }>
+> = {
   trash: {
     title: "Trash is empty",
     body: "Pages you delete will show up here for 30 days before they’re gone for good.",
   },
-  starred: {
-    title: "No starred pages yet",
+  favorited: {
+    title: "No favorite pages yet",
     body: "Star a saved page to pin it here for quick access.",
   },
   recent: {
@@ -27,12 +29,16 @@ export default function EmptyState({ view }: EmptyStateProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-white py-16 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface py-16 text-center">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-hover text-text-secondary">
         <FileText size={20} />
       </div>
-      <div className="text-sm font-semibold text-stone-700">{copy.title}</div>
-      <div className="mt-1 max-w-xs text-xs text-stone-400">{copy.body}</div>
+      <div className="text-sm font-semibold text-text-primary">
+        {copy.title}
+      </div>
+      <div className="mt-1 max-w-xs text-xs text-text-secondary">
+        {copy.body}
+      </div>
     </div>
   );
 }

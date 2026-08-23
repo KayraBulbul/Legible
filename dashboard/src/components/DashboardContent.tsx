@@ -10,7 +10,7 @@ export default function DashboardContent() {
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5">
       <h1
-        className="mb-4 text-xl font-bold text-stone-900"
+        className="mb-4 text-xl font-bold text-text-primary"
         style={{ fontFamily: "'Lexend', sans-serif" }}
       >
         {viewTitle}
@@ -18,7 +18,7 @@ export default function DashboardContent() {
 
       {view === "home" && <FolderShelf />}
 
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
         {view === "home"
           ? "Recently saved"
           : `${visiblePages.length} page${visiblePages.length === 1 ? "" : "s"}`}

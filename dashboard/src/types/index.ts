@@ -7,7 +7,7 @@ export interface SavedPage {
   domain: string;
   savedAt: string; // ISO date
   folderId: string | null;
-  starred: boolean;
+  favorited: boolean;
   trashed: boolean;
   fontMode: FontMode;
   contrastMode: ContrastMode;
@@ -20,9 +20,9 @@ export interface PageFolder {
   color: string; // Tailwind bg-* class
 }
 
-export type StaticView = "home" | "mypages" | "recent" | "starred" | "trash";
+export type StaticView = "home" | "mypages" | "recent" | "favorited" | "trash";
 export type View = StaticView | `folder:${string}`;
 
 export type ViewMode = "grid" | "list";
 export type SortBy = "date" | "title";
-export type AiPanel = "summary" | "simplify" | "focus" | null;
+export type ToolPanel = "summary" | "simplify" | "focus" | null;

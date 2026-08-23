@@ -12,20 +12,19 @@ import {
 import { useDashboardContext } from "@/context/useDashboardContext";
 
 export default function Sidebar() {
-  const { view, setView, folders, counts, openNewFolder } =
-    useDashboardContext();
+  const { view, setView, folders, openNewFolder } = useDashboardContext();
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col gap-1 bg-stone-950 p-4">
+    <aside className="flex w-64 shrink-0 flex-col gap-1 border-r border-border bg-surface p-4">
       <button
         onClick={() => (window.location.href = "/")}
         className="mb-4 flex items-center gap-2 px-2"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 text-base">
-          <Accessibility size={18} className="text-white" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-base">
+          <Accessibility size={18} className="text-text-inverse" />
         </div>
         <span
-          className="text-[15px] font-bold text-white"
+          className="text-[15px] font-bold text-text-primary"
           style={{ fontFamily: "'Lexend', sans-serif" }}
         >
           A11y Reader
@@ -34,7 +33,7 @@ export default function Sidebar() {
 
       <button
         onClick={openNewFolder}
-        className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-500"
+        className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-accent px-3 py-3 text-sm font-semibold text-text-inverse shadow-sm hover:bg-accent-hover"
       >
         <Plus size={16} /> New folder
       </button>
@@ -59,20 +58,18 @@ export default function Sidebar() {
       />
       <NavItem
         icon={Star}
-        label="Starred"
-        active={view === "starred"}
-        onClick={() => setView("starred")}
-        count={counts.starred}
+        label="Favorites"
+        active={view === "favorited"}
+        onClick={() => setView("favorited")}
       />
       <NavItem
         icon={Trash2}
         label="Trash"
         active={view === "trash"}
         onClick={() => setView("trash")}
-        count={counts.trash}
       />
 
-      <div className="mt-5 mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+      <div className="mt-5 mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
         Folders
       </div>
       <div className="flex flex-col gap-1 overflow-y-auto">
@@ -83,15 +80,14 @@ export default function Sidebar() {
             label={f.name}
             active={view === `folder:${f.id}`}
             onClick={() => setView(`folder:${f.id}`)}
-            count={counts.folders[f.id] ?? 0}
           />
         ))}
       </div>
 
-      <div className="mt-auto rounded-xl bg-stone-900 p-3 text-[11px] text-stone-400">
+      <div className="mt-auto rounded-xl bg-surface-hover p-3 text-[11px] text-text-secondary">
         {/* TODO(extension): reflect real connection state via chrome.runtime messaging */}
-        <div className="flex items-center gap-1.5 font-medium text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Extension
+        <div className="flex items-center gap-1.5 font-medium text-success">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" /> Extension
           connected
         </div>
         <p className="mt-1 leading-snug">

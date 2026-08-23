@@ -19,17 +19,14 @@ export interface DashboardContextValue {
   sortBy: SortBy;
   setSortBy: (sortBy: SortBy) => void;
   visiblePages: SavedPage[];
-  counts: { starred: number; trash: number; folders: Record<string, number> };
-
-  // Selection
-  selected: Set<string>;
-  toggleSelect: (id: string) => void;
-  clearSelection: () => void;
 
   // Reader modal
   readerPage: SavedPage | null;
   openReader: (page: SavedPage) => void;
   closeReader: () => void;
+  readerFullScreen: boolean;
+  enterReaderFullScreen: (pageId: string) => void;
+  exitReaderFullScreen: () => void;
 
   // New folder modal
   newFolderOpen: boolean;
@@ -40,10 +37,12 @@ export interface DashboardContextValue {
   createFolder: () => void;
 
   // Page mutations
-  bulkDelete: () => void;
-  bulkStar: (star: boolean) => void;
   restorePage: (id: string) => void;
   deleteForever: (id: string) => void;
+  moveToTrash: (id: string) => void;
+  toggleFavorite: (id: string) => void;
 }
 
-export const DashboardContext = createContext<DashboardContextValue | null>(null);
+export const DashboardContext = createContext<DashboardContextValue | null>(
+  null,
+);

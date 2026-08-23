@@ -1,44 +1,38 @@
-import { Check, MoreVertical } from "lucide-react";
-import cn from "@/utils/cn";
+import { useEffect, useRef, useState } from "react";
+import { FileDown, MoreVertical, Trash2 } from "lucide-react";
 import formatDate from "@/utils/formatDate";
 import ModeBadges from "@/components/ModeBadges";
+import PopupTooltip from "@/components/PopupTooltip";
 import type { PageItemActionsProps } from "@/components/PageCard";
 
 export default function PageRow({
   page,
-  selected,
-  onToggleSelect,
   onOpen,
   onRestore,
   onDeleteForever,
+  onMoveToTrash,
   isTrash,
 }: PageItemActionsProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
   return (
-    <tr
-      className={cn(
-        "border-b border-stone-100 last:border-0 hover:bg-stone-50",
-        selected && "bg-violet-50",
-      )}
-    >
-      <td className="px-4 py-2.5">
-        <button
-          onClick={onToggleSelect}
-          className={cn(
-            "flex h-4 w-4 items-center justify-center rounded border",
-            selected
-              ? "border-violet-600 bg-violet-600 text-white"
-              : "border-stone-300 text-transparent",
-          )}
-        >
-          <Check size={11} />
-        </button>
-      </td>
-      <td className="px-2 py-2.5">
+    <tr className="border-b border-border last:border-0 hover:bg-surface-hover">
+      <td className="px-2 py-2.5 pl-4">
         <button onClick={onOpen} className="text-left">
-          <div className="text-sm font-medium text-stone-800 hover:text-violet-600">
+          <div className="text-sm font-medium text-text-primary hover:text-accent">
             {page.title}
           </div>
-          <div className="text-xs text-stone-400">{page.domain}</div>
+          <div className="text-xs text-text-secondary">{page.domain}</div>
         </button>
       </td>
       <td className="px-2 py-2.5">
@@ -46,27 +40,54 @@ export default function PageRow({
           <ModeBadges page={page} />
         </div>
       </td>
-      <td className="px-2 py-2.5 text-xs text-stone-400">{formatDate(page.savedAt)}</td>
+      <td className="px-2 py-2.5 text-xs text-text-secondary">
+        {formatDate(page.savedAt)}
+      </td>
       <td className="px-4 py-2.5 text-right">
         {isTrash ? (
           <div className="flex justify-end gap-2">
             <button
               onClick={onRestore}
-              className="text-xs font-medium text-stone-500 hover:text-violet-600"
+              className="text-xs font-medium text-text-secondary hover:text-accent"
             >
               Restore
             </button>
             <button
               onClick={onDeleteForever}
-              className="text-xs font-medium text-rose-500 hover:text-rose-600"
+              className="text-xs font-medium text-danger hover:underline"
             >
               Delete
             </button>
           </div>
         ) : (
-          <button className="rounded p-1 text-stone-400 hover:bg-stone-100">
-            <MoreVertical size={14} />
-          </button>
+          <div ref={menuRef} className="relative inline-block">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((open) => !open);
+              }}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="More actions"
+              className="rounded p-1 text-text-secondary hover:bg-surface-hover"
+            >
+              <MoreVertical size={14} />
+            </button>
+            {menuOpen && (
+              <PopupTooltip
+                onClose={() => setMenuOpen(false)}
+                items={[
+                  { label: "Export to PDF", icon: FileDown, onClick: () => {} },
+                  {
+                    label: "Move to trash",
+                    icon: Trash2,
+                    onClick: onMoveToTrash,
+                    danger: true,
+                  },
+                ]}
+              />
+            )}
+          </div>
         )}
       </td>
     </tr>
