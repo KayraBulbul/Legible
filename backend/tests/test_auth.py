@@ -64,6 +64,33 @@ async def test_guest_session_creation_is_rate_limited_globally(
     assert limited.json()["error"]["code"] == "guest_session_rate_limited"
 
 
+async def test_guest_session_limit_uses_forwarded_client_behind_trusted_proxy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_settings().model_copy(
+        update={
+            "forwarded_allow_ips": "100.0.0.0/8",
+            "guest_sessions_per_ip_per_hour": 1,
+            "guest_sessions_global_per_hour": 100,
+        }
+    )
+    monkeypatch.setattr("api.routes.auth.get_settings", lambda: settings)
+    transport = ASGITransport(app=app, client=("100.64.0.10", 4312))
+
+    async with AsyncClient(transport=transport, base_url="http://test") as proxy_client:
+        first = await proxy_client.post(
+            "/api/v1/auth/guest",
+            headers={"X-Real-IP": "203.0.113.20"},
+        )
+        second = await proxy_client.post(
+            "/api/v1/auth/guest",
+            headers={"X-Real-IP": "203.0.113.21"},
+        )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+
 async def test_authenticated_user_can_read_self(client: AsyncClient) -> None:
     created = await client.post("/api/v1/auth/guest")
     payload = created.json()

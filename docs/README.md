@@ -58,6 +58,8 @@ Extension HTTP requests must go through the Manifest V3 service worker. Content 
 
 Guest creation defaults to 60 sessions per client address per hour and 1,000 sessions per
 hour across the deployment. A rejected request returns `429 guest_session_rate_limited`.
+In production, the client address comes from Railway's `X-Real-IP` header only when the
+connection peer belongs to the configured trusted proxy networks.
 Clients should reuse an existing valid token instead of creating a session on every launch.
 
 Never log access tokens, place them in URLs, or expose them to browsed pages. Use `credentials: "omit"` for browser requests so source-site cookies are never sent to this backend.
@@ -99,8 +101,12 @@ The production backend currently accepts the local dashboard origin `http://loca
 Railway must deploy the `main` branch from root directory `/backend`. The backend start command is:
 
 ```bash
-uv run alembic upgrade head && uv run uvicorn api.main:app --host 0.0.0.0 --port $PORT
+uv run alembic upgrade head && uv run uvicorn api.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "$FORWARDED_ALLOW_IPS"
 ```
+
+Set `FORWARDED_ALLOW_IPS=127.0.0.0/8,::1,10.0.0.0/8,100.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7`
+on the Railway backend service. These are Railway's documented proxy ranges plus loopback. Do
+not set it to `*`; untrusted peers must not be able to supply the address used for rate limits.
 
 The public Railway domain must target the same port as `$PORT`. The current deployment uses port `8080`. PostgreSQL stays in a separate private Railway service and the backend receives its connection string through a `DATABASE_URL` reference variable.
 

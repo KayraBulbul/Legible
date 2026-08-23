@@ -113,6 +113,8 @@ client address per hour and 1,000 sessions per hour across the deployment. Confi
 with `GUEST_SESSIONS_PER_IP_PER_HOUR` and `GUEST_SESSIONS_GLOBAL_PER_HOUR`. A blocked request
 returns `429 guest_session_rate_limited` and does not create a user or session. Clients should
 reuse a valid session instead of creating one on every launch.
+Behind Railway, the backend accepts the platform's original-client header only from configured
+trusted proxy networks, so different clients do not share the edge proxy's rate-limit bucket.
 
 The extension creates this session on first use and stores the token in `chrome.storage.local`. Do not log it, put it in a URL, or send it to content scripts unless needed for a tightly scoped message. The dashboard should centralise token access in one auth module. Its persistent storage choice still needs agreement before implementation.
 

@@ -72,6 +72,7 @@ Provide these environment variables through Railway rather than committing a `.e
 - `ENVIRONMENT=production`;
 - `CORS_ORIGINS`, as a JSON array of allowed dashboard origins;
 - `PAIRING_CODE_SECRET`, a random value containing at least 32 characters;
+- `FORWARDED_ALLOW_IPS=127.0.0.0/8,::1,10.0.0.0/8,100.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7`, the Railway and loopback proxy networks trusted to supply client-address headers;
 - `GUEST_SESSIONS_PER_IP_PER_HOUR=60`, the guest-session limit for one client address;
 - `GUEST_SESSIONS_GLOBAL_PER_HOUR=1000`, the guest-session limit across the deployment;
 - `PDF_RENDER_TIMEOUT_SECONDS=20`, the hard limit for each renderer subprocess;
@@ -103,6 +104,11 @@ PostgreSQL. The `rate_limit_buckets` table stores hashed subjects rather than ra
 addresses, and row locks keep concurrent API instances within the same limits. Run Alembic
 upgrade `20260823_0005` before deploying this version.
 
+Railway supplies the original client address in `X-Real-IP`. The backend uses that header only
+when the connection comes from a network in `FORWARDED_ALLOW_IPS`; otherwise it uses the direct
+peer address. Keep this setting restricted to the Railway and loopback ranges above. Do not use
+`*`, because that would let direct clients forge the address used for rate limits.
+
 `railpack.json` extends Railpack's runtime Apt packages with Pango, HarfBuzz font subsetting, and Noto fonts required by WeasyPrint, including CJK fallback fonts. Keep the `"..."` entry so Railpack retains its generated defaults. See [Railpack's package configuration](https://railpack.com/guides/installing-packages/).
 
 PDFs are generated in short-lived subprocesses and are never stored. Lexend and OpenDyslexic are bundled under the SIL Open Font License. Noto Sans and Noto Sans CJK come from runtime packages and provide Unicode fallback glyphs. The renderer derives the base text direction from the saved document language and preserves safe `dir` attributes for mixed-direction content.
@@ -110,7 +116,7 @@ PDFs are generated in short-lived subprocesses and are never stored. Lexend and 
 Use this backend start command:
 
 ```bash
-uv run alembic upgrade head && uv run uvicorn api.main:app --host 0.0.0.0 --port $PORT
+uv run alembic upgrade head && uv run uvicorn api.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "$FORWARDED_ALLOW_IPS"
 ```
 
 Railway normally injects `DATABASE_URL` with a `postgresql://` scheme. Backend configuration converts it to SQLAlchemy's `postgresql+asyncpg://` scheme without logging the URL.

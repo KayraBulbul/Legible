@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Request
 
+from api.client_address import client_address
+from api.config import get_settings
 from api.dependencies import AiService, CurrentUser, DatabaseSession
 from api.schemas import (
     ErrorResponse,
@@ -31,7 +33,8 @@ async def transform_document(
     current_user: CurrentUser,
     service: AiService,
 ) -> TransformationResponse:
-    client_key = request.client.host if request.client is not None else "unknown"
+    settings = get_settings()
+    client_key = client_address(request, settings.forwarded_allow_ips)
     return await service.transform(database, current_user.id, client_key, payload)
 
 
@@ -47,5 +50,6 @@ async def describe_image(
     current_user: CurrentUser,
     service: AiService,
 ) -> ImageDescriptionResponse:
-    client_key = request.client.host if request.client is not None else "unknown"
+    settings = get_settings()
+    client_key = client_address(request, settings.forwarded_allow_ips)
     return await service.describe_image(database, current_user.id, client_key, payload)

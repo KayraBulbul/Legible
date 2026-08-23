@@ -3,6 +3,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
+from api.client_address import client_address
 from api.config import get_settings
 from api.dependencies import CurrentSession, DatabaseSession
 from api.rate_limits import RateLimitRule, consume_rate_limits, rate_limit_key
@@ -61,7 +62,7 @@ def issued_session_response(issued: IssuedSession) -> GuestSessionResponse:
 )
 async def create_guest(request: Request, database: DatabaseSession) -> GuestSessionResponse:
     settings = get_settings()
-    client_key = request.client.host if request.client is not None else "unknown"
+    client_key = client_address(request, settings.forwarded_allow_ips)
     await consume_rate_limits(
         database,
         (
@@ -138,7 +139,8 @@ async def redeem_code(
     request: Request,
     database: DatabaseSession,
 ) -> GuestSessionResponse:
-    client_key = request.client.host if request.client is not None else "unknown"
+    settings = get_settings()
+    client_key = client_address(request, settings.forwarded_allow_ips)
     await consume_rate_limits(
         database,
         (
@@ -151,5 +153,5 @@ async def redeem_code(
         error_code="pairing_rate_limited",
         error_message="Too many pairing attempts. Try again later.",
     )
-    issued = await redeem_pairing_code(database, payload.code, get_settings().pairing_code_secret)
+    issued = await redeem_pairing_code(database, payload.code, settings.pairing_code_secret)
     return issued_session_response(issued)
