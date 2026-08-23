@@ -321,6 +321,28 @@ class UserResponse(ApiModel):
     created_at: datetime
 
 
+class UserUpdate(ApiModel):
+    display_name: str | None = Field(default=None, max_length=120)
+
+    @field_validator("display_name", mode="before")
+    @classmethod
+    def normalize_display_name(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        if "\x00" in value:
+            raise ValueError("display name must not contain null bytes")
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("display name must not be blank")
+        return value
+
+    @model_validator(mode="after")
+    def require_update(self) -> UserUpdate:
+        if "display_name" not in self.model_fields_set:
+            raise ValueError("displayName must be provided")
+        return self
+
+
 class SessionResponse(ApiModel):
     access_token: str
     expires_at: datetime

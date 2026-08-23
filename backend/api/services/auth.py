@@ -84,6 +84,14 @@ async def revoke_session(database: AsyncSession, session: UserSession) -> None:
     await database.commit()
 
 
+async def update_user_display_name(
+    database: AsyncSession, user: User, display_name: str | None
+) -> None:
+    user.display_name = display_name
+    await database.commit()
+    await database.refresh(user)
+
+
 def hash_pairing_code(code: str, secret: str) -> str:
     return hmac.new(secret.encode("utf-8"), code.encode("ascii"), hashlib.sha256).hexdigest()
 

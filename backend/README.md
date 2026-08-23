@@ -1,6 +1,8 @@
 # Backend
 
-FastAPI and PostgreSQL backend for guest sessions, extension/dashboard pairing, user-owned saved accessibility snapshots, synchronous Gemini transformations, image descriptions, and PDF export.
+FastAPI and PostgreSQL backend for guest sessions, user display names, extension/dashboard
+pairing, user-owned saved accessibility snapshots, synchronous Gemini transformations, image
+descriptions, and PDF export.
 
 ## Requirements
 
@@ -27,7 +29,10 @@ uv run fastapi dev api/main.py
 
 The API is available at `http://127.0.0.1:8000`, interactive documentation at `/docs`, and health at `/health`.
 
-Create a guest session first, then send its token as `Authorization: Bearer <accessToken>` to saved-page endpoints. The request and response contract is documented in `../docs/api.md`.
+Create a guest session first, then send its token as `Authorization: Bearer <accessToken>` to
+authenticated endpoints. `PATCH /api/v1/auth/me` sets or clears the optional display name for
+every session paired to that user. The request and response contract is documented in
+`../docs/api.md`.
 
 ## Production
 
