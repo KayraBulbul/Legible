@@ -23,7 +23,7 @@ The backend currently provides:
 - one-time pairing between an extension session and a dashboard session;
 - saved-page creation with backend HTML sanitisation and idempotent retries;
 - paginated saved-page summaries;
-- saved-page detail, partial updates including favourite state, and deletion;
+- saved-page detail, partial updates including favourite state and tags, and deletion;
 - authenticated Gemini transformations and image descriptions;
 - synchronous PDF export;
 - ownership isolation for every authenticated operation.
@@ -89,6 +89,8 @@ const library = await response.json();
 - Treat returned HTML as untrusted and sanitise again before rendering it.
 - Use the list endpoint for library screens. It omits the large document fields by design.
 - Read `isFavourited` from list summaries and update it with `PATCH /api/v1/saved-pages/{id}`.
+- Read `tags` from list summaries and replace them with `PATCH /api/v1/saved-pages/{id}`. Tags
+  are lowercase labels for client-side filtering; the backend does not filter by tag.
 - Treat `404` as unavailable. The API intentionally returns the same result for missing and other-user resources.
 - Request bodies are limited to 20 MiB.
 

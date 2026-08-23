@@ -23,6 +23,7 @@ class SavedPageSummaryRecord:
     title: str
     excerpt: str
     is_favourited: bool
+    tags: list[str]
     profile_id: UUID | None
     has_transformed_content: bool
     captured_at: datetime
@@ -151,6 +152,7 @@ async def list_saved_pages(
             SavedPage.title,
             SavedPage.excerpt,
             SavedPage.is_favourited,
+            SavedPage.tags,
             SavedPage.profile_id,
             func.coalesce(
                 func.jsonb_typeof(SavedPage.transformed_document) == "object", False
@@ -172,6 +174,7 @@ async def list_saved_pages(
             title=row.title,
             excerpt=row.excerpt,
             is_favourited=row.is_favourited,
+            tags=row.tags,
             profile_id=row.profile_id,
             has_transformed_content=row.has_transformed_content,
             captured_at=row.captured_at,
@@ -202,6 +205,8 @@ async def update_saved_page(
         page.title = payload.title
     if payload.is_favourited is not None:
         page.is_favourited = payload.is_favourited
+    if payload.tags is not None:
+        page.tags = payload.tags
     await database.commit()
     await database.refresh(page)
     return page

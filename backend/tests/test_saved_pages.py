@@ -21,6 +21,7 @@ async def test_guest_can_save_list_and_retrieve_page(
     created = create_response.json()
     assert created["title"] == "Example article"
     assert created["isFavourited"] is False
+    assert created["tags"] == []
     assert created["sourceHash"].startswith("sha256:")
     assert len(created["sourceHash"]) == 71
     assert "<script" not in created["sourceDocument"]["html"]
@@ -35,6 +36,7 @@ async def test_guest_can_save_list_and_retrieve_page(
     assert listing["items"][0]["id"] == created["id"]
     assert listing["items"][0]["hasTransformedContent"] is False
     assert listing["items"][0]["isFavourited"] is False
+    assert listing["items"][0]["tags"] == []
     assert "sourceDocument" not in listing["items"][0]
 
     detail_response = await client.get(f"/api/v1/saved-pages/{created['id']}", headers=headers)
@@ -204,6 +206,19 @@ async def test_favourite_state_cannot_be_set_during_creation(
     assert any(field["path"] == "isFavourited" for field in response.json()["error"]["fields"])
 
 
+async def test_tags_cannot_be_set_during_creation(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    invalid_payload = deepcopy(saved_page_payload)
+    invalid_payload["tags"] = ["research"]
+
+    response = await client.post("/api/v1/saved-pages", json=invalid_payload, headers=headers)
+
+    assert response.status_code == 422
+    assert any(field["path"] == "tags" for field in response.json()["error"]["fields"])
+
+
 async def test_unknown_page_returns_not_found(client: AsyncClient) -> None:
     headers = await create_guest_headers(client)
 
@@ -274,6 +289,50 @@ async def test_owner_can_rename_and_favourite_atomically(
     assert response.json()["isFavourited"] is True
 
 
+async def test_owner_can_replace_and_clear_saved_page_tags(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    tagged = await client.patch(
+        path,
+        json={"tags": ["  Research  Notes ", "URGENT", "research notes"]},
+        headers=headers,
+    )
+    listing = await client.get("/api/v1/saved-pages", headers=headers)
+    cleared = await client.patch(path, json={"tags": []}, headers=headers)
+
+    assert tagged.status_code == 200
+    assert tagged.json()["tags"] == ["research notes", "urgent"]
+    assert listing.json()["items"][0]["tags"] == ["research notes", "urgent"]
+    assert cleared.status_code == 200
+    assert cleared.json()["tags"] == []
+
+
+async def test_owner_can_update_title_favourite_and_tags_atomically(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    response = await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}",
+        json={
+            "title": "  Tagged favourite  ",
+            "isFavourited": True,
+            "tags": ["Reference"],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Tagged favourite"
+    assert response.json()["isFavourited"] is True
+    assert response.json()["tags"] == ["reference"]
+
+
 async def test_invalid_combined_update_changes_neither_field(
     client: AsyncClient, saved_page_payload: dict[str, Any]
 ) -> None:
@@ -293,6 +352,25 @@ async def test_invalid_combined_update_changes_neither_field(
     assert retrieved.json()["isFavourited"] is False
 
 
+async def test_invalid_tags_do_not_change_other_fields(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    response = await client.patch(
+        path,
+        json={"title": "Changed title", "tags": ["   "]},
+        headers=headers,
+    )
+    retrieved = await client.get(path, headers=headers)
+
+    assert response.status_code == 422
+    assert retrieved.json()["title"] == "Example article"
+    assert retrieved.json()["tags"] == []
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -301,6 +379,13 @@ async def test_invalid_combined_update_changes_neither_field(
         {"isFavourited": None},
         {"isFavourited": "true"},
         {"isFavourited": 1},
+        {"tags": None},
+        {"tags": "research"},
+        {"tags": ["   "]},
+        {"tags": [1]},
+        {"tags": ["x" * 51]},
+        {"tags": [f"tag-{index}" for index in range(21)]},
+        {"tags": ["bad\x00tag"]},
         {"unknown": True},
     ],
 )
@@ -342,6 +427,23 @@ async def test_saved_page_list_order_is_unchanged_by_favourite_state(
         second.json()["id"],
         first.json()["id"],
     ]
+
+
+async def test_idempotent_save_replay_preserves_tags(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    await client.patch(
+        f"/api/v1/saved-pages/{created.json()['id']}",
+        json={"tags": ["research"]},
+        headers=headers,
+    )
+
+    replay = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    assert replay.status_code == 200
+    assert replay.json()["tags"] == ["research"]
 
 
 async def test_blank_saved_page_title_is_rejected(
@@ -387,11 +489,14 @@ async def test_user_cannot_rename_or_delete_another_users_page(
 
     renamed = await client.patch(path, json={"title": "Stolen"}, headers=other_headers)
     favourited = await client.patch(path, json={"isFavourited": True}, headers=other_headers)
+    tagged = await client.patch(path, json={"tags": ["stolen"]}, headers=other_headers)
     deleted = await client.delete(path, headers=other_headers)
     owner_read = await client.get(path, headers=owner_headers)
 
     assert renamed.status_code == 404
     assert favourited.status_code == 404
+    assert tagged.status_code == 404
     assert deleted.status_code == 404
     assert owner_read.status_code == 200
     assert owner_read.json()["title"] == "Example article"
+    assert owner_read.json()["tags"] == []

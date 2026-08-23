@@ -49,18 +49,22 @@ async def test_openapi_publishes_idempotent_saved_page_response(client: AsyncCli
     assert create_responses["201"]["content"]["application/json"]["schema"] == expected
 
 
-async def test_openapi_publishes_saved_page_favourite_contract(client: AsyncClient) -> None:
+async def test_openapi_publishes_saved_page_update_contract(client: AsyncClient) -> None:
     response = await client.get("/openapi.json")
 
     assert response.status_code == 200
     schemas = response.json()["components"]["schemas"]
     update = schemas["SavedPageUpdate"]
-    assert set(update["properties"]) == {"title", "isFavourited"}
+    assert set(update["properties"]) == {"title", "isFavourited", "tags"}
     assert update.get("required", []) == []
     assert update["properties"]["title"]["type"] == "string"
     assert update["properties"]["isFavourited"]["type"] == "boolean"
+    assert update["properties"]["tags"]["type"] == "array"
+    assert update["properties"]["tags"]["maxItems"] == 20
     assert schemas["SavedPageResponse"]["properties"]["isFavourited"]["type"] == "boolean"
+    assert schemas["SavedPageResponse"]["properties"]["tags"]["type"] == "array"
     assert schemas["SavedPageSummary"]["properties"]["isFavourited"]["type"] == "boolean"
+    assert schemas["SavedPageSummary"]["properties"]["tags"]["type"] == "array"
 
 
 @pytest.mark.parametrize("method", ["PATCH", "DELETE"])
