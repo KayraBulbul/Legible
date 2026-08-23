@@ -101,12 +101,14 @@ The production backend currently accepts the local dashboard origin `http://loca
 Railway must deploy the `main` branch from root directory `/backend`. The backend start command is:
 
 ```bash
-uv run alembic upgrade head && uv run uvicorn api.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "$FORWARDED_ALLOW_IPS"
+uv run alembic upgrade head && uv run uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-proxy-headers
 ```
 
-Set `FORWARDED_ALLOW_IPS=127.0.0.0/8,::1,10.0.0.0/8,100.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7`
+Set `TRUSTED_PROXY_IPS=127.0.0.0/8,::1,10.0.0.0/8,100.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7`
 on the Railway backend service. These are Railway's documented proxy ranges plus loopback. Do
 not set it to `*`; untrusted peers must not be able to supply the address used for rate limits.
+The `--no-proxy-headers` flag preserves the socket peer for this trust check. The backend reads
+Railway's `X-Real-IP` itself and ignores `X-Forwarded-For`.
 
 The public Railway domain must target the same port as `$PORT`. The current deployment uses port `8080`. PostgreSQL stays in a separate private Railway service and the backend receives its connection string through a `DATABASE_URL` reference variable.
 

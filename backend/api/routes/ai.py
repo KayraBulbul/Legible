@@ -34,7 +34,7 @@ async def transform_document(
     service: AiService,
 ) -> TransformationResponse:
     settings = get_settings()
-    client_key = client_address(request, settings.forwarded_allow_ips)
+    client_key = client_address(request, settings.trusted_proxy_ips)
     return await service.transform(database, current_user.id, client_key, payload)
 
 
@@ -51,5 +51,5 @@ async def describe_image(
     service: AiService,
 ) -> ImageDescriptionResponse:
     settings = get_settings()
-    client_key = client_address(request, settings.forwarded_allow_ips)
+    client_key = client_address(request, settings.trusted_proxy_ips)
     return await service.describe_image(database, current_user.id, client_key, payload)

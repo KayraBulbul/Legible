@@ -62,7 +62,7 @@ def issued_session_response(issued: IssuedSession) -> GuestSessionResponse:
 )
 async def create_guest(request: Request, database: DatabaseSession) -> GuestSessionResponse:
     settings = get_settings()
-    client_key = client_address(request, settings.forwarded_allow_ips)
+    client_key = client_address(request, settings.trusted_proxy_ips)
     await consume_rate_limits(
         database,
         (
@@ -140,7 +140,7 @@ async def redeem_code(
     database: DatabaseSession,
 ) -> GuestSessionResponse:
     settings = get_settings()
-    client_key = client_address(request, settings.forwarded_allow_ips)
+    client_key = client_address(request, settings.trusted_proxy_ips)
     await consume_rate_limits(
         database,
         (

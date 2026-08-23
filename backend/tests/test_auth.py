@@ -64,12 +64,12 @@ async def test_guest_session_creation_is_rate_limited_globally(
     assert limited.json()["error"]["code"] == "guest_session_rate_limited"
 
 
-async def test_guest_session_limit_uses_forwarded_client_behind_trusted_proxy(
+async def test_guest_session_limit_uses_railway_client_address(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = get_settings().model_copy(
         update={
-            "forwarded_allow_ips": "100.0.0.0/8",
+            "trusted_proxy_ips": "100.0.0.0/8",
             "guest_sessions_per_ip_per_hour": 1,
             "guest_sessions_global_per_hour": 100,
         }
