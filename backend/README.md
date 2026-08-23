@@ -101,8 +101,10 @@ and return safe errors without exposing provider responses.
 
 Guest creation, pairing redemption, and AI request limits use fixed-window counters in
 PostgreSQL. The `rate_limit_buckets` table stores hashed subjects rather than raw client
-addresses, and row locks keep concurrent API instances within the same limits. Run Alembic
-upgrade `20260823_0005` before deploying this version.
+addresses, and row locks keep concurrent API instances within the same limits.
+
+Saved-page tags are stored as PostgreSQL text arrays. Run `uv run alembic upgrade head` before
+deploying so revisions `20260823_0005` and `20260823_0006` are applied.
 
 Railway supplies the original client address in `X-Real-IP`. The backend uses that header only
 when the connection comes from a network in `TRUSTED_PROXY_IPS`; otherwise it uses the direct

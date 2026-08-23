@@ -282,6 +282,9 @@ A saved page is a user-owned snapshot. It is not unique by URL. The same user ma
 
 `profileId` must be `null` until the profiles API is implemented. The backend rejects non-null values rather than storing an ID it cannot validate for existence and ownership.
 
+New saved pages start with `tags: []`. The create endpoint does not accept client-supplied tags;
+clients assign them later with the saved-page update endpoint.
+
 The backend returns `201 Created` for a new snapshot and a full saved-page response:
 
 ```json
@@ -292,6 +295,7 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
   "title": "Example article",
   "excerpt": "Original content.",
   "isFavourited": false,
+  "tags": [],
   "sourceDocument": {
     "format": "semantic_html",
     "html": "<article><h1>Example article</h1><p>Original content.</p></article>",
@@ -343,6 +347,7 @@ The backend returns `201 Created` for a new snapshot and a full saved-page respo
       "title": "Example article",
       "excerpt": "Original content.",
       "isFavourited": false,
+      "tags": [],
       "profileId": null,
       "hasTransformedContent": false,
       "capturedAt": "2026-08-22T04:31:00Z",
@@ -363,7 +368,7 @@ The planned default is 20 items and maximum is 100. Items sort newest first. Lis
 ### Retrieve, update, and delete
 
 - `GET /api/v1/saved-pages/{id}` returns the full saved-page response.
-- `PATCH /api/v1/saved-pages/{id}` accepts `title`, `isFavourited`, or both and returns the updated full response.
+- `PATCH /api/v1/saved-pages/{id}` accepts any combination of `title`, `isFavourited`, and `tags`, then returns the updated full response.
 - `DELETE /api/v1/saved-pages/{id}` returns `204 No Content`.
 
 Rename a page:
@@ -382,9 +387,25 @@ Favourite or unfavourite a page:
 }
 ```
 
-Both fields update atomically when sent together. An empty object, explicit `null`, a non-boolean `isFavourited`, or an unknown field returns `422 validation_error`. New pages always start with `isFavourited: false`; the create endpoint does not accept client-supplied favourite state.
+Replace a page's tags:
 
-List results remain sorted newest first. The API does not filter or reorder the list based on favourite state. A dashboard can use `isFavourited` to mark or group the returned summaries.
+```json
+{
+  "tags": ["research", "accessibility"]
+}
+```
+
+An empty tag array removes every tag. Tags are trimmed, case-folded, whitespace-normalised, and
+deduplicated while preserving their order. A page may have at most 20 tags, each no longer than
+50 characters after normalisation.
+
+All supplied fields update atomically. An empty object, explicit `null`, invalid tag list, a
+non-boolean `isFavourited`, or an unknown field returns `422 validation_error`. New pages always
+start with `isFavourited: false`; the create endpoint accepts neither favourite state nor tags.
+
+List results remain sorted newest first. The API does not filter or reorder the list based on
+favourite state or tags. A dashboard can filter the returned summaries, but it must retrieve all
+pagination pages when it needs complete tag results.
 
 A missing page and a page owned by another user both return `404`. Clients must not infer that another user's page exists.
 

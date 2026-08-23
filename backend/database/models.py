@@ -14,8 +14,9 @@ from sqlalchemy import (
     UniqueConstraint,
     false,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.base import Base
@@ -98,6 +99,9 @@ class SavedPage(Base):
     excerpt: Mapped[str] = mapped_column(Text, nullable=False)
     is_favourited: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
+    )
+    tags: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, default=list, server_default=text("'{}'::text[]")
     )
     source_document: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     transformed_document: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))

@@ -107,6 +107,9 @@ class AccessibilitySettings(ApiModel):
 
 
 DocumentText = Annotated[str, StringConstraints(max_length=1_000_000)]
+Tag = Annotated[str, StringConstraints(strict=True, min_length=1, max_length=50)]
+MAX_SAVED_PAGE_TAGS = 20
+TagList = Annotated[list[Tag], Field(max_length=MAX_SAVED_PAGE_TAGS)]
 
 
 class SemanticDocument(ApiModel):
@@ -220,13 +223,35 @@ class SavedPageCreate(ApiModel):
 class SavedPageUpdate(ApiModel):
     title: str | SkipJsonSchema[None] = Field(default=None, min_length=1, max_length=512)
     is_favourited: StrictBool | SkipJsonSchema[None] = None
+    tags: TagList | SkipJsonSchema[None] = None
 
-    @field_validator("title", "is_favourited", mode="before")
+    @field_validator("title", "is_favourited", "tags", mode="before")
     @classmethod
     def reject_null_updates(cls, value: object) -> object:
         if value is None:
             raise ValueError("updated fields must not be null")
         return value
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def normalize_tags(cls, value: object) -> object:
+        if not isinstance(value, list):
+            return value
+        if len(value) > MAX_SAVED_PAGE_TAGS:
+            raise ValueError(f"tags must contain at most {MAX_SAVED_PAGE_TAGS} items")
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for tag in value:
+            if not isinstance(tag, str):
+                return value
+            clean_tag = " ".join(tag.split()).casefold()
+            if "\x00" in clean_tag:
+                raise ValueError("tags must not contain null bytes")
+            if clean_tag not in seen:
+                normalized.append(clean_tag)
+                seen.add(clean_tag)
+        return normalized
 
     @field_validator("title")
     @classmethod
@@ -252,6 +277,7 @@ class SavedPageResponse(ApiModel):
     title: str
     excerpt: str
     is_favourited: bool
+    tags: TagList
     source_document: SemanticDocument
     transformed_document: SemanticDocument | None
     accessibility_settings: AccessibilitySettings
@@ -269,6 +295,7 @@ class SavedPageSummary(ApiModel):
     title: str
     excerpt: str
     is_favourited: bool
+    tags: TagList
     profile_id: UUID | None
     has_transformed_content: bool
     captured_at: datetime
