@@ -67,6 +67,32 @@ async def test_openapi_publishes_saved_page_update_contract(client: AsyncClient)
     assert schemas["SavedPageSummary"]["properties"]["tags"]["type"] == "array"
 
 
+async def test_openapi_publishes_current_user_update_contract(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    schema = response.json()
+    operation = schema["paths"]["/api/v1/auth/me"]["patch"]
+    assert operation["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/UserUpdate"
+    }
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/UserResponse"
+    }
+
+    display_name = schema["components"]["schemas"]["UserUpdate"]["properties"]["displayName"]
+    string_schema = next(option for option in display_name["anyOf"] if option["type"] == "string")
+    assert string_schema["maxLength"] == 120
+    assert {"type": "null"} in display_name["anyOf"]
+
+    expected_error = {"$ref": "#/components/schemas/ErrorResponse"}
+    for status in ("401", "413", "422"):
+        assert (
+            operation["responses"][status]["content"]["application/json"]["schema"]
+            == expected_error
+        )
+
+
 @pytest.mark.parametrize("method", ["PATCH", "DELETE"])
 async def test_cors_preflight_allows_saved_page_writes(client: AsyncClient, method: str) -> None:
     origin = "http://localhost:5173"
@@ -82,6 +108,23 @@ async def test_cors_preflight_allows_saved_page_writes(client: AsyncClient, meth
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == origin
     assert method in response.headers["access-control-allow-methods"]
+    assert "Authorization" in response.headers["access-control-allow-headers"]
+
+
+async def test_cors_preflight_allows_current_user_update(client: AsyncClient) -> None:
+    origin = "http://localhost:5173"
+    response = await client.options(
+        "/api/v1/auth/me",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "PATCH",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+    assert "PATCH" in response.headers["access-control-allow-methods"]
     assert "Authorization" in response.headers["access-control-allow-headers"]
 
 

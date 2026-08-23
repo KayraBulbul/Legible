@@ -40,7 +40,7 @@
     if (!el) return true;
     if (SKIP_TAGS.has(el.tagName)) return true;
     if (el.isContentEditable) return true;
-    if (el.closest && el.closest('.a11y-hud, .a11y-bionic-strong')) return true;
+    if (el.closest && el.closest('.a11y-bionic-strong, .a11y-highlight-box, .a11y-subtitle-banner')) return true;
     return false;
   }
 

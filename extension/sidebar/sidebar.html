@@ -3,14 +3,17 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Web Accessibility</title>
+  <title>LEGIBLE</title>
   <link rel="stylesheet" href="sidebar.css" />
 </head>
 
 <body>
   <header class="header">
-    <span class="micon icon-lg" aria-hidden="true">accessibility_new</span>
-    <h1>Web Accessibility</h1>
+    <img src="../icons/icon48.png" alt="" class="header-logo" width="24" height="24" />
+    <h1>LEGIBLE</h1>
+    <button type="button" id="resetBtn" class="icon-btn" title="Reset all settings to default" aria-label="Reset all settings to default">
+      <span class="micon" aria-hidden="true">restart_alt</span>
+    </button>
     <button type="button" id="hidePanelBtn" class="icon-btn" title="Hide panel" aria-label="Hide panel">
       <span class="micon" aria-hidden="true">keyboard_double_arrow_right</span>
     </button>
@@ -37,26 +40,62 @@
         </button>
       </div>
       <p id="saveStatus" class="hint"></p>
+
+      <div class="subsection" id="pairingSection">
+        <h3><span class="micon" aria-hidden="true">devices</span>Linked devices</h3>
+        <p class="hint">Link another browser or the dashboard to this same library. Pages are
+          not copied - both devices simply see the one library.</p>
+
+        <button id="pairCreateBtn" class="btn" disabled>
+          <span class="micon" aria-hidden="true">qr_code_2</span>
+          <span>Show a linking code</span>
+        </button>
+        <div id="pairCodeBox" class="pair-code-box" hidden>
+          <output id="pairCode" class="pair-code"></output>
+          <div class="row">
+            <button id="pairCopyBtn" class="btn btn-small">
+              <span class="micon" aria-hidden="true">content_copy</span>
+              <span>Copy</span>
+            </button>
+            <span id="pairExpiry" class="status-text" role="timer"></span>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="field-label">
+            <span class="label-text"><span class="micon" aria-hidden="true">link</span>Have a code?</span>
+          </span>
+          <input type="text" id="pairCodeInput" placeholder="8-character code" autocomplete="off"
+            spellcheck="false" maxlength="11" aria-describedby="pairRedeemWarning" />
+        </label>
+        <p id="pairRedeemWarning" class="hint">Using a code replaces this device's library with
+          the other device's. Anything saved here first stays with the old session.</p>
+        <button id="pairRedeemBtn" class="btn">
+          <span class="micon" aria-hidden="true">link</span>
+          <span>Link this device</span>
+        </button>
+        <p id="pairStatus" class="hint" role="status"></p>
+      </div>
     </section>
 
     <section class="section">
-      <h2><span class="micon" aria-hidden="true">palette</span>Theme</h2>
+      <h2><span class="micon" aria-hidden="true">palette</span>Page Theme</h2>
       <div class="card-grid" id="themeGrid">
-        <button type="button" class="card" data-theme="invert" data-icon="invert_colors_off"
-          data-icon-on="invert_colors">
-          <span class="micon card-icon" aria-hidden="true">invert_colors_off</span>
+        <button type="button" class="card" data-theme="invert" data-icon="invert_colors"
+          data-icon-on="invert_colors_off">
+          <span class="micon card-icon" aria-hidden="true">invert_colors</span>
           <span class="card-label">Invert Colors</span>
         </button>
-        <button type="button" class="card" data-theme="dark" data-icon="bedtime_off" data-icon-on="bedtime">
-          <span class="micon card-icon" aria-hidden="true">bedtime_off</span>
+        <button type="button" class="card" data-theme="dark" data-icon="bedtime" data-icon-on="bedtime_off">
+          <span class="micon card-icon" aria-hidden="true">bedtime</span>
           <span class="card-label">Dark Mode</span>
         </button>
-        <button type="button" class="card" data-theme="light" data-icon="brightness_low" data-icon-on="sunny">
-          <span class="micon card-icon" aria-hidden="true">brightness_low</span>
+        <button type="button" class="card" data-theme="light" data-icon="sunny" data-icon-on="brightness_low">
+          <span class="micon card-icon" aria-hidden="true">sunny</span>
           <span class="card-label">Light Mode</span>
         </button>
-        <button type="button" class="card" data-theme="contrast" data-icon="tonality" data-icon-on="contrast">
-          <span class="micon card-icon" aria-hidden="true">tonality</span>
+        <button type="button" class="card" data-theme="contrast" data-icon="contrast" data-icon-on="tonality">
+          <span class="micon card-icon" aria-hidden="true">contrast</span>
           <span class="card-label">High Contrast</span>
         </button>
       </div>
@@ -179,30 +218,23 @@
         <span>Might be incompatible with certain websites</span>
       </p>
       <div class="card-grid">
-        <button type="button" class="card" id="highlightLinksCard" data-icon="link_off" data-icon-on="link">
-          <span class="micon card-icon" aria-hidden="true">link_off</span>
+        <button type="button" class="card" id="highlightLinksCard" data-icon="link" data-icon-on="link_off">
+          <span class="micon card-icon" aria-hidden="true">link</span>
           <span class="card-label">Highlight Links</span>
         </button>
-        <button type="button" class="card" id="hideImagesCard" data-icon="image" data-icon-on="hide_image">
-          <span class="micon card-icon" aria-hidden="true">image</span>
+        <button type="button" class="card" id="hideImagesCard" data-icon="hide_image" data-icon-on="image">
+          <span class="micon card-icon" aria-hidden="true">hide_image</span>
           <span class="card-label">Hide Images</span>
         </button>
-        <button type="button" class="card" id="pauseAnimationsCard" data-icon="play_circle"
-          data-icon-on="pause_circle">
-          <span class="micon card-icon" aria-hidden="true">play_circle</span>
+        <button type="button" class="card" id="pauseAnimationsCard" data-icon="pause_circle" data-icon-on="play_circle">
+          <span class="micon card-icon" aria-hidden="true">pause_circle</span>
           <span class="card-label">Pause Animations</span>
         </button>
-        <button type="button" class="card" id="declutterCard" data-icon="auto_fix_off"
-          data-icon-on="auto_fix_high">
-          <span class="micon card-icon" aria-hidden="true">auto_fix_off</span>
+        <button type="button" class="card" id="declutterCard" data-icon="auto_fix_high" data-icon-on="auto_fix_off">
+          <span class="micon card-icon" aria-hidden="true">auto_fix_high</span>
           <span class="card-label">Reduce Clutter</span>
         </button>
       </div>
-      <label class="checkbox-field">
-        <input type="checkbox" id="hudVisible" checked />
-        <span class="micon" aria-hidden="true">widgets</span>
-        <span>Show floating on-page toolbar</span>
-      </label>
     </section>
 
     <section class="section">
@@ -294,37 +326,43 @@
         <span>Start / Stop Reading (Alt+R)</span>
       </button>
       <p class="hint">Alt+N / Alt+P move to the next / previous element.</p>
+      <p id="readStatus" class="hint" role="status"></p>
     </section>
 
-    <section class="section">
-      <h2><span class="micon" aria-hidden="true">auto_awesome</span>AI Vision (Gemini)</h2>
-      <label class="field">
+    <section class="section" id="extensionSettingsSection">
+      <h2><span class="micon" aria-hidden="true">settings</span>Extension Settings</h2>
+      <div class="field">
         <span class="field-label">
-          <span class="label-text"><span class="micon" aria-hidden="true">key</span>Gemini API key</span>
+          <span class="label-text"><span class="micon" aria-hidden="true">palette</span>Theme Mode</span>
         </span>
-        <input type="password" id="apiKey" placeholder="Paste your Gemini API key" autocomplete="off" />
-      </label>
-      <div class="row">
-        <button id="saveKeyBtn" class="btn">
-          <span class="micon" aria-hidden="true">save</span>
-          <span>Save Key</span>
-        </button>
-        <span id="keyStatus" class="status-text"></span>
+        <div class="card-grid card-grid-3" id="extThemeGrid">
+          <button type="button" class="card active" data-ext-theme="light" aria-pressed="true">
+            <span class="micon card-icon" aria-hidden="true">light_mode</span>
+            <span class="card-label">Light</span>
+          </button>
+          <button type="button" class="card" data-ext-theme="dark" aria-pressed="false">
+            <span class="micon card-icon" aria-hidden="true">dark_mode</span>
+            <span class="card-label">Dark</span>
+          </button>
+          <button type="button" class="card" data-ext-theme="contrast" aria-pressed="false">
+            <span class="micon card-icon" aria-hidden="true">contrast</span>
+            <span class="card-label">High Contrast</span>
+          </button>
+        </div>
       </div>
       <label class="checkbox-field">
-        <input type="checkbox" id="aiEnabled" checked />
-        <span class="micon" aria-hidden="true">smart_toy</span>
-        <span>Enable AI alt-text / ARIA generation</span>
+        <input type="checkbox" id="toolbarVisible" checked />
+        <span class="micon" aria-hidden="true">widgets</span>
+        <span>Show floating on-page button</span>
       </label>
-      <button id="scanBtn" class="btn btn-primary">
-        <span class="micon" aria-hidden="true">document_scanner</span>
-        <span>Scan This Page with AI</span>
-      </button>
-      <p id="scanStatus" class="hint"></p>
     </section>
   </main>
 
   <footer>
+    <button type="button" id="resetAllBtn" class="btn" style="width: 100%; margin-bottom: 8px;">
+      <span class="micon" aria-hidden="true">restart_alt</span>
+      <span>Reset All Settings</span>
+    </button>
     <p id="powerHint" class="hint">Changes are saved as you make them.</p>
   </footer>
 

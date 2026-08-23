@@ -113,10 +113,75 @@ async function authedFetchWithRetry(path, options, retries = 2) {
   }
 }
 
+/* Pairing links a second client to the SAME anonymous user, so both see one saved-page
+   library. It does not copy pages between devices, and revoking one session leaves the
+   other signed in. */
+
+// The backend alphabet omits I, O, 0 and 1 to avoid transcription errors, and its schema
+// rejects anything but eight uppercase characters from that set - there is no server-side
+// normalization. Users type codes read off another screen, so strip the spaces and dashes
+// they add and fix the case here, or a perfectly good code 422s.
+const PAIRING_CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const PAIRING_CODE_LENGTH = 8;
+
+function normalizePairingCode(raw) {
+  return String(raw || '')
+    .toUpperCase()
+    .split('')
+    .filter((ch) => PAIRING_CODE_ALPHABET.includes(ch))
+    .join('');
+}
+
+function isValidPairingCode(raw) {
+  return normalizePairingCode(raw).length === PAIRING_CODE_LENGTH;
+}
+
+/** Asks the backend for a code this device can read out to another one. Authenticated. */
+async function createPairingCode() {
+  const data = await authedFetch('/api/v1/auth/pairing-codes', { method: 'POST' });
+  return { code: data.code, expiresAt: data.expiresAt };
+}
+
+/** Redeems a code from another device. Deliberately unauthenticated: the whole point is
+    that this client has no session for the target user yet. On success the stored session
+    is REPLACED, so any pages saved under this device's previous guest user stop being
+    reachable from here. Callers must confirm with the user before calling this. */
+async function redeemPairingCode(rawCode) {
+  const code = normalizePairingCode(rawCode);
+  if (code.length !== PAIRING_CODE_LENGTH) {
+    throw new ApiError(400, 'invalid_pairing_code', 'Enter the 8-character code from the other device.');
+  }
+
+  const resp = await fetch(`${API_BASE_URL}/api/v1/auth/pairing-codes/redeem`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+    body: JSON.stringify({ code }),
+  });
+
+  if (!resp.ok) {
+    const errCode = await parseErrorCode(resp);
+    throw new ApiError(resp.status, errCode, `Could not use that code (${errCode})`);
+  }
+
+  const data = await resp.json();
+  const session = {
+    accessToken: data.session.accessToken,
+    expiresAt: data.session.expiresAt,
+    userId: data.user.id,
+  };
+  await setStoredSession(session);
+  return session;
+}
+
 export {
   ApiError,
   API_BASE_URL,
   createGuestSession,
+  createPairingCode,
+  redeemPairingCode,
+  normalizePairingCode,
+  isValidPairingCode,
   ensureSession,
   getStoredSession,
   clearStoredSession,

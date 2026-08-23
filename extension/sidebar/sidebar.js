@@ -17,16 +17,26 @@ const DEFAULT_SETTINGS = {
   ttsRate: 1,
   ttsPitch: 1,
   voiceURI: null,
-  hudVisible: true,
-  aiEnabled: true,
+  toolbarVisible: true,
+  extTheme: 'light',
 };
 
 const els = {
+  resetBtn: document.getElementById('resetBtn'),
+  resetAllBtn: document.getElementById('resetAllBtn'),
   hidePanelBtn: document.getElementById('hidePanelBtn'),
   powerBtn: document.getElementById('powerBtn'),
   powerIcon: document.getElementById('powerIcon'),
   powerHint: document.getElementById('powerHint'),
   backendStatus: document.getElementById('backendStatus'),
+  pairCreateBtn: document.getElementById('pairCreateBtn'),
+  pairCodeBox: document.getElementById('pairCodeBox'),
+  pairCode: document.getElementById('pairCode'),
+  pairCopyBtn: document.getElementById('pairCopyBtn'),
+  pairExpiry: document.getElementById('pairExpiry'),
+  pairCodeInput: document.getElementById('pairCodeInput'),
+  pairRedeemBtn: document.getElementById('pairRedeemBtn'),
+  pairStatus: document.getElementById('pairStatus'),
   connectBtn: document.getElementById('connectBtn'),
   savePageBtn: document.getElementById('savePageBtn'),
   saveStatus: document.getElementById('saveStatus'),
@@ -35,6 +45,7 @@ const els = {
   fontPickerValue: document.getElementById('fontPickerValue'),
   fontPickerList: document.getElementById('fontPickerList'),
   themeGrid: document.getElementById('themeGrid'),
+  extThemeGrid: document.getElementById('extThemeGrid'),
   fontScale: document.getElementById('fontScale'),
   fontScaleOut: document.getElementById('fontScaleOut'),
   fontScaleDown: document.getElementById('fontScaleDown'),
@@ -52,7 +63,7 @@ const els = {
   hideImagesCard: document.getElementById('hideImagesCard'),
   pauseAnimationsCard: document.getElementById('pauseAnimationsCard'),
   declutterCard: document.getElementById('declutterCard'),
-  hudVisible: document.getElementById('hudVisible'),
+  toolbarVisible: document.getElementById('toolbarVisible'),
   cursorEnabled: document.getElementById('cursorEnabled'),
   cursorStyle: document.getElementById('cursorStyle'),
   cursorSize: document.getElementById('cursorSize'),
@@ -66,12 +77,7 @@ const els = {
   ttsPitch: document.getElementById('ttsPitch'),
   ttsPitchOut: document.getElementById('ttsPitchOut'),
   toggleReadBtn: document.getElementById('toggleReadBtn'),
-  apiKey: document.getElementById('apiKey'),
-  saveKeyBtn: document.getElementById('saveKeyBtn'),
-  keyStatus: document.getElementById('keyStatus'),
-  aiEnabled: document.getElementById('aiEnabled'),
-  scanBtn: document.getElementById('scanBtn'),
-  scanStatus: document.getElementById('scanStatus'),
+  readStatus: document.getElementById('readStatus'),
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -101,6 +107,18 @@ function syncThemeGrid() {
   els.themeGrid.querySelectorAll('.card').forEach((btn) => {
     setCardState(btn, settings.themeMode === btn.dataset.theme);
   });
+}
+
+function syncExtThemeGrid() {
+  const current = settings.extTheme || 'light';
+  document.documentElement.setAttribute('data-ext-theme', current);
+  if (els.extThemeGrid) {
+    els.extThemeGrid.querySelectorAll('.card').forEach((btn) => {
+      const active = btn.dataset.extTheme === current;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+  }
 }
 
 function syncFeatureCards() {
@@ -288,6 +306,7 @@ function populateUI() {
   syncPowerUI();
   syncFontPicker();
   syncThemeGrid();
+  syncExtThemeGrid();
   syncFeatureCards();
 
   els.fontScale.value = settings.fontScale;
@@ -300,7 +319,7 @@ function populateUI() {
   els.lineHeightOut.textContent = settings.lineHeight ? String(settings.lineHeight) : 'Default';
 
   els.bionicReading.checked = !!settings.bionicReading;
-  els.hudVisible.checked = settings.hudVisible !== false;
+  els.toolbarVisible.checked = settings.toolbarVisible !== false;
 
   els.cursorEnabled.checked = !!settings.cursorEnabled;
   els.cursorStyle.value = settings.cursorStyle || DEFAULT_SETTINGS.cursorStyle;
@@ -312,7 +331,6 @@ function populateUI() {
   els.ttsRateOut.textContent = `${settings.ttsRate.toFixed(1)}x`;
   els.ttsPitch.value = settings.ttsPitch;
   els.ttsPitchOut.textContent = settings.ttsPitch.toFixed(1);
-  els.aiEnabled.checked = settings.aiEnabled !== false;
   if (settings.voiceURI) els.voiceSelect.value = settings.voiceURI;
 }
 
@@ -369,7 +387,141 @@ async function refreshBackendStatus() {
   els.backendStatus.textContent = connected ? 'Connected' : 'Not connected';
   els.backendStatus.className = connected ? 'status-text ok' : 'status-text';
   els.savePageBtn.disabled = !connected;
+  // Only an authenticated session can mint a pairing code; redeeming one deliberately
+  // stays available while disconnected, since that is the whole point of joining.
+  els.pairCreateBtn.disabled = !connected;
+  if (!connected) hidePairCode();
   return connected;
+}
+
+/* Pairing. A code links a second client to the same anonymous user so both see one
+   saved-page library; nothing is copied between devices. Codes live 10 minutes, are
+   single-use, and creating a new one invalidates the previous unused one. */
+
+const PAIRING_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+let pairExpiryTimer = null;
+
+// Mirrors the backend's alphabet, which drops I/O/0/1 so codes read aloud cleanly. The
+// API rejects anything else outright, so tidy up what the user typed before sending.
+function normalizePairingCode(raw) {
+  return String(raw || '')
+    .toUpperCase()
+    .split('')
+    .filter((ch) => PAIRING_ALPHABET.includes(ch))
+    .join('');
+}
+
+function stopPairExpiryTimer() {
+  if (pairExpiryTimer !== null) {
+    clearInterval(pairExpiryTimer);
+    pairExpiryTimer = null;
+  }
+}
+
+function hidePairCode() {
+  stopPairExpiryTimer();
+  els.pairCodeBox.hidden = true;
+  els.pairCode.textContent = '';
+  els.pairExpiry.textContent = '';
+}
+
+function showPairCode(code, expiresAt) {
+  els.pairCode.textContent = code;
+  els.pairCodeBox.hidden = false;
+
+  const deadline = new Date(expiresAt).getTime();
+  const tick = () => {
+    const left = Math.round((deadline - Date.now()) / 1000);
+    if (left <= 0) {
+      // The backend would reject it anyway; clearing it avoids reading out a dead code.
+      hidePairCode();
+      els.pairStatus.textContent = 'That code expired. Generate a new one.';
+      return;
+    }
+    const mins = Math.floor(left / 60);
+    const secs = String(left % 60).padStart(2, '0');
+    els.pairExpiry.textContent = `Expires in ${mins}:${secs}`;
+  };
+  tick();
+  stopPairExpiryTimer();
+  pairExpiryTimer = setInterval(tick, 1000);
+}
+
+function wirePairingEvents() {
+  els.pairCreateBtn.addEventListener('click', async () => {
+    els.pairCreateBtn.disabled = true;
+    els.pairStatus.textContent = 'Requesting a code...';
+    const res = await chrome.runtime.sendMessage({ type: 'BACKEND_CREATE_PAIRING_CODE' });
+    els.pairCreateBtn.disabled = false;
+
+    if (res && res.ok) {
+      showPairCode(res.code, res.expiresAt);
+      els.pairStatus.textContent = 'Enter this code on the other device within 10 minutes.';
+    } else {
+      hidePairCode();
+      els.pairStatus.textContent =
+        (res && res.error) === 'pairing_rate_limited'
+          ? 'Too many codes requested. Try again later.'
+          : `Could not get a code (${(res && res.error) || 'unknown'}).`;
+    }
+  });
+
+  els.pairCopyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(els.pairCode.textContent);
+      els.pairStatus.textContent = 'Code copied.';
+    } catch (e) {
+      // Clipboard access can be denied inside the overlay iframe; the code is on screen.
+      els.pairStatus.textContent = 'Could not copy - read the code off the screen instead.';
+    }
+  });
+
+  // Normalizing as the user types means a code pasted with dashes or in lower case still
+  // looks right in the field, rather than being silently fixed only on submit.
+  els.pairCodeInput.addEventListener('input', () => {
+    els.pairCodeInput.value = normalizePairingCode(els.pairCodeInput.value).slice(0, 8);
+  });
+
+  els.pairRedeemBtn.addEventListener('click', async () => {
+    const code = normalizePairingCode(els.pairCodeInput.value);
+    if (code.length !== 8) {
+      els.pairStatus.textContent = 'Enter the full 8-character code.';
+      return;
+    }
+
+    // Redeeming swaps this device onto the other device's user, so anything saved under the
+    // current session becomes unreachable from here. Destructive enough to confirm first.
+    const confirmed = window.confirm(
+      'Link this device to the other one?\n\n' +
+        'This device will switch to the other device\u2019s saved-page library. ' +
+        'Pages you saved on this device before linking will stay with the old session ' +
+        'and will not appear here.'
+    );
+    if (!confirmed) return;
+
+    els.pairRedeemBtn.disabled = true;
+    els.pairStatus.textContent = 'Linking...';
+    const res = await chrome.runtime.sendMessage({
+      type: 'BACKEND_REDEEM_PAIRING_CODE',
+      payload: { code },
+    });
+    els.pairRedeemBtn.disabled = false;
+
+    if (res && res.ok) {
+      els.pairCodeInput.value = '';
+      hidePairCode();
+      els.pairStatus.textContent = 'Linked. This device now shares the other library.';
+      await refreshBackendStatus();
+    } else {
+      const err = (res && res.error) || 'unknown';
+      els.pairStatus.textContent =
+        err === 'invalid_pairing_code'
+          ? 'That code is invalid, already used, or expired.'
+          : err === 'pairing_rate_limited'
+            ? 'Too many attempts. Try again later.'
+            : `Linking failed (${err}).`;
+    }
+  });
 }
 
 function wireBackendEvents() {
@@ -487,7 +639,7 @@ function wireEvents() {
     syncFeatureCards();
   });
 
-  els.hudVisible.addEventListener('change', () => persist({ hudVisible: els.hudVisible.checked }));
+  els.toolbarVisible.addEventListener('change', () => persist({ toolbarVisible: els.toolbarVisible.checked }));
 
   els.cursorEnabled.addEventListener('change', () => persist({ cursorEnabled: els.cursorEnabled.checked }));
   els.cursorStyle.addEventListener('change', () => persist({ cursorStyle: els.cursorStyle.value }));
@@ -510,54 +662,56 @@ function wireEvents() {
     els.ttsPitchOut.textContent = Number(els.ttsPitch.value).toFixed(1);
     persist({ ttsPitch: Number(els.ttsPitch.value) });
   });
-  els.aiEnabled.addEventListener('change', () => persist({ aiEnabled: els.aiEnabled.checked }));
 
   els.toggleReadBtn.addEventListener('click', async () => {
     try {
       await sendToContent({ type: 'TOGGLE_READ' });
+      els.readStatus.textContent = '';
     } catch (e) {
-      els.scanStatus.textContent = 'Cannot control this page (try a regular website tab).';
+      els.readStatus.textContent = 'Cannot control this page (try a regular website tab).';
     }
   });
 
-  els.saveKeyBtn.addEventListener('click', async () => {
-    const key = els.apiKey.value.trim();
-    if (!key) {
-      els.keyStatus.textContent = 'Enter a key first.';
-      els.keyStatus.className = 'status-text err';
-      return;
-    }
-    await chrome.storage.local.set({ geminiApiKey: key });
-    els.keyStatus.textContent = 'Saved.';
-    els.keyStatus.className = 'status-text ok';
-  });
+  if (els.extThemeGrid) {
+    els.extThemeGrid.querySelectorAll('.card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const theme = btn.dataset.extTheme;
+        persist({ extTheme: theme });
+        syncExtThemeGrid();
+      });
+    });
+  }
 
-  els.scanBtn.addEventListener('click', async () => {
-    els.scanStatus.textContent = 'Scanning...';
+  const handleReset = async () => {
+    settings = { ...DEFAULT_SETTINGS };
+    await chrome.storage.local.set({ a11ySettings: settings });
+    populateUI();
     try {
-      const res = await sendToContent({ type: 'RUN_AI_SCAN' });
-      if (res && res.ok) {
-        els.scanStatus.textContent = `Analyzed ${res.result.scanned} element(s).`;
-      } else {
-        els.scanStatus.textContent = 'Scan failed.';
-      }
+      await sendToContent({ type: 'RESET_SESSION' });
     } catch (e) {
-      els.scanStatus.textContent = 'Cannot scan this page (try a regular website tab).';
+      // content script may not be loaded on internal pages
     }
-  });
+    els.powerHint.textContent = 'All settings have been reset to defaults.';
+    els.powerHint.style.color = 'var(--color-accent)';
+    setTimeout(() => {
+      syncPowerUI();
+      els.powerHint.style.removeProperty('color');
+    }, 2500);
+  };
+
+  if (els.resetBtn) els.resetBtn.addEventListener('click', handleReset);
+  if (els.resetAllBtn) els.resetAllBtn.addEventListener('click', handleReset);
 }
 
 async function init() {
-  const stored = await chrome.storage.local.get(['a11ySettings', 'geminiApiKey']);
+  const stored = await chrome.storage.local.get(['a11ySettings']);
   settings = { ...DEFAULT_SETTINGS, ...(stored.a11ySettings || {}) };
-  if (stored.geminiApiKey) {
-    els.apiKey.placeholder = 'Key saved (hidden)';
-  }
   populateUI();
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;
   wireEvents();
   wireBackendEvents();
+  wirePairingEvents();
   refreshBackendStatus();
 }
 

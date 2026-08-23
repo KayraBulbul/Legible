@@ -1,4 +1,4 @@
-/* Content script orchestrator: wires storage settings, messages, HUD, and keyboard commands */
+/* Content script orchestrator: wires storage settings, messages, and keyboard commands */
 (function () {
   const DEFAULT_SETTINGS = {
     extensionEnabled: true,
@@ -19,8 +19,8 @@
     ttsRate: 1,
     ttsPitch: 1,
     voiceURI: null,
-    hudVisible: true,
-    aiEnabled: true,
+    toolbarVisible: true,
+    extTheme: 'light',
   };
 
   // Values forced while the extension is switched off from the sidebar. The user's own
@@ -37,7 +37,7 @@
     highlightLinks: false,
     hideImages: false,
     cursorEnabled: false,
-    hudVisible: false,
+    toolbarVisible: false,
   };
 
   let settings = { ...DEFAULT_SETTINGS };
@@ -60,8 +60,7 @@
         voiceURI: effective.voiceURI,
       });
     if (!isEnabled() && window.A11yScreenReader) window.A11yScreenReader.stopReading();
-    window.A11yHud && window.A11yHud.setVisible(effective.hudVisible);
-    window.A11yHud && window.A11yHud.syncState(effective);
+    window.A11yToolbar && window.A11yToolbar.setVisible(effective.toolbarVisible !== false && isEnabled());
   }
 
   function loadSettings(cb) {
@@ -87,38 +86,6 @@
     applyAll();
   });
 
-  async function runAiScan() {
-    if (!window.A11yScanner) return { ok: false };
-    if (!isEnabled()) return { ok: false, reason: 'extension-off' };
-    if (!settings.aiEnabled) {
-      window.A11yHud && window.A11yHud.setStatus('AI scanning is disabled in settings.');
-      return { ok: false, reason: 'ai-disabled' };
-    }
-    window.A11yHud && window.A11yHud.setStatus('Scanning page for missing alt text...');
-    const result = await window.A11yScanner.scanPage(document.body);
-    if (result.scanned === 0) {
-      window.A11yHud && window.A11yHud.setStatus('No unlabeled images, icons, or canvases found.');
-    } else if (result.results.every((r) => !r.ok && r.reason === 'missing-api-key')) {
-      window.A11yHud && window.A11yHud.setStatus('Add a Gemini API key in the sidebar to enable AI scanning.');
-    } else {
-      const okCount = result.results.filter((r) => r.ok).length;
-      window.A11yHud && window.A11yHud.setStatus(`AI scan complete: ${okCount}/${result.scanned} element(s) labeled.`);
-    }
-    return { ok: true, result };
-  }
-
-  async function runAiScanFocused() {
-    const el = window.A11yScreenReader && window.A11yScreenReader.getFocusedOrHoveredImage();
-    if (!el) {
-      window.A11yHud && window.A11yHud.setStatus('Hover or focus an image first, then press Alt+A.');
-      return;
-    }
-    window.A11yHud && window.A11yHud.setStatus('Analyzing image...');
-    const result = await window.A11yScanner.scanSingleElement(el);
-    window.A11yHud &&
-      window.A11yHud.setStatus(result.ok ? `AI: ${result.altText}` : 'AI scan failed for this element.');
-  }
-
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.type) return;
 
@@ -135,9 +102,6 @@
           case 'prev-element':
             window.A11yScreenReader && window.A11yScreenReader.prev();
             break;
-          case 'ai-scan-focused':
-            runAiScanFocused();
-            break;
         }
         break;
       }
@@ -151,9 +115,6 @@
       case 'GET_SETTINGS':
         sendResponse({ settings });
         break;
-      case 'RUN_AI_SCAN':
-        runAiScan().then(sendResponse);
-        return true;
       case 'TOGGLE_READ':
         if (!isEnabled()) {
           sendResponse({ ok: false, reason: 'extension-off' });
@@ -165,14 +126,20 @@
       case 'EXTRACT_PAGE':
         sendResponse(window.A11yExtractor ? window.A11yExtractor.extractPage() : { ok: false, reason: 'no-extractor' });
         break;
+      case 'RESET_SESSION':
+        settings = { ...DEFAULT_SETTINGS };
+        applyAll();
+        if (window.A11yScreenReader) window.A11yScreenReader.stopReading();
+        sendResponse({ ok: true });
+        break;
     }
     return undefined;
   });
 
-  window.A11yContent = { updateSetting, runAiScan, runAiScanFocused, getSettings: () => settings };
+  window.A11yContent = { updateSetting, getSettings: () => settings };
 
   loadSettings(() => {
     applyAll();
-    if (window.A11yHud) window.A11yHud.init({ settings: effectiveSettings(), updateSetting, runAiScan });
+    if (window.A11yToolbar) window.A11yToolbar.init({ settings: effectiveSettings(), togglePanel: () => window.A11yPanel && window.A11yPanel.toggle() });
   });
 })();

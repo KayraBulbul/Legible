@@ -19,6 +19,7 @@ Reference links:
 The backend currently provides:
 
 - guest-session creation, lookup, and revocation;
+- authenticated display-name updates shared by paired sessions;
 - PostgreSQL-backed guest, pairing-redemption, and Gemini rate limits shared by API instances;
 - one-time pairing between an extension session and a dashboard session;
 - saved-page creation with backend HTML sanitisation and idempotent retries;
@@ -54,7 +55,9 @@ Extension HTTP requests must go through the Manifest V3 service worker. Content 
 2. Store the returned `session.accessToken` in client-owned storage.
 3. Send `Authorization: Bearer <accessToken>` on authenticated requests.
 4. Use the pairing endpoints when the extension and dashboard need to share one user.
-5. Clear a token after a `401` response or successful session revocation.
+5. Read `displayName` from the pairing response or `GET /api/v1/auth/me`. If it is `null`,
+   the dashboard may prompt once and save the answer with `PATCH /api/v1/auth/me`.
+6. Clear a token after a `401` response or successful session revocation.
 
 Guest creation defaults to 60 sessions per client address per hour and 1,000 sessions per
 hour across the deployment. A rejected request returns `429 guest_session_rate_limited`.
@@ -63,6 +66,10 @@ connection peer belongs to the configured trusted proxy networks.
 Clients should reuse an existing valid token instead of creating a session on every launch.
 
 Never log access tokens, place them in URLs, or expose them to browsed pages. Use `credentials: "omit"` for browser requests so source-site cookies are never sent to this backend.
+
+Display names are optional presentation labels. They do not change authentication or
+saved-page ownership. Send a non-blank string of at most 120 characters to set one, or `null`
+to clear it. The backend trims and collapses whitespace before saving it.
 
 A basic authenticated request looks like:
 

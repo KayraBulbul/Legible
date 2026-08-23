@@ -130,12 +130,128 @@
     document.head.appendChild(style);
   }
 
+  /* Pause Animations, script half.
+
+     The stylesheet handles CSS keyframes and transitions declaratively. These helpers
+     cover the three things CSS cannot reach: Web Animations API animations started with
+     element.animate(), SVG SMIL (<animate>, <animateTransform>), and media that only
+     begins playing after the toggle was flipped. */
+
+  let pauseAnimationsOn = false;
+  // Only animations this extension paused are resumed later, so a toggle-off never starts
+  // something the page had deliberately paused on its own.
+  const pausedAnimations = new Set();
+  let motionObserver = null;
+  let motionSweepTimer = null;
+
+  function pauseWebAnimations() {
+    if (typeof document.getAnimations !== 'function') return;
+    document.getAnimations().forEach((anim) => {
+      if (anim.playState !== 'running' || pausedAnimations.has(anim)) return;
+      try {
+        anim.pause();
+        pausedAnimations.add(anim);
+      } catch (e) {
+        // pause() throws InvalidStateError on an infinite animation with no resolved time.
+      }
+    });
+  }
+
+  function resumeWebAnimations() {
+    pausedAnimations.forEach((anim) => {
+      try {
+        if (anim.playState === 'paused') anim.play();
+      } catch (e) {
+        /* animation may have been cancelled with the element that owned it */
+      }
+    });
+    pausedAnimations.clear();
+  }
+
+  function setSvgAnimations(paused) {
+    document.querySelectorAll('svg').forEach((svg) => {
+      // SVGSVGElement only; an inline <svg> in an unsupported engine has no timeline.
+      if (typeof svg.pauseAnimations !== 'function') return;
+      try {
+        if (paused) svg.pauseAnimations();
+        else svg.unpauseAnimations();
+      } catch (e) {
+        /* ignore */
+      }
+    });
+  }
+
+  function pauseMedia() {
+    document.querySelectorAll('video, audio').forEach((m) => {
+      try { m.pause(); } catch (e) { /* ignore */ }
+    });
+  }
+
+  function sweepMotion() {
+    pauseWebAnimations();
+    setSvgAnimations(true);
+    pauseMedia();
+  }
+
+  // A childList observer cannot see an animation started on an element that was already in
+  // the DOM, so mutations trigger a full re-sweep rather than a scan of the added nodes.
+  // Debounced because script-heavy pages mutate in bursts.
+  function scheduleMotionSweep() {
+    if (motionSweepTimer !== null) return;
+    motionSweepTimer = setTimeout(() => {
+      motionSweepTimer = null;
+      if (pauseAnimationsOn) sweepMotion();
+    }, 200);
+  }
+
+  function startMotionObserver() {
+    if (motionObserver) return;
+    motionObserver = new MutationObserver(scheduleMotionSweep);
+    motionObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  function stopMotionObserver() {
+    if (motionObserver) {
+      motionObserver.disconnect();
+      motionObserver = null;
+    }
+    if (motionSweepTimer !== null) {
+      clearTimeout(motionSweepTimer);
+      motionSweepTimer = null;
+    }
+  }
+
+  // `play` does not bubble, so this listens in the capture phase to catch media that
+  // autoplays, gets restarted by the page, or arrives with infinite scroll.
+  document.addEventListener(
+    'play',
+    (e) => {
+      if (!pauseAnimationsOn) return;
+      const el = e.target;
+      if (el && (el.tagName === 'VIDEO' || el.tagName === 'AUDIO')) {
+        try { el.pause(); } catch (err) { /* ignore */ }
+      }
+    },
+    true
+  );
+
   function setPauseAnimations(enabled) {
     setPreset('pause-animations', enabled);
-    if (enabled) {
-      document.querySelectorAll('video, audio').forEach((m) => {
-        try { m.pause(); } catch (e) { /* ignore */ }
-      });
+    const wasOn = pauseAnimationsOn;
+    pauseAnimationsOn = !!enabled;
+
+    if (pauseAnimationsOn) {
+      sweepMotion();
+      startMotionObserver();
+    } else if (wasOn) {
+      // Restore only on a real on->off flip. applyState() re-runs on every settings
+      // change, and unpausing unconditionally would resume SVG timelines the page had
+      // paused itself.
+      stopMotionObserver();
+      resumeWebAnimations();
+      setSvgAnimations(false);
+      // Media stays paused on purpose. Silently resuming video or audio the user did not
+      // restart themselves is a worse surprise than leaving it stopped.
     }
   }
 

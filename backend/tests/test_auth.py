@@ -102,6 +102,79 @@ async def test_authenticated_user_can_read_self(client: AsyncClient) -> None:
     assert response.json() == payload["user"]
 
 
+async def test_authenticated_user_can_update_display_name(client: AsyncClient) -> None:
+    created = await client.post("/api/v1/auth/guest")
+    headers = {"Authorization": f"Bearer {created.json()['session']['accessToken']}"}
+
+    updated = await client.patch(
+        "/api/v1/auth/me",
+        json={"displayName": "  Ada   Lovelace\n"},
+        headers=headers,
+    )
+    read_back = await client.get("/api/v1/auth/me", headers=headers)
+
+    assert updated.status_code == 200
+    assert updated.json()["displayName"] == "Ada Lovelace"
+    assert read_back.json() == updated.json()
+
+
+async def test_authenticated_user_can_clear_display_name(client: AsyncClient) -> None:
+    created = await client.post("/api/v1/auth/guest")
+    headers = {"Authorization": f"Bearer {created.json()['session']['accessToken']}"}
+    await client.patch("/api/v1/auth/me", json={"displayName": "Ada"}, headers=headers)
+
+    response = await client.patch("/api/v1/auth/me", json={"displayName": None}, headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["displayName"] is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"displayName": " \n\t "},
+        {"displayName": "a" * 121},
+        {"displayName": "Ada\x00Lovelace"},
+    ],
+)
+async def test_display_name_update_rejects_invalid_payloads(
+    client: AsyncClient, payload: dict[str, object]
+) -> None:
+    created = await client.post("/api/v1/auth/guest")
+    headers = {"Authorization": f"Bearer {created.json()['session']['accessToken']}"}
+
+    response = await client.patch("/api/v1/auth/me", json=payload, headers=headers)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+async def test_display_name_update_requires_authentication(client: AsyncClient) -> None:
+    response = await client.patch("/api/v1/auth/me", json={"displayName": "Ada"})
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "authentication_required"
+
+
+async def test_display_name_is_shared_across_paired_sessions(client: AsyncClient) -> None:
+    created = await client.post("/api/v1/auth/guest")
+    original_headers = {"Authorization": f"Bearer {created.json()['session']['accessToken']}"}
+    await client.patch("/api/v1/auth/me", json={"displayName": "Ada"}, headers=original_headers)
+    code = (await client.post("/api/v1/auth/pairing-codes", headers=original_headers)).json()[
+        "code"
+    ]
+
+    paired = await client.post("/api/v1/auth/pairing-codes/redeem", json={"code": code})
+    paired_headers = {"Authorization": f"Bearer {paired.json()['session']['accessToken']}"}
+    await client.patch("/api/v1/auth/me", json={"displayName": "Grace"}, headers=paired_headers)
+    original_user = await client.get("/api/v1/auth/me", headers=original_headers)
+
+    assert paired.status_code == 201
+    assert paired.json()["user"]["displayName"] == "Ada"
+    assert original_user.json()["displayName"] == "Grace"
+
+
 async def test_revoking_session_invalidates_its_token(client: AsyncClient) -> None:
     created = await client.post("/api/v1/auth/guest")
     headers = {"Authorization": f"Bearer {created.json()['session']['accessToken']}"}

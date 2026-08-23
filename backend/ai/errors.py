@@ -1,14 +1,23 @@
-class GeminiError(Exception):
-    """Base class for safe, provider-boundary failures."""
+"""
+Each maps to one of the HTTP status codes docs/api.md requires (413/415/429/502).
+"""
 
 
-class GeminiRateLimitError(GeminiError):
-    """The provider rejected the request because its quota was exhausted."""
+class AiServiceError(Exception):
+    """Base class for all AI-service failures."""
 
 
-class GeminiProviderError(GeminiError):
-    """The provider failed or returned an unusable response."""
+class PayloadTooLargeError(AiServiceError):
+    """Maps to HTTP 413 — the image/content payload exceeds the allowed size."""
 
 
-class GeminiUnavailableError(GeminiError):
-    """The service is not configured for provider calls."""
+class UnsupportedMediaTypeError(AiServiceError):
+    """Maps to HTTP 415 — the image type or data URL is not something we accept."""
+
+
+class RateLimitedError(AiServiceError):
+    """Maps to HTTP 429 — Gemini's own rate limit was hit."""
+
+
+class UpstreamServiceError(AiServiceError):
+    """Maps to HTTP 502 — Gemini failed or returned something unusable."""

@@ -16,6 +16,6 @@ html.a11y-theme-invert [style*="background-image"] {
 /* Counter-invert the extension's own overlays so they render in their real colours. */
 html.a11y-theme-invert .a11y-custom-cursor,
 html.a11y-theme-invert .a11y-panel-host,
-html.a11y-theme-invert .a11y-hud-root {
+html.a11y-theme-invert .a11y-toolbar-btn {
   filter: invert(1) hue-rotate(180deg) !important;
 }

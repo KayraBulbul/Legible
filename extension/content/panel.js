@@ -36,14 +36,14 @@
        max-height: calc(100vh - ${INSET * 2}px) !important;
        margin: 0 !important;
        padding: 0 !important;
-       border: 1px solid #dcdcdc !important;
+       border: 1px solid rgba(120, 120, 128, 0.2) !important;
        border-radius: 14px !important;
        overflow: hidden !important;
-       background: #fafaf9 !important;
+       background: transparent !important;
        z-index: ${Z} !important;
        transform: translateX(calc(100% + ${INSET * 2}px));
        transition: transform 0.22s ease;
-       box-shadow: 0 12px 40px rgba(28, 28, 30, 0.22) !important;
+       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28) !important;
        pointer-events: auto !important;
        visibility: hidden;`
     );
@@ -63,9 +63,8 @@
        margin: 0 !important;
        padding: 0 !important;
        border: none !important;
-       border-radius: 0 !important;
-       background: #fafaf9 !important;
-       color-scheme: light !important;
+       border-radius: 14px !important;
+       background: transparent !important;
        opacity: 1 !important;
        filter: none !important;`
     );

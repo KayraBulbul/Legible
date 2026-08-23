@@ -5,20 +5,12 @@ import logging
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
 from google.genai import errors as genai_errors
-from google.genai import types
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text, update
 
-from ai.errors import GeminiProviderError, GeminiRateLimitError, GeminiUnavailableError
-from ai.gemini_service import (
-    GeminiImageDescription,
-    GeminiTransformation,
-    GoogleGeminiService,
-)
 from api.config import get_settings
 from api.dependencies import get_ai_service
 from api.main import app, create_app
@@ -30,6 +22,14 @@ from api.schemas import (
     TextTransformationOperation,
 )
 from api.services.ai import MAX_IMAGE_BYTES, AiApplicationService
+from api.services.gemini import (
+    GeminiImageDescription,
+    GeminiProviderError,
+    GeminiRateLimitError,
+    GeminiTransformation,
+    GeminiUnavailableError,
+    GoogleGeminiService,
+)
 from database.models import RateLimitBucket
 from database.session import engine
 from tests.helpers import create_guest_headers
@@ -122,16 +122,17 @@ async def test_gemini_transform_preserves_unknown_language(
 ) -> None:
     provider = GoogleGeminiService(api_key="test-key", model="fake-gemini")
 
-    async def generate(
+    def call_gemini(
         _contents: object,
-        response_model: Any,
         *,
-        response_json_schema: dict[str, object],
-    ) -> Any:
-        assert response_json_schema
-        return response_model(html="<p>Clear</p>", text="Clear", language=None)
+        client: object,
+        model: str,
+    ) -> str:
+        assert client is not None
+        assert model == "fake-gemini"
+        return '{"html":"<p>Clear</p>","text":"Clear","language":null}'
 
-    monkeypatch.setattr(provider, "_generate", generate)
+    monkeypatch.setattr("ai.gemini_service._call_gemini", call_gemini)
     result = await provider.transform(
         TextTransformationOperation.SIMPLIFY,
         SemanticDocument(html="<p>Dense</p>", text="Dense", language=None),
@@ -141,16 +142,16 @@ async def test_gemini_transform_preserves_unknown_language(
     assert result.document.language is None
 
 
-async def test_gemini_transform_uses_supported_response_json_schema(
+async def test_gemini_transform_uses_restored_json_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured_configs: list[types.GenerateContentConfig] = []
+    captured_configs: list[dict[str, object]] = []
 
-    async def generate_content(
+    def generate_content(
         *,
         model: str,
         contents: object,
-        config: types.GenerateContentConfig,
+        config: dict[str, object],
     ) -> object:
         assert model == "gemini-3.6-flash"
         assert contents
@@ -160,10 +161,8 @@ async def test_gemini_transform_uses_supported_response_json_schema(
             text='{"html":"<p>Clear</p>","text":"Clear","language":"en"}',
         )
 
-    fake_client = SimpleNamespace(
-        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
-    )
-    monkeypatch.setattr("ai.gemini_service.genai.Client", lambda **_kwargs: fake_client)
+    fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    monkeypatch.setattr("api.services.gemini.genai.Client", lambda **_kwargs: fake_client)
     provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
 
     await provider.transform(
@@ -173,32 +172,22 @@ async def test_gemini_transform_uses_supported_response_json_schema(
     )
 
     assert len(captured_configs) == 1
-    config = captured_configs[0]
-    assert config.response_schema is None
-    assert config.response_json_schema == {
-        "type": "object",
-        "properties": {
-            "html": {"type": "string"},
-            "text": {"type": "string"},
-            "language": {
-                "anyOf": [{"type": "string"}, {"type": "null"}],
-            },
-        },
-        "required": ["html", "text"],
-        "additionalProperties": False,
+    assert captured_configs[0] == {
+        "temperature": 0.2,
+        "response_mime_type": "application/json",
     }
 
 
-async def test_gemini_image_description_uses_supported_response_json_schema(
+async def test_gemini_image_description_uses_restored_json_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured_configs: list[types.GenerateContentConfig] = []
+    captured_configs: list[dict[str, object]] = []
 
-    async def generate_content(
+    def generate_content(
         *,
         model: str,
         contents: object,
-        config: types.GenerateContentConfig,
+        config: dict[str, object],
     ) -> object:
         assert model == "gemini-3.6-flash"
         assert contents
@@ -208,10 +197,8 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
             text='{"altText":"A red dot.","role":"img"}',
         )
 
-    fake_client = SimpleNamespace(
-        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
-    )
-    monkeypatch.setattr("ai.gemini_service.genai.Client", lambda **_kwargs: fake_client)
+    fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    monkeypatch.setattr("api.services.gemini.genai.Client", lambda **_kwargs: fake_client)
     provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
 
     await provider.describe_image(
@@ -222,24 +209,9 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
     )
 
     assert len(captured_configs) == 1
-    config = captured_configs[0]
-    assert config.response_schema is None
-    assert config.response_json_schema == {
-        "type": "object",
-        "properties": {
-            "altText": {"type": "string"},
-            "role": {
-                "anyOf": [
-                    {
-                        "type": "string",
-                        "enum": ["img", "figure", "graphics-document"],
-                    },
-                    {"type": "null"},
-                ],
-            },
-        },
-        "required": ["altText"],
-        "additionalProperties": False,
+    assert captured_configs[0] == {
+        "temperature": 0.2,
+        "response_mime_type": "application/json",
     }
 
 
@@ -289,7 +261,7 @@ async def test_gemini_image_description_uses_supported_response_json_schema(
             {
                 "event": "gemini_provider_failure",
                 "failure_stage": "response_validation",
-                "exception_type": "ValidationError",
+                "exception_type": "JSONDecodeError",
                 "provider_code": None,
                 "provider_status": None,
                 "provider_reason": None,
@@ -305,20 +277,18 @@ async def test_gemini_logs_redacted_provider_failure(
     provider_result: object,
     expected_diagnostic: dict[str, object],
 ) -> None:
-    async def generate_content(**_kwargs: object) -> object:
+    def generate_content(**_kwargs: object) -> object:
         if isinstance(provider_result, Exception):
             raise provider_result
         return provider_result
 
-    fake_client = SimpleNamespace(
-        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
-    )
-    monkeypatch.setattr("ai.gemini_service.genai.Client", lambda **_kwargs: fake_client)
-    monkeypatch.setattr("ai.gemini_service.logger.disabled", False)
+    fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    monkeypatch.setattr("api.services.gemini.genai.Client", lambda **_kwargs: fake_client)
+    monkeypatch.setattr("api.services.gemini.logger.disabled", False)
     provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
 
     with (
-        caplog.at_level(logging.ERROR, logger="ai.gemini_service"),
+        caplog.at_level(logging.ERROR, logger="api.services.gemini"),
         pytest.raises(GeminiProviderError),
     ):
         await provider.transform(

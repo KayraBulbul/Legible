@@ -21,7 +21,7 @@ Clients should read the base URL from environment-specific configuration rather 
 
 The API owns:
 
-- guest identity, sessions, and extension/dashboard pairing;
+- guest identity, display names, sessions, and extension/dashboard pairing;
 - per-user saved pages and accessibility profiles;
 - Gemini 3.6 Flash transformations and image descriptions;
 - PDF generation for saved pages.
@@ -64,6 +64,7 @@ The dashboard may use this for a diagnostic state, but normal screens should han
 | `GET` | `/health` | No | Current | Process and database health |
 | `POST` | `/api/v1/auth/guest` | No | Current | Create a guest user and first session |
 | `GET` | `/api/v1/auth/me` | Yes | Current | Read the current user |
+| `PATCH` | `/api/v1/auth/me` | Yes | Current | Set or clear the current user's display name |
 | `POST` | `/api/v1/auth/pairing-codes` | Yes | Current | Create a one-time dashboard/extension pairing code |
 | `POST` | `/api/v1/auth/pairing-codes/redeem` | No | Current | Exchange a pairing code for another session |
 | `DELETE` | `/api/v1/auth/session` | Yes | Current | Revoke the current session |
@@ -87,7 +88,8 @@ Profiles may follow saved-page CRUD if time is tight. Their schema is still defi
 
 The MVP uses anonymous guest users. It does not require email, password, login, or signup. Each client gets an opaque access token. A one-time code connects an extension session and dashboard session to the same user.
 
-Guest-session creation, bearer-token validation, current-user lookup, session revocation, and pairing are implemented.
+Guest-session creation, bearer-token validation, current-user lookup and display-name updates,
+session revocation, and pairing are implemented.
 
 ### Create a guest session
 
@@ -124,6 +126,31 @@ The extension creates this session on first use and stores the token in `chrome.
 
 `GET /api/v1/auth/me` returns `200 OK` with the `user` object above. A missing, invalid, expired, or revoked token returns `401`.
 
+### Update the current user's display name
+
+`PATCH /api/v1/auth/me` updates the user resolved from the bearer token and returns the updated
+`user` object. It never accepts a client-supplied user ID.
+
+```json
+{
+  "displayName": "Ada Lovelace"
+}
+```
+
+Display names are optional presentation labels. They do not authenticate the user or affect
+saved-page ownership. The backend trims surrounding whitespace, collapses internal whitespace,
+and accepts at most 120 characters. A blank name is invalid. Send `null` to clear the name:
+
+```json
+{
+  "displayName": null
+}
+```
+
+An empty object is invalid because the request would not change anything. Successful updates
+return `200 OK`. Missing, invalid, expired, or revoked tokens return `401`; invalid payloads
+return `422`.
+
 ### Pair extension and dashboard
 
 An authenticated client requests a code:
@@ -147,7 +174,7 @@ The other client redeems it:
 }
 ```
 
-Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user.
+Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user. The `user.displayName` value is shared by every session for that user, so either paired client sees later updates through `GET /api/v1/auth/me`.
 
 Codes contain eight uppercase characters, expire after 10 minutes, and work once. Creating a
 new code invalidates any previous unused code for the same user. A user may create five codes

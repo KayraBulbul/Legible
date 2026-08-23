@@ -1,5 +1,19 @@
-/* Pause Animations: freezes CSS animations/transitions (video/audio playback is paused via script) */
-html.a11y-pause-animations *:not(.a11y-hud):not(.a11y-hud *) {
+/* Pause Animations: freezes CSS keyframe animations and cancels transitions.
+
+   The universal selector does not match pseudo-elements, so ::before/::after are listed
+   explicitly - spinners and decorative motion built on them would otherwise keep running.
+   `html` is listed on its own because `*` only matches its descendants.
+
+   Transitions are cancelled rather than frozen: `transition: none` snaps to the end value,
+   which leaves the page in a coherent state, whereas freezing mid-flight can strand an
+   element half-faded or half-slid.
+
+   Web Animations API animations, SVG SMIL, and media playback cannot be reached from CSS
+   at all; content/restyler.js pauses those by script. */
+html.a11y-pause-animations,
+html.a11y-pause-animations *,
+html.a11y-pause-animations *::before,
+html.a11y-pause-animations *::after {
   animation-play-state: paused !important;
   transition: none !important;
 }

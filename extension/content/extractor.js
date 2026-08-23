@@ -1,9 +1,9 @@
 /* Builds a semantic-HTML snapshot of the live page for saving to the backend. Strips this
-   extension's own DOM injections (HUD, bionic-reading wrappers, custom cursor) so a saved
+   extension's own DOM injections (highlight box, subtitles, bionic-reading wrappers, custom cursor) so a saved
    page reflects the source content, not this extension's UI. The backend re-sanitizes HTML
    server-side, so this only needs to remove extension artifacts, not defend against XSS. */
 (function () {
-  const STRIP_SELECTORS = ['.a11y-hud', '.a11y-custom-cursor', 'script', 'style', 'noscript', 'iframe', 'form'];
+  const STRIP_SELECTORS = ['.a11y-highlight-box', '.a11y-subtitle-banner', '.a11y-custom-cursor', '.a11y-toolbar-btn', 'script', 'style', 'noscript', 'iframe', 'form'];
   const MAX_DOC_LENGTH = 1000000;
 
   function unwrapBionicText(root) {
