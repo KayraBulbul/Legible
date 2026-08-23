@@ -3,6 +3,7 @@ import base64
 import json
 import logging
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -10,7 +11,7 @@ import pytest
 from google.genai import errors as genai_errors
 from google.genai import types
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
+from sqlalchemy import text, update
 
 from ai.errors import GeminiProviderError, GeminiRateLimitError, GeminiUnavailableError
 from ai.gemini_service import (
@@ -29,6 +30,7 @@ from api.schemas import (
     TextTransformationOperation,
 )
 from api.services.ai import MAX_IMAGE_BYTES, AiApplicationService
+from database.models import RateLimitBucket
 from database.session import engine
 from tests.helpers import create_guest_headers
 
@@ -634,7 +636,7 @@ async def test_transform_rejects_when_local_capacity_is_full(
     assert busy.json()["error"]["code"] == "ai_busy"
 
 
-async def test_local_rate_limit_is_scoped_to_user(
+async def test_ai_rate_limit_is_scoped_to_user(
     client: AsyncClient,
     fake_provider: FakeGeminiService,
 ) -> None:
@@ -683,30 +685,61 @@ async def test_new_guest_identity_does_not_reset_client_rate_limit(
     assert limited.json()["error"]["code"] == "ai_rate_limited"
 
 
-async def test_expired_rate_limit_subjects_are_removed(
+async def test_expired_rate_limit_windows_reset(
     client: AsyncClient,
     fake_provider: FakeGeminiService,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = make_service(fake_provider)
+    service = make_service(
+        fake_provider,
+        rate_limit=1,
+        ip_rate_limit=1,
+        global_rate_limit=1,
+    )
     app.dependency_overrides[get_ai_service] = lambda: service
-    timestamps = iter((0.0, 61.0))
-    monkeypatch.setattr("api.services.ai.monotonic", lambda: next(timestamps))
     payload = {
         "operation": "focus",
         "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
     }
     try:
-        first_user = await create_guest_headers(client)
-        second_user = await create_guest_headers(client)
-        first = await client.post("/api/v1/transformations", headers=first_user, json=payload)
-        second = await client.post("/api/v1/transformations", headers=second_user, json=payload)
+        headers = await create_guest_headers(client)
+        first = await client.post("/api/v1/transformations", headers=headers, json=payload)
+        async with engine.begin() as connection:
+            await connection.execute(
+                update(RateLimitBucket)
+                .where(RateLimitBucket.key.like("ai-%"))
+                .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+            )
+        second = await client.post("/api/v1/transformations", headers=headers, json=payload)
     finally:
         app.dependency_overrides.pop(get_ai_service, None)
 
     assert first.status_code == 200
     assert second.status_code == 200
-    assert len(service._attempts) == 3
+
+
+async def test_ai_rate_limit_is_shared_between_service_instances(
+    client: AsyncClient,
+    fake_provider: FakeGeminiService,
+) -> None:
+    first_service = make_service(fake_provider, rate_limit=1)
+    second_service = make_service(fake_provider, rate_limit=1)
+    payload = {
+        "operation": "focus",
+        "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
+    }
+    headers = await create_guest_headers(client)
+
+    app.dependency_overrides[get_ai_service] = lambda: first_service
+    try:
+        first = await client.post("/api/v1/transformations", headers=headers, json=payload)
+        app.dependency_overrides[get_ai_service] = lambda: second_service
+        limited = await client.post("/api/v1/transformations", headers=headers, json=payload)
+    finally:
+        app.dependency_overrides.pop(get_ai_service, None)
+
+    assert first.status_code == 200
+    assert limited.status_code == 429
+    assert limited.json()["error"]["code"] == "ai_rate_limited"
 
 
 async def test_global_rate_limit_applies_across_clients(

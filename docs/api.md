@@ -108,6 +108,16 @@ Guest-session creation, bearer-token validation, current-user lookup, session re
 }
 ```
 
+Guest creation uses two PostgreSQL-backed fixed-window limits by default: 60 sessions per
+client address per hour and 1,000 sessions per hour across the deployment. Configure them
+with `GUEST_SESSIONS_PER_IP_PER_HOUR` and `GUEST_SESSIONS_GLOBAL_PER_HOUR`. A blocked request
+returns `429 guest_session_rate_limited` and does not create a user or session. Clients should
+reuse a valid session instead of creating one on every launch.
+Behind Railway, the backend accepts the platform's original-client header only from configured
+trusted proxy networks, so different clients do not share the edge proxy's rate-limit bucket.
+The deployment preserves the socket peer, reads Railway's `X-Real-IP` header, and ignores
+`X-Forwarded-For` when deriving this identity.
+
 The extension creates this session on first use and stores the token in `chrome.storage.local`. Do not log it, put it in a URL, or send it to content scripts unless needed for a tightly scoped message. The dashboard should centralise token access in one auth module. Its persistent storage choice still needs agreement before implementation.
 
 ### Read the current user
@@ -139,7 +149,10 @@ The other client redeems it:
 
 Successful redemption returns `201 Created` with the same shape as guest-session creation. It contains a new access token for the existing user.
 
-Codes contain eight uppercase characters, expire after 10 minutes, and work once. Creating a new code invalidates any previous unused code for the same user. A user may create five codes per hour, and one client address may attempt redemption 10 times per 10 minutes.
+Codes contain eight uppercase characters, expire after 10 minutes, and work once. Creating a
+new code invalidates any previous unused code for the same user. A user may create five codes
+per hour, and one client address may attempt redemption 10 times per 10 minutes. Redemption
+limits use PostgreSQL, so all API instances share the same count.
 
 `DELETE /api/v1/auth/session` revokes only the token used for that request and returns `204 No Content`.
 
@@ -466,6 +479,12 @@ The backend sanitises input before calling Gemini and sanitises returned semanti
 again before responding. Calls are synchronous and are not persisted by this endpoint.
 Clients must handle `429`, `502`, and `503` without disabling non-AI features.
 
+By default, Gemini calls are limited to 15 requests per minute for each user, 15 per minute
+for each client address, and 15 per minute across the deployment. These fixed-window counters
+are stored in PostgreSQL and shared by all API instances. Configure them with
+`AI_REQUESTS_PER_MINUTE`, `AI_REQUESTS_PER_IP_PER_MINUTE`, and
+`AI_GLOBAL_REQUESTS_PER_MINUTE`.
+
 ## Image descriptions
 
 Image-description endpoints are implemented and require a bearer token.
@@ -589,7 +608,7 @@ The API error envelope is:
 | `413` | Page or image payload too large |
 | `415` | Unsupported image or content type |
 | `422` | Pydantic validation failure |
-| `429` | Pairing or Gemini rate limit reached |
+| `429` | Guest-session, pairing, or Gemini rate limit reached |
 | `502` | Upstream Gemini or PDF generation failure |
 | `503` | Database, Gemini, or PDF service temporarily unavailable |
 

@@ -106,6 +106,16 @@ async def test_openapi_publishes_pairing_error_envelopes(client: AsyncClient) ->
         assert redeem_responses[status]["content"]["application/json"]["schema"] == expected
 
 
+async def test_openapi_publishes_guest_session_rate_limit(client: AsyncClient) -> None:
+    response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    rate_limit = response.json()["paths"]["/api/v1/auth/guest"]["post"]["responses"]["429"]
+    assert rate_limit["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ErrorResponse"
+    }
+
+
 async def test_openapi_publishes_payload_limit_for_saved_pages(client: AsyncClient) -> None:
     response = await client.get("/openapi.json")
 

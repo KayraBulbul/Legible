@@ -18,7 +18,6 @@ os.environ["PAIRING_CODE_SECRET"] = "test-pairing-code-secret-at-least-32-charac
 os.environ["MAX_REQUEST_BYTES"] = "4096"
 
 from api.main import app  # noqa: E402
-from api.rate_limits import pairing_redemption_limiter  # noqa: E402
 from database.session import engine  # noqa: E402
 
 
@@ -30,9 +29,10 @@ def migrated_database() -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 async def clean_database(migrated_database: None) -> AsyncIterator[None]:
-    await pairing_redemption_limiter.reset()
     async with engine.begin() as connection:
-        await connection.execute(text("TRUNCATE TABLE saved_pages, user_sessions, users CASCADE"))
+        await connection.execute(
+            text("TRUNCATE TABLE rate_limit_buckets, saved_pages, user_sessions, users CASCADE")
+        )
     yield
 
 

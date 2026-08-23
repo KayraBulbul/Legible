@@ -12,7 +12,10 @@ The FastAPI backend is deployed at [hackmelbourne2026-production.up.railway.app]
 - [Frontend integration guide](docs/README.md)
 - [Full API contract](docs/api.md)
 
-The deployed API supports anonymous guest sessions, one-time extension/dashboard pairing, and user-owned saved-page CRUD. Gemini transformations, image descriptions, profiles, and PDF export are still planned.
+The backend implements anonymous guest sessions, one-time extension/dashboard pairing,
+user-owned saved-page CRUD, Gemini transformations and image descriptions, and synchronous
+PDF export. Accessibility profiles remain planned. The production deployment may lag behind
+`main` until its next successful deploy; use its OpenAPI document to confirm the live version.
 
 ## Load the extension
 
@@ -29,7 +32,9 @@ The deployed API supports anonymous guest sessions, one-time extension/dashboard
 
 Without a key, all typography, contrast, and screen-reader features still work. Only the AI alt-text and ARIA scan is disabled.
 
-This direct browser-to-Gemini path is legacy prototype behaviour. Do not build new features on it or ship its API key flow. Gemini calls will move behind the backend API so provider credentials remain on the server.
+This direct browser-to-Gemini path is legacy prototype behaviour. Do not build new features on
+it or ship its API key flow. The backend Gemini endpoints already exist, but the extension has
+not yet migrated to them.
 
 ## Using it
 

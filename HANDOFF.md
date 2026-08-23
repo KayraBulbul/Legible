@@ -1,5 +1,9 @@
 # Handoff — 2026-08-22
 
+> Historical snapshot. It predates the saved-page client integration, Gemini backend routes,
+> PDF export, and PostgreSQL-backed rate limits now present on `main`. Use `README.md`,
+> `backend/README.md`, and `docs/api.md` for current status.
+
 For a new Claude Code instance picking this up. Repo: `ScreenReaderv2` (Chrome extension + backend + dashboard monorepo).
 
 ## Repo state right now
