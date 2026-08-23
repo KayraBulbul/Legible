@@ -4,6 +4,7 @@ backend/ai/.env
 __pycache__/
 *.pyc
 backend/ai/test/output/
+backend/ai/manual_test.py
 .env
 .venv/
 __pycache__/

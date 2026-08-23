@@ -30,24 +30,26 @@ TRANSFORM_PROMPTS = {
     ),
 }
 
+# Reused from the extension's existing extension/background/gemini-client.js wording —
+# same job, moved server-side.
 IMAGE_PROMPTS = {
     "img": (
         "image-description-v1",
         "This image appears on a webpage without usable alt text. Write a concise, "
         "highly descriptive accessibility alt-text (1-2 sentences) a screen reader can "
-        "read aloud. Set role to img, figure, graphics-document, or null, choosing the most "
-        "appropriate accessible document role.",
+        "read aloud. Also classify it as one of: photo, illustration, chart, icon, logo, "
+        "decorative.",
     ),
     "icon-button": (
         "image-description-v1",
         "This is an icon used inside an interactive button or link with no accessible "
         "label. Describe in 2-6 words what action this control performs, suitable for an "
-        'aria-label (e.g. "Close dialog", "Search"). Set role to null.',
+        'aria-label (e.g. "Close dialog", "Search").',
     ),
     "canvas": (
         "image-description-v1",
         "This is a snapshot of an interactive <canvas> element (chart, diagram, or "
         "graphic app) with no accessible description. Write a concise 1-2 sentence "
-        "description of what it shows. Set role to img, figure, graphics-document, or null.",
+        "description of what it shows.",
     ),
 }

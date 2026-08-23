@@ -5,11 +5,11 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai.gemini_service import GoogleGeminiService
 from api.config import get_settings
 from api.errors import AppError
 from api.services.ai import AiApplicationService
 from api.services.auth import AuthenticatedSession, find_authenticated_session
+from api.services.gemini import GoogleGeminiService
 from api.services.pdf_exports import PdfExportService
 from database.models import User
 from database.session import get_database_session
@@ -59,7 +59,11 @@ def get_ai_service() -> AiApplicationService:
     api_key = (
         settings.gemini_api_key.get_secret_value() if settings.gemini_api_key is not None else None
     )
-    provider = GoogleGeminiService(api_key=api_key, model=settings.gemini_model)
+    provider = GoogleGeminiService(
+        api_key=api_key,
+        model=settings.gemini_model,
+        request_timeout_seconds=settings.ai_request_timeout_seconds,
+    )
     return AiApplicationService(
         provider,
         timeout_seconds=settings.ai_request_timeout_seconds,
