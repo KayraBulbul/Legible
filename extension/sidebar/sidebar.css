@@ -1,13 +1,43 @@
+/* ---------- Fonts used by the typography picker previews ---------- */
+@font-face {
+  font-family: 'A11y Lexend';
+  src: url('../fonts/Lexend-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'A11y OpenDyslexic';
+  src: url('../fonts/OpenDyslexic-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  src: url('../fonts/AtkinsonHyperlegible-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Open Sans';
+  src: url('../fonts/OpenSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
-  --bg: #14131f;
-  --panel: #1c1b29;
-  --border: #322f47;
-  --text: #f2f2f6;
-  --muted: #a7a5bd;
-  --accent: #5b3cdc;
-  --accent-2: #2563eb;
-  --success: #22c55e;
-  --danger: #ef4444;
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f4f4f5;
+  --color-border: #dcdcdc;
+  --color-text-primary: #1c1c1e;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+
+  /* Derived tokens, tuned for contrast against the light surfaces above. */
+  --color-text-muted: #5b5b60;
+  --color-on-accent: #ffffff;
+  --color-success: #15803d;
+  --color-danger: #b91c1c;
 }
 
 * { box-sizing: border-box; }
@@ -18,28 +48,94 @@ html, body {
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   display: flex;
   flex-direction: column;
 }
 
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Google Material Symbols ----------
+   Bundled as a subsetted variable woff2 (only the glyphs this panel uses) so the icons
+   work offline and no request ever leaves the browser. The FILL axis gives every icon a
+   filled counterpart, which is what active cards switch to. */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  src: url('../fonts/MaterialSymbolsRounded.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  /* `block` rather than `swap`: better a brief blank than a flash of the ligature name. */
+  font-display: block;
+}
+
+.micon {
+  flex: 0 0 auto;
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.icon-lg { font-size: 22px; }
+
 .header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   flex: 0 0 auto;
 }
-.header-icon { font-size: 20px; }
 .header h1 {
   font-size: 15px;
   margin: 0;
   font-weight: 700;
+  flex: 1 1 auto;
 }
+
+.icon-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.icon-btn.is-off {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.icon-btn.is-off:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
 
 main {
   flex: 1 1 auto;
@@ -47,28 +143,41 @@ main {
   padding: 12px 16px 4px;
 }
 
+/* Turned off: settings stay on screen (and stay saved) but read as inactive. */
+body.is-off main {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
 .section {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 12px;
 }
 
 .section h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--muted);
+  color: var(--color-text-muted);
   margin: 0 0 10px;
 }
+.section h2 .micon { font-size: 17px; }
 
-.section h4 {
+.note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
-  font-weight: 400;
-  color: var(--muted);
+  color: var(--color-text-muted);
   margin: -4px 0 10px;
 }
+.note .micon { font-size: 15px; }
 
 .card-grid {
   display: grid;
@@ -85,19 +194,25 @@ main {
   gap: 6px;
   padding: 14px 8px;
   border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #0f0e18;
-  color: var(--text);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   cursor: pointer;
   text-align: center;
 }
-.card:hover { border-color: var(--accent); }
-.card.active {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  border-color: transparent;
-  color: #fff;
+.card:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
 }
-.card-icon { font-size: 20px; line-height: 1; }
+.card.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.card.active:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+/* Active cards switch to the icon's filled cut — the state change reads even in greyscale. */
+.card.active .micon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.card-icon { font-size: 24px; }
 .card-label { font-size: 11.5px; font-weight: 600; }
 
 .field {
@@ -106,24 +221,141 @@ main {
   gap: 4px;
   margin-bottom: 10px;
 }
-.field span { color: var(--text); font-size: 12.5px; display: flex; justify-content: space-between; }
+.field > span,
+.field-label,
+.stepper-label {
+  color: var(--color-text-primary);
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+/* Icon + wording stay glued together on the left; the value sits hard right. */
+.label-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.label-text .micon { font-size: 17px; color: var(--color-text-muted); }
 .field select, .field input[type="password"] {
-  background: #0f0e18;
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   border-radius: 6px;
   padding: 7px 8px;
   font-size: 12.5px;
 }
-.field input[type="color"] {
-  background: #0f0e18;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 3px;
-  height: 32px;
+.field select:hover, .field input[type="password"]:hover { border-color: var(--color-accent); }
+/* ---------- Colour palette (cursor) ---------- */
+.palette {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
+  padding: 2px;
+}
+.swatch {
+  aspect-ratio: 1 / 1;
   width: 100%;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--swatch);
   cursor: pointer;
 }
+.swatch:hover {
+  transform: scale(1.12);
+}
+.swatch[aria-checked="true"] {
+  border-color: var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-accent);
+}
+
+/* ---------- Font picker: each option previews its own typeface ---------- */
+.fontpicker { position: relative; }
+
+.fontpicker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.fontpicker-trigger:hover { background: var(--color-surface-hover); border-color: var(--color-accent); }
+.fontpicker-trigger[aria-expanded="true"] { border-color: var(--color-accent); }
+.fontpicker-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fontpicker-chevron {
+  font-size: 18px;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+.fontpicker-trigger[aria-expanded="true"] .fontpicker-chevron { transform: rotate(180deg); }
+
+.fontpicker-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(28, 28, 30, 0.12);
+}
+.fontpicker-list[hidden] { display: none; }
+
+.fontpicker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.fontpicker-option:hover,
+.fontpicker-option.is-active {
+  background: var(--color-surface-hover);
+}
+.fontpicker-option[aria-selected="true"] {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.fontpicker-check {
+  font-size: 16px;
+  visibility: hidden;
+  color: var(--color-accent);
+}
+.fontpicker-option[aria-selected="true"] .fontpicker-check { visibility: visible; }
+
+/* Preview typefaces, applied to both the list options and the trigger value. */
+.font-lexend { font-family: 'A11y Lexend', Verdana, sans-serif; }
+.font-opendyslexic { font-family: 'A11y OpenDyslexic', 'Comic Sans MS', sans-serif; }
+.font-atkinson { font-family: 'Atkinson Hyperlegible', Arial, sans-serif; }
+.font-arial { font-family: Arial, Helvetica, sans-serif; }
+.font-verdana { font-family: Verdana, Geneva, Tahoma, sans-serif; }
+.font-opensans { font-family: 'Open Sans', 'Segoe UI', Roboto, sans-serif; }
+.font-comicsans { font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', cursive, sans-serif; }
 
 .stepper-field {
   display: flex;
@@ -131,35 +363,50 @@ main {
   gap: 4px;
   margin-bottom: 10px;
 }
-.stepper-label {
-  color: var(--text);
-  font-size: 12.5px;
-  display: flex;
-  justify-content: space-between;
-}
 .stepper-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+/* Both steppers sit together to the left of the track, so the value can be nudged
+   without the pointer travelling across the slider. */
+.stepper-btns {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .stepper-row input[type="range"] {
   flex: 1 1 auto;
-  accent-color: var(--accent);
+  min-width: 0;
+  accent-color: var(--color-accent);
 }
+
+/* High-contrast −/+ controls: solid accent chip, white glyph. */
 .stepper-btn {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  border: 1px solid var(--border);
-  background: #262438;
-  color: var(--text);
-  font-size: 15px;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
 }
-.stepper-btn:hover { border-color: var(--accent); }
-.stepper-btn:active { background: var(--accent); border-color: var(--accent); }
+.stepper-btn:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+.stepper-btn:active {
+  background: var(--color-text-primary);
+  border-color: var(--color-text-primary);
+}
 
 .checkbox-field {
   display: flex;
@@ -168,33 +415,40 @@ main {
   margin-bottom: 10px;
   font-size: 12.5px;
 }
-.checkbox-field input { accent-color: var(--accent); width: 16px; height: 16px; }
+.checkbox-field input { accent-color: var(--color-accent); width: 16px; height: 16px; flex: 0 0 auto; }
+.checkbox-field .micon { font-size: 17px; color: var(--color-text-muted); }
+/* Checked options fill and colour their icon, matching how active cards read. */
+.checkbox-field input:checked + .micon {
+  color: var(--color-accent);
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
 
 .btn {
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 9px 10px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #262438;
-  color: var(--text);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
 }
-.btn:hover { border-color: var(--accent); }
+.btn:hover { background: var(--color-surface-hover); border-color: var(--color-accent); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn:disabled:hover { background: var(--color-surface); border-color: var(--color-border); }
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  border: none;
-  color: #fff;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
 }
-.btn-link {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  text-decoration: underline;
-  font-weight: 400;
-}
+.btn-primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+.btn-primary:disabled:hover { background: var(--color-accent); border-color: var(--color-accent); }
 
 .row {
   display: flex;
@@ -203,13 +457,13 @@ main {
 }
 .row .btn { width: auto; flex: 0 0 auto; }
 
-.status-text { font-size: 12px; color: var(--muted); }
-.status-text.ok { color: var(--success); }
-.status-text.err { color: var(--danger); }
+.status-text { font-size: 12px; color: var(--color-text-muted); }
+.status-text.ok { color: var(--color-success); }
+.status-text.err { color: var(--color-danger); }
 
 .hint {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--color-text-muted);
   margin: 6px 0 0;
 }
 
@@ -218,5 +472,6 @@ footer {
   padding: 10px 16px 16px;
   text-align: center;
 }
+footer .hint { margin: 0; }
 
-output { color: var(--muted); font-weight: 400; }
+output { color: var(--color-text-muted); font-weight: 400; }

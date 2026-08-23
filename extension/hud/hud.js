@@ -35,7 +35,13 @@
     root = el('div', 'a11y-hud a11y-hud-root');
 
     const pill = el('button', 'a11y-hud a11y-hud-pill', { 'aria-label': 'Toggle accessibility toolbar', title: 'Accessibility Toolbar' });
-    pill.textContent = '♿';
+    // Monochrome mark rather than an emoji glyph, drawn in the pill's own text colour.
+    pill.innerHTML =
+      '<svg class="a11y-hud-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" ' +
+      'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="12" cy="4.4" r="1.9" />' +
+      '<path d="M4.5 8.2h15M12 8.6v5.2m0 0 3.4 6.4M12 13.8l-3.4 6.4" />' +
+      '</svg>';
     pill.addEventListener('click', () => {
       expanded = !expanded;
       panel.classList.toggle('a11y-open', expanded);

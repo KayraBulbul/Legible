@@ -40,3 +40,11 @@ html.a11y-theme-dark *:focus-visible {
   outline: 2px solid #7aa2ff !important;
   outline-offset: 2px !important;
 }
+
+/* Leave the extension's own overlays alone - they already carry an accessible palette. */
+html.a11y-theme-dark .a11y-custom-cursor,
+html.a11y-theme-dark .a11y-panel-host,
+html.a11y-theme-dark .a11y-hud,
+html.a11y-theme-dark .a11y-hud * {
+  filter: none !important;
+}

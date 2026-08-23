@@ -1,6 +1,7 @@
 /* Content script orchestrator: wires storage settings, messages, HUD, and keyboard commands */
 (function () {
   const DEFAULT_SETTINGS = {
+    extensionEnabled: true,
     dyslexiaFont: 'none',
     themeMode: 'none',
     declutter: false,
@@ -12,9 +13,9 @@
     highlightLinks: false,
     hideImages: false,
     cursorEnabled: false,
-    cursorStyle: 'ring',
+    cursorStyle: 'arrow',
     cursorSize: 32,
-    cursorColor: '#5b3cdc',
+    cursorColor: '#2563eb',
     ttsRate: 1,
     ttsPitch: 1,
     voiceURI: null,
@@ -22,18 +23,45 @@
     aiEnabled: true,
   };
 
+  // Values forced while the extension is switched off from the sidebar. The user's own
+  // choices stay in storage untouched, so flipping back on restores them exactly.
+  const OFF_OVERRIDES = {
+    dyslexiaFont: 'none',
+    themeMode: 'none',
+    declutter: false,
+    pauseAnimations: false,
+    bionicReading: false,
+    fontScale: 100,
+    letterSpacing: 0,
+    lineHeight: null,
+    highlightLinks: false,
+    hideImages: false,
+    cursorEnabled: false,
+    hudVisible: false,
+  };
+
   let settings = { ...DEFAULT_SETTINGS };
 
+  function isEnabled() {
+    return settings.extensionEnabled !== false;
+  }
+
+  function effectiveSettings() {
+    return isEnabled() ? settings : { ...settings, ...OFF_OVERRIDES };
+  }
+
   function applyAll() {
-    window.A11yRestyler && window.A11yRestyler.applyState(settings);
+    const effective = effectiveSettings();
+    window.A11yRestyler && window.A11yRestyler.applyState(effective);
     window.A11yScreenReader &&
       window.A11yScreenReader.updateSettings({
-        rate: settings.ttsRate,
-        pitch: settings.ttsPitch,
-        voiceURI: settings.voiceURI,
+        rate: effective.ttsRate,
+        pitch: effective.ttsPitch,
+        voiceURI: effective.voiceURI,
       });
-    window.A11yHud && window.A11yHud.setVisible(settings.hudVisible);
-    window.A11yHud && window.A11yHud.syncState(settings);
+    if (!isEnabled() && window.A11yScreenReader) window.A11yScreenReader.stopReading();
+    window.A11yHud && window.A11yHud.setVisible(effective.hudVisible);
+    window.A11yHud && window.A11yHud.syncState(effective);
   }
 
   function loadSettings(cb) {
@@ -61,6 +89,7 @@
 
   async function runAiScan() {
     if (!window.A11yScanner) return { ok: false };
+    if (!isEnabled()) return { ok: false, reason: 'extension-off' };
     if (!settings.aiEnabled) {
       window.A11yHud && window.A11yHud.setStatus('AI scanning is disabled in settings.');
       return { ok: false, reason: 'ai-disabled' };
@@ -95,6 +124,7 @@
 
     switch (message.type) {
       case 'COMMAND': {
+        if (!isEnabled()) break;
         switch (message.command) {
           case 'toggle-read':
             window.A11yScreenReader && window.A11yScreenReader.toggleRead();
@@ -111,6 +141,9 @@
         }
         break;
       }
+      case 'TOGGLE_PANEL':
+        sendResponse({ ok: true, open: window.A11yPanel ? window.A11yPanel.toggle() : false });
+        break;
       case 'UPDATE_SETTING':
         updateSetting(message.payload || {});
         sendResponse({ ok: true });
@@ -122,6 +155,10 @@
         runAiScan().then(sendResponse);
         return true;
       case 'TOGGLE_READ':
+        if (!isEnabled()) {
+          sendResponse({ ok: false, reason: 'extension-off' });
+          break;
+        }
         window.A11yScreenReader && window.A11yScreenReader.toggleRead();
         sendResponse({ ok: true });
         break;
@@ -136,6 +173,6 @@
 
   loadSettings(() => {
     applyAll();
-    if (window.A11yHud) window.A11yHud.init({ settings, updateSetting, runAiScan });
+    if (window.A11yHud) window.A11yHud.init({ settings: effectiveSettings(), updateSetting, runAiScan });
   });
 })();

@@ -1,4 +1,5 @@
 const DEFAULT_SETTINGS = {
+  extensionEnabled: true,
   dyslexiaFont: 'none',
   themeMode: 'none',
   declutter: false,
@@ -10,9 +11,9 @@ const DEFAULT_SETTINGS = {
   highlightLinks: false,
   hideImages: false,
   cursorEnabled: false,
-  cursorStyle: 'ring',
+  cursorStyle: 'arrow',
   cursorSize: 32,
-  cursorColor: '#5b3cdc',
+  cursorColor: '#2563eb',
   ttsRate: 1,
   ttsPitch: 1,
   voiceURI: null,
@@ -21,11 +22,18 @@ const DEFAULT_SETTINGS = {
 };
 
 const els = {
+  hidePanelBtn: document.getElementById('hidePanelBtn'),
+  powerBtn: document.getElementById('powerBtn'),
+  powerIcon: document.getElementById('powerIcon'),
+  powerHint: document.getElementById('powerHint'),
   backendStatus: document.getElementById('backendStatus'),
   connectBtn: document.getElementById('connectBtn'),
   savePageBtn: document.getElementById('savePageBtn'),
   saveStatus: document.getElementById('saveStatus'),
-  dyslexiaFont: document.getElementById('dyslexiaFont'),
+  fontPicker: document.getElementById('fontPicker'),
+  fontPickerTrigger: document.getElementById('fontPickerTrigger'),
+  fontPickerValue: document.getElementById('fontPickerValue'),
+  fontPickerList: document.getElementById('fontPickerList'),
   themeGrid: document.getElementById('themeGrid'),
   fontScale: document.getElementById('fontScale'),
   fontScaleOut: document.getElementById('fontScaleOut'),
@@ -51,7 +59,7 @@ const els = {
   cursorSizeOut: document.getElementById('cursorSizeOut'),
   cursorSizeDown: document.getElementById('cursorSizeDown'),
   cursorSizeUp: document.getElementById('cursorSizeUp'),
-  cursorColor: document.getElementById('cursorColor'),
+  cursorPalette: document.getElementById('cursorPalette'),
   voiceSelect: document.getElementById('voiceSelect'),
   ttsRate: document.getElementById('ttsRate'),
   ttsRateOut: document.getElementById('ttsRateOut'),
@@ -64,7 +72,6 @@ const els = {
   aiEnabled: document.getElementById('aiEnabled'),
   scanBtn: document.getElementById('scanBtn'),
   scanStatus: document.getElementById('scanStatus'),
-  resetBtn: document.getElementById('resetBtn'),
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -79,21 +86,207 @@ function decimalsOf(step) {
   return i === -1 ? 0 : s.length - i - 1;
 }
 
+/* Active cards get the filled cut of their icon from the font's FILL axis (CSS). Cards whose
+   two states mean genuinely different things — Hide Images is image vs hide_image — name a
+   second glyph in data-icon-on and swap the ligature here. */
+function setCardState(card, active) {
+  card.classList.toggle('active', !!active);
+  card.setAttribute('aria-pressed', String(!!active));
+  const icon = card.querySelector('.card-icon');
+  const name = active ? card.dataset.iconOn : card.dataset.icon;
+  if (icon && name) icon.textContent = name;
+}
+
 function syncThemeGrid() {
   els.themeGrid.querySelectorAll('.card').forEach((btn) => {
-    btn.classList.toggle('active', settings.themeMode === btn.dataset.theme);
+    setCardState(btn, settings.themeMode === btn.dataset.theme);
   });
 }
 
 function syncFeatureCards() {
-  els.highlightLinksCard.classList.toggle('active', !!settings.highlightLinks);
-  els.hideImagesCard.classList.toggle('active', !!settings.hideImages);
-  els.pauseAnimationsCard.classList.toggle('active', !!settings.pauseAnimations);
-  els.declutterCard.classList.toggle('active', !!settings.declutter);
+  setCardState(els.highlightLinksCard, settings.highlightLinks);
+  setCardState(els.hideImagesCard, settings.hideImages);
+  setCardState(els.pauseAnimationsCard, settings.pauseAnimations);
+  setCardState(els.declutterCard, settings.declutter);
+}
+
+/* ---------- Cursor colour palette ----------
+   A radiogroup of preset swatches replaces the native colour input; the same palette
+   colours the arrow, ring, dot and crosshair cursors. */
+const swatches = Array.from(els.cursorPalette.querySelectorAll('.swatch'));
+
+function syncPalette() {
+  const current = String(settings.cursorColor || DEFAULT_SETTINGS.cursorColor).toLowerCase();
+  let checkedIndex = swatches.findIndex((s) => s.dataset.color.toLowerCase() === current);
+  if (checkedIndex === -1) checkedIndex = 0;
+  swatches.forEach((s, i) => {
+    s.setAttribute('aria-checked', String(i === checkedIndex));
+    s.tabIndex = i === checkedIndex ? 0 : -1;
+  });
+}
+
+function chooseSwatch(index, { focus = false } = {}) {
+  const i = clamp(index, 0, swatches.length - 1);
+  persist({ cursorColor: swatches[i].dataset.color });
+  syncPalette();
+  if (focus) swatches[i].focus();
+}
+
+function wirePalette() {
+  swatches.forEach((swatch, index) => {
+    swatch.addEventListener('click', () => chooseSwatch(index));
+    swatch.addEventListener('keydown', (e) => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (step) {
+        e.preventDefault();
+        const next = (index + step + swatches.length) % swatches.length;
+        chooseSwatch(next, { focus: true });
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        chooseSwatch(e.key === 'Home' ? 0 : swatches.length - 1, { focus: true });
+      }
+    });
+  });
+}
+
+/* ---------- Font picker ----------
+   A listbox instead of a native <select> so every choice can be rendered in the
+   typeface it applies, which a <select>'s option list cannot do reliably. */
+const fontOptions = Array.from(els.fontPickerList.querySelectorAll('.fontpicker-option'));
+let fontListOpen = false;
+let activeFontIndex = 0;
+
+function fontOptionClass(optionEl) {
+  return Array.from(optionEl.classList).find((c) => c.startsWith('font-')) || '';
+}
+
+function syncFontPicker() {
+  const value = settings.dyslexiaFont || 'none';
+  const selected = fontOptions.find((o) => o.dataset.value === value) || fontOptions[0];
+
+  fontOptions.forEach((o) => o.setAttribute('aria-selected', String(o === selected)));
+
+  els.fontPickerValue.textContent = selected.querySelector('.fontpicker-name').textContent;
+  els.fontPickerValue.className = `fontpicker-value ${fontOptionClass(selected)}`.trim();
+  activeFontIndex = fontOptions.indexOf(selected);
+}
+
+function setActiveFontOption(index) {
+  activeFontIndex = clamp(index, 0, fontOptions.length - 1);
+  fontOptions.forEach((o, i) => o.classList.toggle('is-active', i === activeFontIndex));
+  const active = fontOptions[activeFontIndex];
+  els.fontPickerList.setAttribute('aria-activedescendant', active.id);
+  active.scrollIntoView({ block: 'nearest' });
+}
+
+function openFontList() {
+  if (fontListOpen) return;
+  fontListOpen = true;
+  els.fontPickerList.hidden = false;
+  els.fontPickerTrigger.setAttribute('aria-expanded', 'true');
+  setActiveFontOption(fontOptions.findIndex((o) => o.getAttribute('aria-selected') === 'true'));
+  els.fontPickerList.focus();
+}
+
+function closeFontList({ refocus = true } = {}) {
+  if (!fontListOpen) return;
+  fontListOpen = false;
+  els.fontPickerList.hidden = true;
+  els.fontPickerList.removeAttribute('aria-activedescendant');
+  els.fontPickerTrigger.setAttribute('aria-expanded', 'false');
+  fontOptions.forEach((o) => o.classList.remove('is-active'));
+  if (refocus) els.fontPickerTrigger.focus();
+}
+
+function chooseFont(index) {
+  const option = fontOptions[clamp(index, 0, fontOptions.length - 1)];
+  persist({ dyslexiaFont: option.dataset.value });
+  syncFontPicker();
+  closeFontList();
+}
+
+function wireFontPicker() {
+  els.fontPickerTrigger.addEventListener('click', () => {
+    if (fontListOpen) closeFontList();
+    else openFontList();
+  });
+
+  els.fontPickerTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openFontList();
+    }
+  });
+
+  els.fontPickerList.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveFontOption(activeFontIndex + 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveFontOption(activeFontIndex - 1);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setActiveFontOption(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setActiveFontOption(fontOptions.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        chooseFont(activeFontIndex);
+        break;
+      case 'Escape':
+        // Escape closes the list only; the panel-level Escape handler must not also fire.
+        e.stopPropagation();
+        closeFontList();
+        break;
+      case 'Tab':
+        closeFontList();
+        break;
+      default:
+        break;
+    }
+  });
+
+  // Keep keyboard focus on the list itself so clicking an option never closes it early.
+  els.fontPickerList.addEventListener('mousedown', (e) => e.preventDefault());
+
+  fontOptions.forEach((option, index) => {
+    option.addEventListener('click', () => chooseFont(index));
+    option.addEventListener('mousemove', () => setActiveFontOption(index));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (fontListOpen && !els.fontPicker.contains(e.target)) closeFontList({ refocus: false });
+  });
+}
+
+/* ---------- Master on/off ----------
+   The header X saves the current settings and switches every page effect off; it
+   never clears what the user configured, so turning back on restores it all. */
+function syncPowerUI() {
+  const off = settings.extensionEnabled === false;
+  document.body.classList.toggle('is-off', off);
+  els.powerBtn.classList.toggle('is-off', off);
+  els.powerIcon.textContent = off ? 'power_settings_new' : 'close';
+
+  const label = off ? 'Turn accessibility features back on' : 'Save settings and turn off';
+  els.powerBtn.setAttribute('aria-label', label);
+  els.powerBtn.title = label;
+  els.powerHint.textContent = off
+    ? 'Turned off. Your settings are saved — press the power button to resume.'
+    : 'Changes are saved as you make them.';
 }
 
 function populateUI() {
-  els.dyslexiaFont.value = settings.dyslexiaFont;
+  syncPowerUI();
+  syncFontPicker();
   syncThemeGrid();
   syncFeatureCards();
 
@@ -110,10 +303,10 @@ function populateUI() {
   els.hudVisible.checked = settings.hudVisible !== false;
 
   els.cursorEnabled.checked = !!settings.cursorEnabled;
-  els.cursorStyle.value = settings.cursorStyle || 'ring';
+  els.cursorStyle.value = settings.cursorStyle || DEFAULT_SETTINGS.cursorStyle;
   els.cursorSize.value = settings.cursorSize || 32;
   els.cursorSizeOut.textContent = `${settings.cursorSize || 32}px`;
-  els.cursorColor.value = settings.cursorColor || '#5b3cdc';
+  syncPalette();
 
   els.ttsRate.value = settings.ttsRate;
   els.ttsRateOut.textContent = `${settings.ttsRate.toFixed(1)}x`;
@@ -221,8 +414,24 @@ function wireBackendEvents() {
   });
 }
 
+/* The panel runs as an overlay iframe inside the page (see content/panel.js), so hiding it
+   is a message to the host frame rather than a window close. */
+function hidePanel() {
+  if (window.parent !== window) window.parent.postMessage({ type: 'A11Y_PANEL_CLOSE' }, '*');
+}
+
 function wireEvents() {
-  els.dyslexiaFont.addEventListener('change', () => persist({ dyslexiaFont: els.dyslexiaFont.value }));
+  wireFontPicker();
+
+  els.hidePanelBtn.addEventListener('click', hidePanel);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !fontListOpen) hidePanel();
+  });
+
+  els.powerBtn.addEventListener('click', () => {
+    persist({ extensionEnabled: settings.extensionEnabled === false });
+    syncPowerUI();
+  });
 
   els.themeGrid.querySelectorAll('.card').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -282,7 +491,7 @@ function wireEvents() {
 
   els.cursorEnabled.addEventListener('change', () => persist({ cursorEnabled: els.cursorEnabled.checked }));
   els.cursorStyle.addEventListener('change', () => persist({ cursorStyle: els.cursorStyle.value }));
-  els.cursorColor.addEventListener('input', () => persist({ cursorColor: els.cursorColor.value }));
+  wirePalette();
   wireStepper({
     rangeEl: els.cursorSize,
     downBtn: els.cursorSizeDown,
@@ -335,12 +544,6 @@ function wireEvents() {
     } catch (e) {
       els.scanStatus.textContent = 'Cannot scan this page (try a regular website tab).';
     }
-  });
-
-  els.resetBtn.addEventListener('click', () => {
-    settings = { ...DEFAULT_SETTINGS };
-    chrome.storage.local.set({ a11ySettings: settings });
-    populateUI();
   });
 }
 

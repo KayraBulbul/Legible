@@ -1,7 +1,9 @@
 /* Floating HUD, highlight box, subtitle banner, and bionic-reading styles.
    Loaded globally via manifest content_scripts; scoped under .a11y-hud / a11y-bionic-* to avoid leaking into host pages. */
 
-.a11y-hud, .a11y-hud * {
+/* SVG subtrees are excluded from the reset: Chrome exposes SVG geometry (d, r, cx, cy) as CSS
+   properties, and `all: revert` would blank them out, leaving icons invisible. */
+.a11y-hud, .a11y-hud *:where(:not(svg, svg *)) {
   all: revert;
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -31,6 +33,12 @@
 }
 .a11y-hud-pill:hover {
   transform: scale(1.06);
+}
+.a11y-hud-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+  margin: 0 auto;
 }
 
 .a11y-hud-panel {
@@ -161,47 +169,27 @@ html.a11y-cursor-hidden * {
   cursor: none !important;
 }
 
+/* The cursor lives in the host page's DOM, so every declaration here is !important: sites
+   routinely ship blanket `div`/`svg`/`path` rules that would otherwise resize, recolour, or
+   hide it. Sizing and transform stay inline (set per-frame from JS). */
 .a11y-custom-cursor {
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  z-index: 2147483647;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
   display: none;
+  visibility: hidden;
+  opacity: 1 !important;
+  clip: auto !important;
+  clip-path: none !important;
+  mask: none !important;
   will-change: transform;
 }
-.a11y-custom-cursor[data-style="ring"] {
-  border: 3px solid var(--a11y-cursor-color, #5b3cdc);
-  border-radius: 50%;
-  background: transparent;
-}
-.a11y-custom-cursor[data-style="dot"] {
-  background: var(--a11y-cursor-color, #5b3cdc);
-  border-radius: 50%;
-}
-.a11y-custom-cursor[data-style="crosshair"] {
-  background: transparent;
-}
-.a11y-custom-cursor[data-style="crosshair"]::before,
-.a11y-custom-cursor[data-style="crosshair"]::after {
-  content: '';
-  position: absolute;
-  background: var(--a11y-cursor-color, #5b3cdc);
-}
-.a11y-custom-cursor[data-style="crosshair"]::before {
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  transform: translateX(-50%);
-}
-.a11y-custom-cursor[data-style="crosshair"]::after {
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  transform: translateY(-50%);
-}
+/* Shape styling (ring, dot, crosshair, arrow) lives inside the cursor's shadow root in
+   content/custom-cursor.js, out of reach of page CSS and of this extension's own presets. */
 
 /* AI-labeled element badges */
 img.a11y-ai-labeled, [role="button"].a11y-ai-labeled, button.a11y-ai-labeled, a.a11y-ai-labeled, canvas.a11y-ai-labeled {
