@@ -8,9 +8,6 @@ export default function PairingScreen() {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    // AuthProvider.pair already records the failure in `pairError` and
-    // rethrows only so callers *can* react further — there's nothing more
-    // to do with the rejection here.
     pair(code).catch(() => {});
   }
 
