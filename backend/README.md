@@ -91,13 +91,20 @@ Provide these environment variables through Railway rather than committing a `.e
 - `AI_REQUESTS_PER_IP_PER_MINUTE=15`, the per-client-IP request limit;
 - `AI_GLOBAL_REQUESTS_PER_MINUTE=15`, the total request limit across the deployment.
 
-The current local dashboard origin can be configured as:
+The local dashboard origin can be configured as:
 
 ```text
 CORS_ORIGINS=["http://localhost:5173"]
 ```
 
-Add the production dashboard origin to this JSON array once it is deployed. Do not use `*` for production.
+The deployed dashboard is `https://hackmelbourne2026.vercel.app/`. Configure the production
+Railway service with both origins, omitting the public URL's trailing slash:
+
+```text
+CORS_ORIGINS=["http://localhost:5173","https://hackmelbourne2026.vercel.app"]
+```
+
+Redeploy Railway after changing this variable. Do not use `*` for production.
 
 Requests are limited to 20 MiB by default. Set `MAX_REQUEST_BYTES` to change that limit.
 Image descriptions accept PNG, JPEG, and WebP data URLs up to 8 MiB after decoding. SVG
