@@ -23,19 +23,14 @@ const DEFAULT_SETTINGS = {
 
 const els = {
   resetBtn: document.getElementById('resetBtn'),
-  resetAllBtn: document.getElementById('resetAllBtn'),
   hidePanelBtn: document.getElementById('hidePanelBtn'),
-  powerBtn: document.getElementById('powerBtn'),
-  powerIcon: document.getElementById('powerIcon'),
-  powerHint: document.getElementById('powerHint'),
+  resetHint: document.getElementById('resetHint'),
   backendStatus: document.getElementById('backendStatus'),
   pairCreateBtn: document.getElementById('pairCreateBtn'),
   pairCodeBox: document.getElementById('pairCodeBox'),
   pairCode: document.getElementById('pairCode'),
   pairCopyBtn: document.getElementById('pairCopyBtn'),
   pairExpiry: document.getElementById('pairExpiry'),
-  pairCodeInput: document.getElementById('pairCodeInput'),
-  pairRedeemBtn: document.getElementById('pairRedeemBtn'),
   pairStatus: document.getElementById('pairStatus'),
   connectBtn: document.getElementById('connectBtn'),
   savePageBtn: document.getElementById('savePageBtn'),
@@ -285,25 +280,7 @@ function wireFontPicker() {
   });
 }
 
-/* ---------- Master on/off ----------
-   The header X saves the current settings and switches every page effect off; it
-   never clears what the user configured, so turning back on restores it all. */
-function syncPowerUI() {
-  const off = settings.extensionEnabled === false;
-  document.body.classList.toggle('is-off', off);
-  els.powerBtn.classList.toggle('is-off', off);
-  els.powerIcon.textContent = off ? 'power_settings_new' : 'close';
-
-  const label = off ? 'Turn accessibility features back on' : 'Save settings and turn off';
-  els.powerBtn.setAttribute('aria-label', label);
-  els.powerBtn.title = label;
-  els.powerHint.textContent = off
-    ? 'Turned off. Your settings are saved — press the power button to resume.'
-    : 'Changes are saved as you make them.';
-}
-
 function populateUI() {
-  syncPowerUI();
   syncFontPicker();
   syncThemeGrid();
   syncExtThemeGrid();
@@ -387,29 +364,19 @@ async function refreshBackendStatus() {
   els.backendStatus.textContent = connected ? 'Connected' : 'Not connected';
   els.backendStatus.className = connected ? 'status-text ok' : 'status-text';
   els.savePageBtn.disabled = !connected;
-  // Only an authenticated session can mint a pairing code; redeeming one deliberately
-  // stays available while disconnected, since that is the whole point of joining.
+  // Only an authenticated session can mint a pairing code.
   els.pairCreateBtn.disabled = !connected;
   if (!connected) hidePairCode();
   return connected;
 }
 
-/* Pairing. A code links a second client to the same anonymous user so both see one
-   saved-page library; nothing is copied between devices. Codes live 10 minutes, are
-   single-use, and creating a new one invalidates the previous unused one. */
+/* Pairing. This extension is the code GENERATOR: it holds the authenticated session, so
+   it is the only client that can mint a code. The dashboard is where a code gets entered.
+   A code links that second client to the same anonymous user so both see one saved-page
+   library; nothing is copied between devices. Codes live 10 minutes, are single-use, and
+   creating a new one invalidates the previous unused one. */
 
-const PAIRING_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 let pairExpiryTimer = null;
-
-// Mirrors the backend's alphabet, which drops I/O/0/1 so codes read aloud cleanly. The
-// API rejects anything else outright, so tidy up what the user typed before sending.
-function normalizePairingCode(raw) {
-  return String(raw || '')
-    .toUpperCase()
-    .split('')
-    .filter((ch) => PAIRING_ALPHABET.includes(ch))
-    .join('');
-}
 
 function stopPairExpiryTimer() {
   if (pairExpiryTimer !== null) {
@@ -456,7 +423,7 @@ function wirePairingEvents() {
 
     if (res && res.ok) {
       showPairCode(res.code, res.expiresAt);
-      els.pairStatus.textContent = 'Enter this code on the other device within 10 minutes.';
+      els.pairStatus.textContent = 'Enter this code on the dashboard within 10 minutes.';
     } else {
       hidePairCode();
       els.pairStatus.textContent =
@@ -475,95 +442,6 @@ function wirePairingEvents() {
       els.pairStatus.textContent = 'Could not copy - read the code off the screen instead.';
     }
   });
-
-  // Normalizing as the user types means a code pasted with dashes or in lower case still
-  // looks right in the field, rather than being silently fixed only on submit.
-  els.pairCodeInput.addEventListener('input', () => {
-    els.pairCodeInput.value = normalizePairingCode(els.pairCodeInput.value).slice(0, 8);
-  });
-
-  els.pairRedeemBtn.addEventListener('click', async () => {
-    const code = normalizePairingCode(els.pairCodeInput.value);
-    if (code.length !== 8) {
-      els.pairStatus.textContent = 'Enter the full 8-character code.';
-      return;
-    }
-
-    // Redeeming swaps this device onto the other device's user, so anything saved under the
-    // current session becomes unreachable from here. Destructive enough to confirm first.
-    const confirmed = window.confirm(
-      'Link this device to the other one?\n\n' +
-        'This device will switch to the other device\u2019s saved-page library. ' +
-        'Pages you saved on this device before linking will stay with the old session ' +
-        'and will not appear here.'
-    );
-    if (!confirmed) return;
-
-    els.pairRedeemBtn.disabled = true;
-    els.pairStatus.textContent = 'Linking...';
-    const res = await chrome.runtime.sendMessage({
-      type: 'BACKEND_REDEEM_PAIRING_CODE',
-      payload: { code },
-    });
-    els.pairRedeemBtn.disabled = false;
-
-    if (res && res.ok) {
-      els.pairCodeInput.value = '';
-      hidePairCode();
-      els.pairStatus.textContent = 'Linked. This device now shares the other library.';
-      await refreshBackendStatus();
-    } else {
-      const err = (res && res.error) || 'unknown';
-      els.pairStatus.textContent =
-        err === 'invalid_pairing_code'
-          ? 'That code is invalid, already used, or expired.'
-          : err === 'pairing_rate_limited'
-            ? 'Too many attempts. Try again later.'
-            : `Linking failed (${err}).`;
-    }
-  });
-}
-
-function wireBackendEvents() {
-  els.connectBtn.addEventListener('click', async () => {
-    els.connectBtn.disabled = true;
-    els.backendStatus.textContent = 'Connecting...';
-    els.backendStatus.className = 'status-text';
-    const res = await chrome.runtime.sendMessage({ type: 'BACKEND_CONNECT' });
-    els.connectBtn.disabled = false;
-    if (res && res.ok) {
-      await refreshBackendStatus();
-    } else {
-      els.backendStatus.textContent = `Connect failed (${(res && res.error) || 'unknown'}).`;
-      els.backendStatus.className = 'status-text err';
-    }
-  });
-
-  els.savePageBtn.addEventListener('click', async () => {
-    els.savePageBtn.disabled = true;
-    els.saveStatus.textContent = 'Extracting page...';
-    try {
-      const extraction = await sendToContent({ type: 'EXTRACT_PAGE' });
-      if (!extraction || !extraction.ok) throw new Error('extract-failed');
-
-      els.saveStatus.textContent = 'Saving...';
-      const res = await chrome.runtime.sendMessage({
-        type: 'BACKEND_SAVE_PAGE',
-        payload: {
-          title: extraction.title,
-          originalUrl: extraction.originalUrl,
-          sourceDocument: extraction.sourceDocument,
-          a11ySettings: settings,
-        },
-      });
-
-      els.saveStatus.textContent = res && res.ok ? 'Saved.' : `Save failed (${(res && res.error) || 'unknown'}).`;
-    } catch (e) {
-      els.saveStatus.textContent = 'Cannot save this page (try a regular website tab).';
-    } finally {
-      els.savePageBtn.disabled = !(await refreshBackendStatus());
-    }
-  });
 }
 
 /* The panel runs as an overlay iframe inside the page (see content/panel.js), so hiding it
@@ -578,11 +456,6 @@ function wireEvents() {
   els.hidePanelBtn.addEventListener('click', hidePanel);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !fontListOpen) hidePanel();
-  });
-
-  els.powerBtn.addEventListener('click', () => {
-    persist({ extensionEnabled: settings.extensionEnabled === false });
-    syncPowerUI();
   });
 
   els.themeGrid.querySelectorAll('.card').forEach((btn) => {
@@ -691,21 +564,28 @@ function wireEvents() {
     } catch (e) {
       // content script may not be loaded on internal pages
     }
-    els.powerHint.textContent = 'All settings have been reset to defaults.';
-    els.powerHint.style.color = 'var(--color-accent)';
+    els.resetHint.textContent = 'All settings have been reset to defaults.';
+    els.resetHint.style.color = 'var(--color-accent)';
     setTimeout(() => {
-      syncPowerUI();
-      els.powerHint.style.removeProperty('color');
+      els.resetHint.textContent = 'Changes are saved as you make them.';
+      els.resetHint.style.removeProperty('color');
     }, 2500);
   };
 
   if (els.resetBtn) els.resetBtn.addEventListener('click', handleReset);
-  if (els.resetAllBtn) els.resetAllBtn.addEventListener('click', handleReset);
 }
 
 async function init() {
   const stored = await chrome.storage.local.get(['a11ySettings']);
   settings = { ...DEFAULT_SETTINGS, ...(stored.a11ySettings || {}) };
+
+  // The master on/off control is gone, and content/toolbar.js hides the on-page button
+  // while the extension is off - so anyone whose stored state is already off would have
+  // no way back on. Heal it here rather than strand them.
+  if (settings.extensionEnabled === false) {
+    persist({ extensionEnabled: true });
+  }
+
   populateUI();
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;

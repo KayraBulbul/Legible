@@ -3,7 +3,6 @@ import {
   createGuestSession,
   createPairingCode,
   ensureSession,
-  redeemPairingCode,
   authedFetchWithRetry,
 } from './api-client.js';
 import { mapA11ySettingsToBackend } from './settings-mapper.js';
@@ -73,15 +72,6 @@ async function handleBackendCreatePairingCode() {
   }
 }
 
-async function handleBackendRedeemPairingCode(payload) {
-  try {
-    const session = await redeemPairingCode(payload.code);
-    return { ok: true, userId: session.userId };
-  } catch (err) {
-    return { ok: false, error: (err instanceof ApiError && err.code) || 'pairing-failed' };
-  }
-}
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) return undefined;
 
@@ -97,9 +87,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     case 'BACKEND_CREATE_PAIRING_CODE':
       handleBackendCreatePairingCode().then(sendResponse);
-      return true;
-    case 'BACKEND_REDEEM_PAIRING_CODE':
-      handleBackendRedeemPairingCode(message.payload || {}).then(sendResponse);
       return true;
     default:
       return undefined;
