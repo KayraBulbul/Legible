@@ -17,11 +17,14 @@ const DEFAULT_SETTINGS = {
   ttsRate: 1,
   ttsPitch: 1,
   voiceURI: null,
-  hudVisible: true,
+  toolbarVisible: true,
+  extTheme: 'light',
   aiEnabled: true,
 };
 
 const els = {
+  resetBtn: document.getElementById('resetBtn'),
+  resetAllBtn: document.getElementById('resetAllBtn'),
   hidePanelBtn: document.getElementById('hidePanelBtn'),
   powerBtn: document.getElementById('powerBtn'),
   powerIcon: document.getElementById('powerIcon'),
@@ -35,6 +38,7 @@ const els = {
   fontPickerValue: document.getElementById('fontPickerValue'),
   fontPickerList: document.getElementById('fontPickerList'),
   themeGrid: document.getElementById('themeGrid'),
+  extThemeGrid: document.getElementById('extThemeGrid'),
   fontScale: document.getElementById('fontScale'),
   fontScaleOut: document.getElementById('fontScaleOut'),
   fontScaleDown: document.getElementById('fontScaleDown'),
@@ -52,7 +56,7 @@ const els = {
   hideImagesCard: document.getElementById('hideImagesCard'),
   pauseAnimationsCard: document.getElementById('pauseAnimationsCard'),
   declutterCard: document.getElementById('declutterCard'),
-  hudVisible: document.getElementById('hudVisible'),
+  toolbarVisible: document.getElementById('toolbarVisible'),
   cursorEnabled: document.getElementById('cursorEnabled'),
   cursorStyle: document.getElementById('cursorStyle'),
   cursorSize: document.getElementById('cursorSize'),
@@ -101,6 +105,18 @@ function syncThemeGrid() {
   els.themeGrid.querySelectorAll('.card').forEach((btn) => {
     setCardState(btn, settings.themeMode === btn.dataset.theme);
   });
+}
+
+function syncExtThemeGrid() {
+  const current = settings.extTheme || 'light';
+  document.documentElement.setAttribute('data-ext-theme', current);
+  if (els.extThemeGrid) {
+    els.extThemeGrid.querySelectorAll('.card').forEach((btn) => {
+      const active = btn.dataset.extTheme === current;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+  }
 }
 
 function syncFeatureCards() {
@@ -288,6 +304,7 @@ function populateUI() {
   syncPowerUI();
   syncFontPicker();
   syncThemeGrid();
+  syncExtThemeGrid();
   syncFeatureCards();
 
   els.fontScale.value = settings.fontScale;
@@ -300,7 +317,7 @@ function populateUI() {
   els.lineHeightOut.textContent = settings.lineHeight ? String(settings.lineHeight) : 'Default';
 
   els.bionicReading.checked = !!settings.bionicReading;
-  els.hudVisible.checked = settings.hudVisible !== false;
+  els.toolbarVisible.checked = settings.toolbarVisible !== false;
 
   els.cursorEnabled.checked = !!settings.cursorEnabled;
   els.cursorStyle.value = settings.cursorStyle || DEFAULT_SETTINGS.cursorStyle;
@@ -487,7 +504,7 @@ function wireEvents() {
     syncFeatureCards();
   });
 
-  els.hudVisible.addEventListener('change', () => persist({ hudVisible: els.hudVisible.checked }));
+  els.toolbarVisible.addEventListener('change', () => persist({ toolbarVisible: els.toolbarVisible.checked }));
 
   els.cursorEnabled.addEventListener('change', () => persist({ cursorEnabled: els.cursorEnabled.checked }));
   els.cursorStyle.addEventListener('change', () => persist({ cursorStyle: els.cursorStyle.value }));
@@ -532,6 +549,16 @@ function wireEvents() {
     els.keyStatus.className = 'status-text ok';
   });
 
+  if (els.extThemeGrid) {
+    els.extThemeGrid.querySelectorAll('.card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const theme = btn.dataset.extTheme;
+        persist({ extTheme: theme });
+        syncExtThemeGrid();
+      });
+    });
+  }
+
   els.scanBtn.addEventListener('click', async () => {
     els.scanStatus.textContent = 'Scanning...';
     try {
@@ -545,6 +572,26 @@ function wireEvents() {
       els.scanStatus.textContent = 'Cannot scan this page (try a regular website tab).';
     }
   });
+
+  const handleReset = async () => {
+    settings = { ...DEFAULT_SETTINGS };
+    await chrome.storage.local.set({ a11ySettings: settings });
+    populateUI();
+    try {
+      await sendToContent({ type: 'RESET_SESSION' });
+    } catch (e) {
+      // content script may not be loaded on internal pages
+    }
+    els.powerHint.textContent = 'All settings have been reset to defaults.';
+    els.powerHint.style.color = 'var(--color-accent)';
+    setTimeout(() => {
+      syncPowerUI();
+      els.powerHint.style.removeProperty('color');
+    }, 2500);
+  };
+
+  if (els.resetBtn) els.resetBtn.addEventListener('click', handleReset);
+  if (els.resetAllBtn) els.resetAllBtn.addEventListener('click', handleReset);
 }
 
 async function init() {

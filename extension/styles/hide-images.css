@@ -3,7 +3,7 @@ html.a11y-hide-images img,
 html.a11y-hide-images picture,
 html.a11y-hide-images video,
 html.a11y-hide-images canvas,
-html.a11y-hide-images svg:not(.a11y-hud):not(.a11y-hud *),
+html.a11y-hide-images svg,
 html.a11y-hide-images [style*="background-image"] {
   visibility: hidden !important;
 }
@@ -13,7 +13,6 @@ html.a11y-hide-images [style*="background-image"] {
    future non-shadow overlay does not silently disappear here. */
 html.a11y-hide-images .a11y-custom-cursor,
 html.a11y-hide-images .a11y-panel-host,
-html.a11y-hide-images .a11y-hud,
-html.a11y-hide-images .a11y-hud * {
+html.a11y-hide-images .a11y-toolbar-btn {
   visibility: inherit !important;
 }

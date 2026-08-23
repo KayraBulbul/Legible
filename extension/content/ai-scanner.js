@@ -148,14 +148,20 @@
     return { scanned: tasks.length, results };
   }
 
-  async function scanSingleElement(el) {
-    if (!el) return { ok: false, reason: 'no-element' };
-    let kind = 'img';
-    if (el.tagName === 'CANVAS') kind = 'canvas';
-    else if (el.tagName !== 'IMG') kind = 'icon-button';
-    processed.delete(el);
-    return analyzeAndApply(el, kind);
+  function revertLabels(root = document.body) {
+    if (!root) return;
+    root.querySelectorAll('.a11y-ai-labeled, .a11y-ai-failed').forEach((el) => {
+      el.classList.remove('a11y-ai-labeled', 'a11y-ai-failed');
+      ['alt', 'aria-label', 'title'].forEach((attr) => {
+        const val = el.getAttribute(attr);
+        if (val && val.startsWith('[AI] ')) {
+          const original = val.slice(5).trim();
+          if (original) el.setAttribute(attr, original);
+          else el.removeAttribute(attr);
+        }
+      });
+    });
   }
 
-  window.A11yScanner = { scanPage, scanSingleElement, findUnlabeledImages, findIconButtons, findCanvases };
+  window.A11yScanner = { scanPage, scanSingleElement, findUnlabeledImages, findIconButtons, findCanvases, revertLabels };
 })();

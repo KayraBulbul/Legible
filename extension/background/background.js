@@ -161,7 +161,8 @@ chrome.runtime.onInstalled.addListener(() => {
           ttsRate: 1,
           ttsPitch: 1,
           voiceURI: null,
-          hudVisible: true,
+          toolbarVisible: true,
+          extTheme: 'light',
           aiEnabled: true,
         },
       });

@@ -30,8 +30,8 @@
   --color-surface-hover: #f4f4f5;
   --color-border: #dcdcdc;
   --color-text-primary: #1c1c1e;
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
+  --color-accent: #F57600;
+  --color-accent-hover: #dc6a00;
 
   /* Derived tokens, tuned for contrast against the light surfaces above. */
   --color-text-muted: #5b5b60;
@@ -103,6 +103,13 @@ body {
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-primary);
   flex: 0 0 auto;
+}
+.header-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: block;
 }
 .header h1 {
   font-size: 15px;
@@ -475,3 +482,164 @@ footer {
 footer .hint { margin: 0; }
 
 output { color: var(--color-text-muted); font-weight: 400; }
+
+.card-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* ==========================================================================
+   Extension Theme: Dark Mode
+   ========================================================================== */
+html[data-ext-theme="dark"],
+html[data-ext-theme="dark"] body {
+  --color-bg: #131316;
+  --color-surface: #1c1c22;
+  --color-surface-hover: #26262e;
+  --color-border: #2e2e38;
+  --color-text-primary: #f2f2f5;
+  --color-text-muted: #8e8e9a;
+  --color-accent: #F57600;
+  --color-accent-hover: #ff851a;
+  --color-on-accent: #ffffff;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  color-scheme: dark;
+}
+
+html[data-ext-theme="dark"] .fontpicker-list {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+html[data-ext-theme="dark"] .fontpicker-option:hover,
+html[data-ext-theme="dark"] .fontpicker-option.is-active {
+  background: var(--color-surface-hover);
+}
+
+/* ==========================================================================
+   Extension Theme: High Contrast Mode
+   ========================================================================== */
+html[data-ext-theme="contrast"],
+html[data-ext-theme="contrast"] body {
+  --color-bg: #000000;
+  --color-surface: #0a0a0d;
+  --color-surface-hover: #181820;
+  --color-border: #00ffcc;
+  --color-text-primary: #ffff00;
+  --color-text-muted: #00ffcc;
+  --color-accent: #ffff00;
+  --color-accent-hover: #ffffff;
+  --color-on-accent: #000000;
+  --color-success: #00ff66;
+  --color-danger: #ff3333;
+  color-scheme: dark;
+}
+
+html[data-ext-theme="contrast"] .header {
+  border-bottom: 2px solid #00ffcc;
+}
+html[data-ext-theme="contrast"] .card {
+  border-width: 2px;
+}
+html[data-ext-theme="contrast"] .card.active {
+  background: #ffff00;
+  border-color: #ffff00;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .card.active .micon,
+html[data-ext-theme="contrast"] .card.active .card-label {
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .btn-primary {
+  background: #ffff00;
+  border-color: #ffff00;
+  color: #000000;
+  font-weight: 700;
+}
+html[data-ext-theme="contrast"] .btn-primary:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .fontpicker-list {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  box-shadow: 0 10px 28px rgba(0, 255, 204, 0.25);
+}
+html[data-ext-theme="contrast"] .fontpicker-option {
+  color: #ffff00;
+}
+html[data-ext-theme="contrast"] .fontpicker-option:hover,
+html[data-ext-theme="contrast"] .fontpicker-option.is-active {
+  background: #181820;
+  color: #ffffff;
+}
+html[data-ext-theme="contrast"] .stepper-btn {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  color: #ffff00;
+  font-size: 17px;
+  font-weight: 900;
+}
+html[data-ext-theme="contrast"] .stepper-btn:hover {
+  background: #00ffcc;
+  border-color: #00ffcc;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .stepper-btn:active {
+  background: #ffff00;
+  border-color: #ffff00;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .icon-btn {
+  background: #000000;
+  border: 1px solid #00ffcc;
+  color: #00ffcc;
+}
+html[data-ext-theme="contrast"] .icon-btn:hover {
+  background: #00ffcc;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] input[type="range"] {
+  accent-color: #00ffcc;
+}
+html[data-ext-theme="contrast"] .field select,
+html[data-ext-theme="contrast"] .field input[type="password"] {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  color: #ffff00;
+}
+html[data-ext-theme="contrast"] .btn {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  color: #00ffcc;
+}
+html[data-ext-theme="contrast"] .btn:hover {
+  background: #00ffcc;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .btn-primary {
+  background: #ffff00;
+  border: 2px solid #ffff00;
+  color: #000000;
+  font-weight: 800;
+}
+html[data-ext-theme="contrast"] .btn-primary:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+html[data-ext-theme="contrast"] .fontpicker-trigger {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  color: #ffff00;
+}
+html[data-ext-theme="contrast"] .fontpicker-trigger:hover {
+  background: #181820;
+  border-color: #ffff00;
+}
+html[data-ext-theme="contrast"] .checkbox-field input {
+  accent-color: #00ffcc;
+}
+
+

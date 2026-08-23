@@ -1,5 +1,5 @@
 /* Pause Animations: freezes CSS animations/transitions (video/audio playback is paused via script) */
-html.a11y-pause-animations *:not(.a11y-hud):not(.a11y-hud *) {
+html.a11y-pause-animations * {
   animation-play-state: paused !important;
   transition: none !important;
 }

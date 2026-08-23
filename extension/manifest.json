@@ -42,7 +42,7 @@
         "content/screen-reader.js",
         "content/extractor.js",
         "content/panel.js",
-        "hud/hud.js",
+        "content/toolbar.js",
         "content/content.js"
       ],
       "css": [

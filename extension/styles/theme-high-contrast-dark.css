@@ -47,7 +47,6 @@ html.a11y-contrast-dark *:focus-visible {
 /* Leave the extension's own overlays alone - they already carry an accessible palette. */
 html.a11y-contrast-dark .a11y-custom-cursor,
 html.a11y-contrast-dark .a11y-panel-host,
-html.a11y-contrast-dark .a11y-hud,
-html.a11y-contrast-dark .a11y-hud * {
+html.a11y-contrast-dark .a11y-toolbar-btn {
   filter: none !important;
 }

@@ -29,7 +29,7 @@
   function buildElementList() {
     const all = Array.from(document.querySelectorAll(READABLE_SELECTOR));
     elements = all.filter((el) => {
-      if (el.closest('.a11y-hud')) return false;
+      if (el.closest('.a11y-highlight-box, .a11y-subtitle-banner')) return false;
       if (!isVisible(el)) return false;
       const text = getReadableText(el);
       return text && text.trim().length > 1;
@@ -45,11 +45,11 @@
   function ensureOverlay() {
     if (highlightBox) return;
     highlightBox = document.createElement('div');
-    highlightBox.className = 'a11y-hud a11y-highlight-box';
+    highlightBox.className = 'a11y-highlight-box';
     document.documentElement.appendChild(highlightBox);
 
     subtitleBanner = document.createElement('div');
-    subtitleBanner.className = 'a11y-hud a11y-subtitle-banner';
+    subtitleBanner.className = 'a11y-subtitle-banner';
     document.documentElement.appendChild(subtitleBanner);
   }
 
