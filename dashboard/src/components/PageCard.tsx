@@ -5,6 +5,7 @@ import formatDate from "@/utils/formatDate";
 import { swatchForId } from "@/theme/swatches";
 import ModeBadges from "@/components/ModeBadges";
 import PageActionsMenu from "@/components/PageActionsMenu";
+import TagBadges from "@/components/TagBadges";
 import { useLibrary } from "@/context/libraryContext";
 import { useWorkspace } from "@/context/workspaceContext";
 
@@ -27,21 +28,17 @@ export default function PageCard({ page }: { page: SavedPage }) {
               : `Add ${page.title} to favorites`
           }
           aria-pressed={page.favorited}
-          // Literal white: this sits on a swatch, which is the same colour in
-          // both themes, so a theme token would go unreadable in one of them.
           className="absolute right-2 top-2 z-10 rounded-full p-1.5 text-white drop-shadow hover:scale-110"
         >
           <Star size={18} className={cn(page.favorited && "fill-white")} />
         </button>
       )}
 
-      {/* overflow-hidden is scoped to the header, not the card, so it clips to
-          the rounded corners without also clipping the actions menu below. */}
       <button
         onClick={() => openReader(page)}
         aria-label={`Open ${page.title}`}
         className={cn(
-          "flex h-24 items-center justify-center overflow-hidden rounded-t-xl text-2xl font-bold text-white/90",
+          "flex h-24 items-center justify-center rounded-t-xl text-2xl font-bold text-white/90",
           swatchForId(page.id),
         )}
       >
@@ -61,6 +58,7 @@ export default function PageCard({ page }: { page: SavedPage }) {
         </div>
         <div className="flex flex-wrap gap-1">
           <ModeBadges page={page} />
+          <TagBadges tags={page.tags} />
         </div>
       </div>
 
@@ -84,8 +82,6 @@ export default function PageCard({ page }: { page: SavedPage }) {
           <>
             <button
               onClick={() => enterReaderFullScreen(page.id)}
-              // Without the title, a screen reader hears a page of buttons all
-              // called "Open" with nothing to tell them apart.
               aria-label={`Open ${page.title} full screen`}
               className="flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-accent"
             >

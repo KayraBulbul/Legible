@@ -5,10 +5,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { LoadStatus, PageFolder, SavedPage, SavedPagePatch } from "@/types";
+import type { LoadStatus, SavedPage, SavedPagePatch } from "@/types";
 import { ApiError } from "@/api/client";
 import { deletePage, listPages, updatePage } from "@/api/pages";
-import { createFolder as requestFolder, listFolders } from "@/api/folders";
 import {
   LibraryContext,
   type LibraryContextValue,
@@ -26,7 +25,6 @@ function describeError(cause: unknown, fallback: string): string {
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [pages, setPages] = useState<SavedPage[]>([]);
-  const [folders, setFolders] = useState<PageFolder[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -34,14 +32,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const controller = new AbortController();
 
-    Promise.all([
-      listPages(controller.signal),
-      listFolders(controller.signal),
-    ]).then(
-      ([nextPages, nextFolders]) => {
+    Promise.all([listPages(controller.signal)]).then(
+      ([nextPages]) => {
         if (controller.signal.aborted) return;
         setPages(nextPages);
-        setFolders(nextFolders);
         setError(null);
         setStatus("ready");
       },
@@ -95,6 +89,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [patchPage],
   );
 
+  const setTags = useCallback(
+    (id: string, tags: string[]) => patchPage(id, { tags }),
+    [patchPage],
+  );
+
   const moveToTrash = useCallback(
     (id: string) => patchPage(id, { trashed: true }),
     [patchPage],
@@ -125,45 +124,30 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  /** Awaited rather than optimistic — the id has to come back from the store. */
-  const createFolder = useCallback(async (name: string) => {
-    try {
-      const folder = await requestFolder(name);
-      setFolders((current) => [...current, folder]);
-      return folder;
-    } catch (cause) {
-      throw new Error(describeError(cause, "That folder could not be created."), {
-        cause,
-      });
-    }
-  }, []);
-
   const value = useMemo<LibraryContextValue>(
     () => ({
       pages,
-      folders,
       status,
       error,
       dismissError,
       reload,
       setFavorite,
+      setTags,
       moveToTrash,
       restorePage,
       deleteForever,
-      createFolder,
     }),
     [
       pages,
-      folders,
       status,
       error,
       dismissError,
       reload,
       setFavorite,
+      setTags,
       moveToTrash,
       restorePage,
       deleteForever,
-      createFolder,
     ],
   );
 

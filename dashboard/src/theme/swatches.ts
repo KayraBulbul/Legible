@@ -2,7 +2,7 @@
  * Decorative, theme-invariant swatch classes (tokens live in src/index.css).
  * Chosen for hue + lightness separation so they stay distinguishable under
  * common colour-vision deficiencies, and constant across light/dark so a
- * folder keeps its identity when the theme flips.
+ * page keeps its identity when the theme flips.
  *
  * Always paired with literal white foregrounds — the swatches are dark enough
  * for white overlays in either theme, which theme tokens could not guarantee.

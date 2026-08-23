@@ -1,10 +1,12 @@
 import { createContext, useContext } from "react";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "invert" | "high-contrast";
+
+const THEMES: readonly Theme[] = ["light", "dark", "invert", "high-contrast"];
 
 export interface ThemeContextValue {
   theme: Theme;
-  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -17,15 +19,10 @@ export function useTheme(): ThemeContextValue {
 
 export const THEME_STORAGE_KEY = "a11y-reader-theme";
 
-/**
- * Storage is unavailable in some privacy modes, and throws rather than
- * returning null — every access goes through these two helpers so a blocked
- * store degrades to "no saved preference" instead of a blank page.
- */
 export function readStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return stored === "light" || stored === "dark" ? stored : null;
+    return THEMES.includes(stored as Theme) ? (stored as Theme) : null;
   } catch {
     return null;
   }

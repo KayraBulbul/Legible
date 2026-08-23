@@ -1,6 +1,7 @@
 import { FileDown, Sparkles, Target, Trash2, Wand2 } from "lucide-react";
 import type { ContrastMode, FontMode, ReaderSettings, ToolPanel } from "@/types";
 import cn from "@/utils/cn";
+import TagEditor from "@/components/TagEditor";
 
 interface ReaderControlsProps {
   settings: ReaderSettings;
@@ -10,6 +11,8 @@ interface ReaderControlsProps {
   ) => void;
   activeTool: ToolPanel;
   onToggleTool: (tool: Exclude<ToolPanel, null>) => void;
+  tags: string[];
+  onTagsChange: (tags: string[]) => void;
   onTrash: () => void;
 }
 
@@ -37,6 +40,8 @@ export default function ReaderControls({
   onChange,
   activeTool,
   onToggleTool,
+  tags,
+  onTagsChange,
   onTrash,
 }: ReaderControlsProps) {
   return (
@@ -92,6 +97,36 @@ export default function ReaderControls({
         />
       </label>
 
+      <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
+        Letter spacing — {settings.letterSpacing.toFixed(2)}em
+        <input
+          type="range"
+          min={0}
+          max={0.3}
+          step={0.05}
+          value={settings.letterSpacing}
+          onChange={(event) =>
+            onChange("letterSpacing", Number(event.target.value))
+          }
+          className="accent-accent"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
+        Line height — {settings.lineHeight.toFixed(1)}
+        <input
+          type="range"
+          min={1.2}
+          max={2.4}
+          step={0.1}
+          value={settings.lineHeight}
+          onChange={(event) =>
+            onChange("lineHeight", Number(event.target.value))
+          }
+          className="accent-accent"
+        />
+      </label>
+
       <label className="flex items-center gap-2 text-xs font-medium text-text-secondary">
         <input
           type="checkbox"
@@ -101,6 +136,13 @@ export default function ReaderControls({
         />
         Bionic reading
       </label>
+
+      <div className="flex flex-col gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          Tags
+        </h3>
+        <TagEditor tags={tags} onChange={onTagsChange} />
+      </div>
 
       <div className="flex flex-col gap-2">
         <h3 className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">

@@ -55,14 +55,39 @@ export class ApiError extends Error {
 /* ------------------------------------------------------------------- session */
 
 /**
- * Guest sessions are anonymous and short-lived, so the token lives in memory
- * only. Persistence (and recovery of a lost guest session) is still an open
- * decision in docs/api.md — when it lands, it lands here and nowhere else.
+ * The dashboard has no identity of its own — it only ever holds a token
+ * handed to it by pairing with an extension session (see src/context/auth).
+ * Persisting it here means a page refresh doesn't force re-pairing.
  */
-let accessToken: string | null = null;
+const ACCESS_TOKEN_STORAGE_KEY = "a11y-reader-access-token";
+
+/**
+ * Storage is unavailable in some privacy modes, and throws rather than
+ * returning null — every access goes through these two helpers so a blocked
+ * store degrades to "no persisted session" instead of a blank page.
+ */
+function readStoredAccessToken(): string | null {
+  try {
+    return localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredAccessToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+    else localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  } catch {
+    // Token simply won't survive the session.
+  }
+}
+
+let accessToken: string | null = readStoredAccessToken();
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+  writeStoredAccessToken(token);
 }
 
 export function getAccessToken(): string | null {
@@ -80,7 +105,10 @@ export interface RequestOptions {
 }
 
 function buildUrl(path: string, query: RequestOptions["query"]): string {
-  const url = new URL(`${API_BASE_URL}${API_PREFIX}${path}`, window.location.origin);
+  const url = new URL(
+    `${API_BASE_URL}${API_PREFIX}${path}`,
+    window.location.origin,
+  );
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined) url.searchParams.set(key, String(value));
   }
@@ -92,8 +120,11 @@ async function toApiError(response: Response): Promise<ApiError> {
     const payload: unknown = await response.json();
     const envelope =
       payload && typeof payload === "object" && "error" in payload
-        ? (payload as { error: Partial<ApiError> & { fields?: ApiErrorField[] } })
-            .error
+        ? (
+            payload as {
+              error: Partial<ApiError> & { fields?: ApiErrorField[] };
+            }
+          ).error
         : null;
     if (envelope) {
       return new ApiError(
@@ -132,7 +163,8 @@ export async function apiRequest<T>(
     });
   } catch (cause) {
     // An aborted request is a caller decision, not a failure to report.
-    if (cause instanceof DOMException && cause.name === "AbortError") throw cause;
+    if (cause instanceof DOMException && cause.name === "AbortError")
+      throw cause;
     throw new ApiError(0, "network_error", "Could not reach the server.");
   }
 

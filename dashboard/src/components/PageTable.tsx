@@ -1,7 +1,7 @@
 import type { SavedPage } from "@/types";
 import PageRow from "@/components/PageRow";
 
-const COLUMNS = ["Name", "Reading modes", "Saved"];
+const COLUMNS = ["Name", "Modes & tags", "Saved"];
 
 export default function PageTable({ pages }: { pages: SavedPage[] }) {
   return (

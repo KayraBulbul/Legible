@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { PageFolder, SavedPage, SortBy, View, ViewMode } from "@/types";
+import type { SavedPage, SortBy, View, ViewMode } from "@/types";
 
 /**
  * How the library is currently being looked at: which view, filtered and
@@ -11,7 +11,6 @@ export interface WorkspaceContextValue {
   /* Navigation */
   view: View;
   setView: (view: View) => void;
-  activeFolder: PageFolder | null;
   viewTitle: string;
   /** Trash swaps the per-page actions for restore/delete everywhere. */
   isTrashView: boolean;
@@ -33,11 +32,6 @@ export interface WorkspaceContextValue {
   closeReader: () => void;
   enterReaderFullScreen: (pageId: string) => void;
   exitReaderFullScreen: () => void;
-
-  /* New-folder dialog (the name itself stays inside the dialog) */
-  newFolderOpen: boolean;
-  openNewFolder: () => void;
-  closeNewFolder: () => void;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(

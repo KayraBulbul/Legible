@@ -2,7 +2,7 @@ import { AlertTriangle, RefreshCw, X } from "lucide-react";
 import { useLibrary } from "@/context/libraryContext";
 import { useWorkspace } from "@/context/workspaceContext";
 import EmptyState from "@/components/EmptyState";
-import FolderShelf from "@/components/FolderShelf";
+import FavoritesShelf from "@/components/FavoritesShelf";
 import PageGrid from "@/components/PageGrid";
 import PageTable from "@/components/PageTable";
 
@@ -28,10 +28,8 @@ export default function DashboardContent() {
         <LoadingGrid />
       ) : status === "error" ? null : (
         <>
-          {view === "home" && <FolderShelf />}
+          {view === "home" && <FavoritesShelf />}
 
-          {/* Announced politely so a screen-reader user hears the result count
-              change as they type in the search box. */}
           <p
             aria-live="polite"
             className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary"
@@ -66,7 +64,11 @@ function ErrorBanner({ message, onRetry, onDismiss }: ErrorBannerProps) {
       role="alert"
       className="mb-4 flex items-center gap-3 rounded-xl border border-danger-muted bg-surface px-4 py-3 text-sm text-text-primary"
     >
-      <AlertTriangle size={16} className="shrink-0 text-danger" aria-hidden="true" />
+      <AlertTriangle
+        size={16}
+        className="shrink-0 text-danger"
+        aria-hidden="true"
+      />
       <span className="flex-1">{message}</span>
       {onRetry && (
         <button

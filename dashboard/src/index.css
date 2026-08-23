@@ -2,32 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Without an explicit height chain, the app's h-full root div has nothing
-   to fill and only grows to its min-h-[720px] floor — any viewport taller
-   than that shows the browser's default white below/around it, regardless
-   of the active theme. */
 html,
 body,
 #root {
   height: 100%;
 }
 
-/* Native controls (selects, scrollbars, range inputs) follow the app theme
-   instead of staying light in dark mode. */
 :root {
   color-scheme: light;
 }
 [data-theme="dark"] {
   color-scheme: dark;
 }
+[data-theme="invert"] {
+  color-scheme: dark;
+  filter: invert(1) hue-rotate(180deg);
+}
+[data-theme="high-contrast"] {
+  color-scheme: dark;
+}
 
-/* A single, always-visible keyboard focus ring. Individual components style
-   hover freely, but focus is a baseline guarantee here — this is the one
-   affordance a keyboard-only user cannot work around. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -41,17 +38,6 @@ body,
   }
 }
 
-/*
- * Theme tokens as hex colours. A few also come in "-subtle"/"-muted"
- * tints for translucent fills/borders — written as 8-digit hex (alpha
- * baked in) since Tailwind can't apply opacity modifiers to a color
- * that resolves through a CSS variable at runtime.
- *
- * :root carries the light values as the default/fallback (used before any
- * theme is applied, or if data-theme is missing). [data-theme="dark"]
- * overrides them. A future colourblind-friendly theme can be added the same
- * way, e.g. [data-theme="deuteranopia"] { --color-danger: ...; }.
- */
 :root,
 [data-theme="light"] {
   --color-bg: #fafaf9;
@@ -77,9 +63,6 @@ body,
   --color-info: #0e7490;
   --color-info-subtle: #0e749026;
 
-  /* Decorative, theme-invariant swatches for user content (folders, cards) —
-     kept constant across themes and chosen for hue + lightness separation
-     so they stay distinguishable under common colour-vision deficiencies. */
   --color-swatch-1: #6d28d9;
   --color-swatch-2: #0e7490;
   --color-swatch-3: #b45309;
@@ -111,4 +94,29 @@ body,
   --color-warning-muted: #a78bfa66;
   --color-info: #22d3ee;
   --color-info-subtle: #22d3ee26;
+}
+
+[data-theme="high-contrast"] {
+  --color-bg: #000000;
+  --color-surface: #000000;
+  --color-surface-hover: #1a1a1a;
+  --color-border: #ffffff;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-inverse: #000000;
+  --color-text-inverse-subtle: #00000033;
+  --color-overlay: #000000cc;
+
+  --color-accent: #ffff00;
+  --color-accent-hover: #ffff66;
+  --color-accent-subtle: #ffff0040;
+  --color-accent-muted: #ffff0080;
+  --color-success: #00ff00;
+  --color-danger: #ff5f5f;
+  --color-danger-muted: #ff5f5f80;
+  --color-warning: #ff00ff;
+  --color-warning-subtle: #ff00ff33;
+  --color-warning-muted: #ff00ff80;
+  --color-info: #00ffff;
+  --color-info-subtle: #00ffff33;
 }

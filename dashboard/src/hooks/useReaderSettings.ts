@@ -18,6 +18,8 @@ export function useReaderSettings(page: SavedPage) {
     contrastMode: page.contrastMode,
     fontScale: 100,
     bionicReading: false,
+    letterSpacing: 0,
+    lineHeight: 1.8,
   });
 
   const update = useCallback(

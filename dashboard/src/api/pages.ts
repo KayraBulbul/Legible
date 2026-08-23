@@ -19,6 +19,15 @@ interface SavedPageListItemDto {
   originalUrl: string;
   title: string;
   capturedAt: string;
+  isFavourited: boolean;
+  tags: string[];
+}
+
+/** Body accepted by `PATCH /saved-pages/{id}` — see docs/api.md. */
+interface SavedPagePatchDto {
+  title?: string;
+  isFavourited?: boolean;
+  tags?: string[];
 }
 
 interface PaginatedDto<T> {
@@ -35,10 +44,10 @@ function domainOf(originalUrl: string): string {
 }
 
 /**
- * List responses carry no accessibility settings and no folder/favorite/trash
- * state — the first is only on the full page response, the rest are dashboard
- * concepts the contract does not model yet (docs/api.md, "Decisions still
- * open"). They default here so one mapper stays the single source of truth.
+ * List and patch responses carry no accessibility settings — those live only
+ * on the full page response — and no trash state, which the contract does
+ * not model at all (docs/api.md, "Decisions still open"). Both default here
+ * so one mapper stays the single source of truth.
  */
 function toSavedPage(dto: SavedPageListItemDto): SavedPage {
   return {
@@ -46,13 +55,22 @@ function toSavedPage(dto: SavedPageListItemDto): SavedPage {
     title: dto.title,
     domain: domainOf(dto.originalUrl),
     savedAt: dto.capturedAt,
-    folderId: null,
-    favorited: false,
+    favorited: dto.isFavourited,
     trashed: false,
+    tags: dto.tags,
     dyslexiaFont: "none",
     contrastMode: "none",
     aiLabels: 0,
   };
+}
+
+/** Only the fields a caller actually supplied round-trip to the wire. */
+function toPatchDto(patch: SavedPagePatch): SavedPagePatchDto {
+  const dto: SavedPagePatchDto = {};
+  if (patch.title !== undefined) dto.title = patch.title;
+  if (patch.favorited !== undefined) dto.isFavourited = patch.favorited;
+  if (patch.tags !== undefined) dto.tags = patch.tags;
+  return dto;
 }
 
 /* ---------------------------------------------------------------- mock store */
@@ -87,9 +105,9 @@ export async function listPages(signal?: AbortSignal): Promise<SavedPage[]> {
  * Persists an edit. Callers apply the change optimistically, so this only has
  * to report success or failure.
  *
- * NOTE: the contract's `PATCH /saved-pages/{id}` accepts `title` only today.
- * Folder, favorite and trash state stay client-side until it grows fields for
- * them; this is the one function that changes when it does.
+ * NOTE: `PATCH /saved-pages/{id}` accepts `title`, `isFavourited` and `tags`
+ * (docs/api.md); trash state stays client-side since the contract deletes
+ * outright rather than modelling a trash state.
  */
 export async function updatePage(
   id: string,
@@ -103,7 +121,7 @@ export async function updatePage(
 
   const dto = await apiRequest<SavedPageListItemDto>(`/saved-pages/${id}`, {
     method: "PATCH",
-    body: { title: patch.title },
+    body: toPatchDto(patch),
   });
   return toSavedPage(dto);
 }

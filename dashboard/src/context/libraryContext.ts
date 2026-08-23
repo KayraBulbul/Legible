@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { LoadStatus, PageFolder, SavedPage } from "@/types";
+import type { LoadStatus, SavedPage } from "@/types";
 
 /**
  * Everything the dashboard knows about the user's saved library: the data
@@ -9,7 +9,6 @@ import type { LoadStatus, PageFolder, SavedPage } from "@/types";
  */
 export interface LibraryContextValue {
   pages: SavedPage[];
-  folders: PageFolder[];
   status: LoadStatus;
   /** Load or mutation failure, already phrased for display. */
   error: string | null;
@@ -20,12 +19,11 @@ export interface LibraryContextValue {
      the request fails, so the reader and the grid never wait on the network. */
   /** Explicit rather than a toggle: idempotent, and it maps straight to a PATCH body. */
   setFavorite: (id: string, favorited: boolean) => void;
+  /** Replaces the full tag set — the backend patch is a replace, not a merge. */
+  setTags: (id: string, tags: string[]) => void;
   moveToTrash: (id: string) => void;
   restorePage: (id: string) => void;
   deleteForever: (id: string) => void;
-
-  /** Rejects with a displayable message so the caller can report it inline. */
-  createFolder: (name: string) => Promise<PageFolder>;
 }
 
 export const LibraryContext = createContext<LibraryContextValue | null>(null);

@@ -2,6 +2,7 @@ import type { SavedPage } from "@/types";
 import formatDate from "@/utils/formatDate";
 import ModeBadges from "@/components/ModeBadges";
 import PageActionsMenu from "@/components/PageActionsMenu";
+import TagBadges from "@/components/TagBadges";
 import { useLibrary } from "@/context/libraryContext";
 import { useWorkspace } from "@/context/workspaceContext";
 
@@ -29,6 +30,7 @@ export default function PageRow({ page }: { page: SavedPage }) {
       <td className="px-2 py-2.5">
         <div className="flex flex-wrap gap-1">
           <ModeBadges page={page} />
+          <TagBadges tags={page.tags} />
         </div>
       </td>
       <td className="px-2 py-2.5 text-xs text-text-secondary">

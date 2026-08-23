@@ -21,10 +21,10 @@ const COPY_BY_VIEW: Partial<Record<StaticView, Copy>> = {
   },
 };
 
-/** Folder views and search misses fall through to the generic copy. */
+/** Search misses fall through to the generic copy. */
 const FALLBACK: Copy = {
   title: "No pages here yet",
-  body: "Save a page from the extension, or drop one into this folder.",
+  body: "Save a page from the extension to see it here.",
 };
 
 export default function EmptyState({ view }: { view: View }) {

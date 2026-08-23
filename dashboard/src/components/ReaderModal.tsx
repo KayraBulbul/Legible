@@ -40,7 +40,7 @@ const CONTRAST_CLASSES: Record<ContrastMode, string> = {
  * previous page's over.
  */
 export default function ReaderModal({ page }: { page: SavedPage }) {
-  const { setFavorite, moveToTrash } = useLibrary();
+  const { setFavorite, setTags, moveToTrash } = useLibrary();
   const {
     closeReader,
     readerFullScreen: fullScreen,
@@ -101,6 +101,8 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
             onChange={update}
             activeTool={activeTool}
             onToggleTool={toggleTool}
+            tags={page.tags}
+            onTagsChange={(tags) => setTags(page.id, tags)}
             onTrash={() => {
               moveToTrash(page.id);
               closeReader();
@@ -184,7 +186,8 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
             style={{
               fontFamily: FONT_STACKS[settings.dyslexiaFont],
               fontSize: `${settings.fontScale}%`,
-              lineHeight: 1.8,
+              letterSpacing: `${settings.letterSpacing}em`,
+              lineHeight: settings.lineHeight,
             }}
           >
             <h3 className="mb-3 text-lg font-bold">{page.title}</h3>
