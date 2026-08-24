@@ -10,11 +10,6 @@ import { useTheme } from "@/context/themeContext";
  * there: the reader is mounted with `key={page.id}`, so switching pages
  * remounts it and the settings re-seed rather than leaking across pages.
  *
- * `contrastMode` never hydrates from `apiSettings`: it defaults to the
- * dashboard's own active theme instead, and stays independent of it after
- * that — see {@link SavedAccessibilitySettings} for why the wire value
- * doesn't even fit here.
- *
  * TODO(backend): PATCH /api/v1/saved-pages/{id} (or the active profile) when
  * settings become persistable.
  */
@@ -26,10 +21,14 @@ export function useReaderSettings(
   const [settings, setSettings] = useState<ReaderSettings>({
     dyslexiaFont: page.dyslexiaFont,
     contrastMode: theme,
+    declutter: false,
     fontScale: 100,
     bionicReading: false,
     letterSpacing: 0,
+    wordSpacing: 0,
     lineHeight: 1.8,
+    reducedMotion: false,
+    readingWidth: null,
   });
 
   // Applies the loaded settings exactly once — later re-renders (e.g. the
@@ -41,10 +40,18 @@ export function useReaderSettings(
     setSettings((current) => ({
       ...current,
       dyslexiaFont: apiSettings.dyslexiaFont,
+      contrastMode:
+        apiSettings.contrastMode === "none"
+          ? current.contrastMode
+          : apiSettings.contrastMode,
+      declutter: apiSettings.declutter,
       fontScale: apiSettings.fontScale,
       bionicReading: apiSettings.bionicReading,
       letterSpacing: apiSettings.letterSpacing ?? current.letterSpacing,
+      wordSpacing: apiSettings.wordSpacing ?? current.wordSpacing,
       lineHeight: apiSettings.lineHeight ?? current.lineHeight,
+      reducedMotion: apiSettings.reducedMotion,
+      readingWidth: apiSettings.readingWidth,
     }));
   }, [apiSettings]);
 

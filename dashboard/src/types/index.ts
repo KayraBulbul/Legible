@@ -9,14 +9,9 @@
 /** `accessibilitySettings.dyslexiaFont` in docs/api.md. */
 export type FontMode = "none" | "lexend" | "opendyslexic";
 
-/**
- * Mirrors `Theme` in context/themeContext.ts one-for-one, so the reader can
- * offer the same contrast choices — and the same colours — as the
- * dashboard's own theme, as an independent per-reader pick. This has drifted
- * from the `contrastMode` enum in docs/api.md (`none` | `dark` | `light`):
- * reading contrast is still local-only (see useReaderSettings.ts).
- */
+/** Reader contrast choices, including dashboard-only invert and high-contrast modes. */
 export type ContrastMode = "light" | "dark" | "invert" | "high-contrast";
+export type SavedContrastMode = "none" | "dark" | "light";
 
 export interface SavedPage {
   id: string;
@@ -44,18 +39,25 @@ export interface SemanticDocument {
   language: string | null;
 }
 
-/**
- * The subset of `accessibilitySettings` (docs/api.md) the reader seeds its
- * local settings from. `contrastMode` is deliberately excluded — the wire
- * enum (`none`/`dark`/`light`) doesn't match `ContrastMode` above, and the
- * reader's contrast pick isn't sourced from here anyway (useReaderSettings.ts).
- */
+/** The complete `accessibilitySettings` snapshot returned by the saved-page API. */
 export interface SavedAccessibilitySettings {
+  schemaVersion: 1;
   dyslexiaFont: FontMode;
+  contrastMode: SavedContrastMode;
+  declutter: boolean;
   bionicReading: boolean;
   fontScale: number;
   lineHeight: number | null;
   letterSpacing: number | null;
+  wordSpacing: number | null;
+  reducedMotion: boolean;
+  readingWidth: number | null;
+  ttsRate: number;
+  ttsPitch: number;
+  voiceURI: string | null;
+  hudVisible: boolean;
+  aiEnabled: boolean;
+  aiPreferences: AiPreferences;
 }
 
 /** The reader's article body — fetched separately from `GET /saved-pages/{id}`. */
@@ -80,10 +82,14 @@ export type ToolPanel = "summary" | "simplify" | "restructure" | "focus" | null;
 export interface ReaderSettings {
   dyslexiaFont: FontMode;
   contrastMode: ContrastMode;
+  declutter: boolean;
   fontScale: number;
   bionicReading: boolean;
   letterSpacing: number;
+  wordSpacing: number;
   lineHeight: number;
+  reducedMotion: boolean;
+  readingWidth: number | null;
 }
 
 /* ------------------------------------------------------------- async loading */
@@ -108,10 +114,20 @@ export interface AiPreferences {
   preserveTechnicalTerms: boolean;
 }
 
+export type TransformationParameter = string | number | boolean | null;
+
+/** Provenance returned with a Gemini transformation and stored with its document. */
+export interface TransformationRecord {
+  operation: TransformOperation;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  parameters: Record<string, TransformationParameter>;
+  performedAt: string;
+}
+
 /** One successful `POST /api/v1/transformations` call. */
 export interface TransformResult {
   document: SemanticDocument;
-  model: string;
-  promptVersion: string;
-  performedAt: string;
+  metadata: TransformationRecord;
 }

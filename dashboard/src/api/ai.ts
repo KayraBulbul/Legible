@@ -3,6 +3,7 @@ import type {
   SemanticDocument,
   TransformOperation,
   TransformResult,
+  TransformationRecord,
 } from "@/types";
 import {
   SAMPLE_FOCUS,
@@ -44,11 +45,7 @@ interface TransformationRequestDto {
 
 interface TransformationResponseDto {
   output: SemanticDocumentDto;
-  metadata: {
-    model: string;
-    promptVersion: string;
-    performedAt: string;
-  };
+  metadata: TransformationRecord;
 }
 
 function toOptionsDto(options: AiPreferences): TransformationOptionsDto {
@@ -95,9 +92,17 @@ export async function transformContent(
   if (USE_MOCK_API) {
     return mockDelay({
       document: mockTransformDocument(operation, input),
-      model: "mock-gemini",
-      promptVersion: `${operation}-v1`,
-      performedAt: new Date().toISOString(),
+      metadata: {
+        operation,
+        provider: "mock",
+        model: "mock-gemini",
+        promptVersion: `${operation}-v1`,
+        parameters: {
+          simplificationLevel: options.simplificationLevel,
+          preserveTechnicalTerms: options.preserveTechnicalTerms,
+        },
+        performedAt: new Date().toISOString(),
+      },
     });
   }
 
@@ -112,8 +117,6 @@ export async function transformContent(
 
   return {
     document: dto.output,
-    model: dto.metadata.model,
-    promptVersion: dto.metadata.promptVersion,
-    performedAt: dto.metadata.performedAt,
+    metadata: dto.metadata,
   };
 }
