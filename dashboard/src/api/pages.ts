@@ -48,24 +48,11 @@ interface SemanticDocumentDto {
   language: string | null;
 }
 
-/**
- * `accessibilitySettings` in docs/api.md — only the fields
- * {@link SavedAccessibilitySettings} needs; `contrastMode` and the rest of
- * the wire object are intentionally not modelled yet.
- */
-interface AccessibilitySettingsDto {
-  dyslexiaFont: SavedAccessibilitySettings["dyslexiaFont"];
-  bionicReading: boolean;
-  fontScale: number;
-  lineHeight: number | null;
-  letterSpacing: number | null;
-}
-
 /** `GET /saved-pages/{id}` full response — see docs/api.md. Only the content fields the reader needs. */
 interface SavedPageDetailDto {
   sourceDocument: SemanticDocumentDto;
   transformedDocument: SemanticDocumentDto | null;
-  accessibilitySettings: AccessibilitySettingsDto;
+  accessibilitySettings: SavedAccessibilitySettings;
 }
 
 function domainOf(originalUrl: string): string {
@@ -134,11 +121,26 @@ function mockContentFor(page: SavedPage): SavedPageContent {
     },
     transformedDocument: null,
     accessibilitySettings: {
+      schemaVersion: 1,
       dyslexiaFont: page.dyslexiaFont,
+      contrastMode: page.contrastMode === "dark" ? "dark" : "light",
+      declutter: false,
       bionicReading: false,
       fontScale: 100,
       lineHeight: 1.8,
       letterSpacing: 0,
+      wordSpacing: 0,
+      reducedMotion: false,
+      readingWidth: null,
+      ttsRate: 1,
+      ttsPitch: 1,
+      voiceURI: null,
+      hudVisible: true,
+      aiEnabled: true,
+      aiPreferences: {
+        simplificationLevel: "moderate",
+        preserveTechnicalTerms: true,
+      },
     },
   };
 }

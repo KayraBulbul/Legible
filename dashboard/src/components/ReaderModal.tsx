@@ -93,13 +93,20 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
     [enterReaderFullScreen, page.id],
   );
 
-  const [aiPreferences, setAiPreferences] = useState<AiPreferences>(
-    DEFAULT_AI_PREFERENCES,
-  );
+  const [aiPreferenceOverride, setAiPreferenceOverride] =
+    useState<AiPreferences | null>(null);
+  const aiPreferences =
+    aiPreferenceOverride ??
+    content?.accessibilitySettings.aiPreferences ??
+    DEFAULT_AI_PREFERENCES;
   const updateAiPreferences = useCallback(
-    <K extends keyof AiPreferences>(key: K, value: AiPreferences[K]) =>
-      setAiPreferences((current) => ({ ...current, [key]: value })),
-    [],
+    <K extends keyof AiPreferences>(key: K, value: AiPreferences[K]) => {
+      setAiPreferenceOverride((current) => ({
+        ...(current ?? aiPreferences),
+        [key]: value,
+      }));
+    },
+    [aiPreferences],
   );
 
   const { run: runTransform, resultFor } = useAiTransform();
@@ -131,17 +138,24 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
         : null);
   const expanded = fullScreen || focusMode;
 
-  const renderedHtml = useMemo(
-    () =>
-      activeDocument ? sanitizeHtml(declutterHtml(activeDocument.html)) : "",
-    [activeDocument],
-  );
+  const renderedHtml = useMemo(() => {
+    if (!activeDocument) return "";
+    const html = settings.declutter
+      ? declutterHtml(activeDocument.html)
+      : activeDocument.html;
+    return sanitizeHtml(html);
+  }, [activeDocument, settings.declutter]);
 
   const renderedText = useMemo(() => {
     if (!renderedHtml) return "";
     const doc = new DOMParser().parseFromString(renderedHtml, "text/html");
     return doc.body.textContent?.replace(/\s+/g, " ").trim() ?? "";
   }, [renderedHtml]);
+
+  const readingWidth =
+    settings.readingWidth === null
+      ? undefined
+      : Math.min(120, Math.max(30, settings.readingWidth));
 
   return (
     <div
@@ -264,12 +278,19 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
 
           <article
             data-theme={settings.contrastMode}
-            className="m-5 flex-1 rounded-xl bg-surface p-6 text-text-primary transition-colors"
+            className={cn(
+              "m-5 flex-1 rounded-xl bg-surface p-6 text-text-primary transition-colors",
+              settings.reducedMotion && "reader-reduced-motion",
+            )}
             style={{
               fontFamily: FONT_STACKS[settings.dyslexiaFont],
               fontSize: `${settings.fontScale}%`,
               letterSpacing: `${settings.letterSpacing}em`,
+              wordSpacing: `${settings.wordSpacing}em`,
               lineHeight: settings.lineHeight,
+              maxWidth: readingWidth ? `${readingWidth}ch` : undefined,
+              width: readingWidth ? "calc(100% - 2.5rem)" : undefined,
+              marginInline: readingWidth ? "auto" : undefined,
             }}
           >
             {contentStatus === "ready" &&
