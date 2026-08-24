@@ -58,7 +58,7 @@ def _call_gemini(
         response = client.models.generate_content(
             model=model,
             contents=contents,
-            config={"temperature": 0.2, "response_mime_type": "application/json"},
+            config={"response_mime_type": "application/json"},
         )
     except genai_errors.ClientError as exc:
         if getattr(exc, "code", None) == 429:

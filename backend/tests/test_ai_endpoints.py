@@ -142,7 +142,7 @@ async def test_gemini_transform_preserves_unknown_language(
     assert result.document.language is None
 
 
-async def test_gemini_transform_uses_restored_json_config(
+async def test_gemini_transform_uses_supported_json_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured_configs: list[dict[str, object]] = []
@@ -172,13 +172,10 @@ async def test_gemini_transform_uses_restored_json_config(
     )
 
     assert len(captured_configs) == 1
-    assert captured_configs[0] == {
-        "temperature": 0.2,
-        "response_mime_type": "application/json",
-    }
+    assert captured_configs[0] == {"response_mime_type": "application/json"}
 
 
-async def test_gemini_image_description_uses_restored_json_config(
+async def test_gemini_image_description_uses_supported_json_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured_configs: list[dict[str, object]] = []
@@ -209,10 +206,7 @@ async def test_gemini_image_description_uses_restored_json_config(
     )
 
     assert len(captured_configs) == 1
-    assert captured_configs[0] == {
-        "temperature": 0.2,
-        "response_mime_type": "application/json",
-    }
+    assert captured_configs[0] == {"response_mime_type": "application/json"}
 
 
 @pytest.mark.parametrize(
