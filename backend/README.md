@@ -84,7 +84,7 @@ Provide these environment variables through Railway rather than committing a `.e
 - `PDF_RENDER_CONCURRENCY=2`, the maximum renders handled by one API instance.
 - `GEMINI_API_KEY`, a Google AI API key kept only on the backend;
 - `GEMINI_MODEL=gemini-3.6-flash`, optional because this is the default;
-- `AI_REQUEST_TIMEOUT_SECONDS=30`, the maximum duration of a provider request;
+- `AI_REQUEST_TIMEOUT_SECONDS=60`, the maximum duration of a provider request;
 - `AI_REQUEST_CONCURRENCY=2`, the maximum concurrent provider calls per API instance;
 - `AI_CAPACITY_WAIT_SECONDS=2`, how long a request waits for local capacity;
 - `AI_REQUESTS_PER_MINUTE=15`, the per-user AI request limit;

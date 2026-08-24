@@ -37,6 +37,10 @@ class GeminiProviderError(GeminiError):
     """The provider failed or returned an unusable response."""
 
 
+class GeminiTimeoutError(GeminiError):
+    """The provider exceeded its request deadline."""
+
+
 class GeminiUnavailableError(GeminiError):
     """The service is not configured for provider calls."""
 
@@ -126,7 +130,7 @@ class GoogleGeminiService:
         self,
         api_key: str | None,
         model: str,
-        request_timeout_seconds: float = 30.0,
+        request_timeout_seconds: float = 60.0,
     ) -> None:
         self._api_key = api_key
         self._model = model
@@ -216,12 +220,15 @@ class GoogleGeminiService:
 
 
 def _raise_provider_error(error: Exception, model: str) -> Never:
+    provider_error = _find_provider_error(error)
     stage = (
         "response_validation"
-        if isinstance(error, UpstreamServiceError) and _find_provider_error(error) is None
+        if isinstance(error, UpstreamServiceError) and provider_error is None
         else "request"
     )
     _log_provider_failure(stage, error, model)
+    if provider_error is not None and provider_error.status == "DEADLINE_EXCEEDED":
+        raise GeminiTimeoutError from error
     raise GeminiProviderError from error
 
 

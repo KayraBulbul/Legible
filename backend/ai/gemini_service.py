@@ -14,6 +14,7 @@ from typing import Any
 
 from google import genai
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 
 from .errors import (
     PayloadTooLargeError,
@@ -54,11 +55,17 @@ def _call_gemini(
 ) -> str:
     client = client or _get_client()
     model = model or GEMINI_MODEL
+    config = genai_types.GenerateContentConfigDict(
+        response_mime_type="application/json",
+        thinking_config=genai_types.ThinkingConfigDict(
+            thinking_level=genai_types.ThinkingLevel.LOW,
+        ),
+    )
     try:
         response = client.models.generate_content(
             model=model,
             contents=contents,
-            config={"response_mime_type": "application/json"},
+            config=config,
         )
     except genai_errors.ClientError as exc:
         if getattr(exc, "code", None) == 429:

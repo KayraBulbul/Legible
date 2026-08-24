@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     pdf_render_concurrency: int = Field(default=2, ge=1)
     gemini_api_key: SecretStr | None = None
     gemini_model: str = Field(default="gemini-3.6-flash", min_length=1, max_length=120)
-    ai_request_timeout_seconds: float = Field(default=30, gt=0)
+    ai_request_timeout_seconds: float = Field(default=60, gt=0)
     ai_request_concurrency: int = Field(default=2, ge=1)
     ai_capacity_wait_seconds: float = Field(default=2, gt=0)
     ai_requests_per_minute: int = Field(default=15, ge=1)
