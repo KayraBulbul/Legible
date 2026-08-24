@@ -11,7 +11,7 @@
   let enabled = false;
   let style = 'ring';
   let size = 32;
-  let color = '#2563eb';
+  let color = '#f97316';
   let rafId = null;
   let lastX = 0;
   let lastY = 0;
@@ -30,18 +30,18 @@
       position: relative;
     }
     .shape[data-style="ring"] {
-      border: 3px solid var(--a11y-cursor-color, #2563eb);
+      border: 3px solid var(--a11y-cursor-color, #f97316);
       border-radius: 50%;
     }
     .shape[data-style="dot"] {
-      background: var(--a11y-cursor-color, #2563eb);
+      background: var(--a11y-cursor-color, #f97316);
       border-radius: 50%;
     }
     .shape[data-style="crosshair"]::before,
     .shape[data-style="crosshair"]::after {
       content: '';
       position: absolute;
-      background: var(--a11y-cursor-color, #2563eb);
+      background: var(--a11y-cursor-color, #f97316);
     }
     .shape[data-style="crosshair"]::before {
       left: 50%;
@@ -67,7 +67,7 @@
       overflow: visible;
     }
     .shape path {
-      fill: var(--a11y-cursor-color, #2563eb);
+      fill: var(--a11y-cursor-color, #f97316);
       stroke: var(--a11y-cursor-outline, #ffffff);
       stroke-width: 1.4;
       stroke-linejoin: round;

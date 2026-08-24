@@ -11,6 +11,43 @@ html.a11y-theme-light body * {
   border-color: #d5d5dd !important;
 }
 
+/* Headings, paragraphs, inline text-level elements, and links are rarely given their own
+   background by a page's own CSS - they're plain text content, or (for links) sometimes an
+   invisible full-card/full-hero click target. Painting a solid box behind every one of them
+   (the rule above does, unconditionally) either boxes off individual words/headlines against
+   their surroundings or, worse, turns an invisible overlay link into an opaque rectangle that
+   hides the real content stacked beneath it. Leaving them transparent lets the forced
+   background on their container (div/section/etc.) show through instead. */
+html.a11y-theme-light a,
+html.a11y-theme-light h1,
+html.a11y-theme-light h2,
+html.a11y-theme-light h3,
+html.a11y-theme-light h4,
+html.a11y-theme-light h5,
+html.a11y-theme-light h6,
+html.a11y-theme-light p,
+html.a11y-theme-light span,
+html.a11y-theme-light em,
+html.a11y-theme-light strong,
+html.a11y-theme-light b,
+html.a11y-theme-light i,
+html.a11y-theme-light small,
+html.a11y-theme-light mark,
+html.a11y-theme-light sub,
+html.a11y-theme-light sup,
+html.a11y-theme-light abbr,
+html.a11y-theme-light cite,
+html.a11y-theme-light code,
+html.a11y-theme-light kbd,
+html.a11y-theme-light s,
+html.a11y-theme-light u,
+html.a11y-theme-light time,
+html.a11y-theme-light q,
+html.a11y-theme-light var,
+html.a11y-theme-light samp {
+  background-color: transparent !important;
+}
+
 html.a11y-theme-light a,
 html.a11y-theme-light a * {
   color: #0044cc !important;

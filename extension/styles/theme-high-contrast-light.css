@@ -13,6 +13,43 @@ html.a11y-contrast-light body * {
   box-shadow: none !important;
 }
 
+/* Headings, paragraphs, inline text-level elements, and links are rarely given their own
+   background by a page's own CSS - they're plain text content, or (for links) sometimes an
+   invisible full-card/full-hero click target. Painting a solid box behind every one of them
+   (the rule above does, unconditionally) either boxes off individual words/headlines against
+   their surroundings or, worse, turns an invisible overlay link into an opaque rectangle that
+   hides the real content stacked beneath it. Leaving them transparent lets the forced
+   background on their container (div/section/etc.) show through instead. */
+html.a11y-contrast-light a,
+html.a11y-contrast-light h1,
+html.a11y-contrast-light h2,
+html.a11y-contrast-light h3,
+html.a11y-contrast-light h4,
+html.a11y-contrast-light h5,
+html.a11y-contrast-light h6,
+html.a11y-contrast-light p,
+html.a11y-contrast-light span,
+html.a11y-contrast-light em,
+html.a11y-contrast-light strong,
+html.a11y-contrast-light b,
+html.a11y-contrast-light i,
+html.a11y-contrast-light small,
+html.a11y-contrast-light mark,
+html.a11y-contrast-light sub,
+html.a11y-contrast-light sup,
+html.a11y-contrast-light abbr,
+html.a11y-contrast-light cite,
+html.a11y-contrast-light code,
+html.a11y-contrast-light kbd,
+html.a11y-contrast-light s,
+html.a11y-contrast-light u,
+html.a11y-contrast-light time,
+html.a11y-contrast-light q,
+html.a11y-contrast-light var,
+html.a11y-contrast-light samp {
+  background-color: transparent !important;
+}
+
 html.a11y-contrast-light a,
 html.a11y-contrast-light a * {
   color: #0044aa !important;

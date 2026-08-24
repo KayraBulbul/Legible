@@ -11,20 +11,51 @@
   <header class="header">
     <img src="../icons/icon48.png" alt="" class="header-logo" width="24" height="24" />
     <h1>LEGIBLE</h1>
-    <button type="button" id="resetBtn" class="icon-btn" title="Reset all settings to default" aria-label="Reset all settings to default">
+    <button type="button" id="resetBtn" class="icon-btn" data-tooltip="Reset all settings to default"
+      aria-label="Reset all settings to default">
       <span class="micon" aria-hidden="true">restart_alt</span>
     </button>
-    <button type="button" id="hidePanelBtn" class="icon-btn" title="Hide panel" aria-label="Hide panel">
+    <button type="button" id="hidePanelBtn" class="icon-btn" data-tooltip="Hide panel" aria-label="Hide panel">
       <span class="micon" aria-hidden="true">keyboard_double_arrow_right</span>
-    </button>
-    <button type="button" id="powerBtn" class="icon-btn" title="Save settings and turn off"
-      aria-label="Save settings and turn off">
-      <span class="micon" id="powerIcon" aria-hidden="true">close</span>
     </button>
   </header>
 
+  <nav class="quick-jump" aria-label="Jump to a section">
+    <a class="quick-jump-link" href="#accountSection" data-tooltip="Account" aria-label="Jump to Account">
+      <span class="micon" aria-hidden="true">account_circle</span>
+    </a>
+    <a class="quick-jump-link" href="#themeSection" data-tooltip="Page Theme" aria-label="Jump to Page Theme">
+      <span class="micon" aria-hidden="true">palette</span>
+    </a>
+    <a class="quick-jump-link" href="#typographySection" data-tooltip="Typography" aria-label="Jump to Typography">
+      <span class="micon" aria-hidden="true">text_fields</span>
+    </a>
+    <a class="quick-jump-link" href="#visualComfortSection" data-tooltip="Visual Comfort"
+      aria-label="Jump to Visual Comfort">
+      <span class="micon" aria-hidden="true">visibility</span>
+    </a>
+    <a class="quick-jump-link" href="#cursorSection" data-tooltip="Cursor" aria-label="Jump to Cursor">
+      <span class="micon" aria-hidden="true">mouse</span>
+    </a>
+    <a class="quick-jump-link" href="#screenReaderSection" data-tooltip="Screen Reader"
+      aria-label="Jump to Screen Reader">
+      <span class="micon" aria-hidden="true">hearing</span>
+    </a>
+    <a class="quick-jump-link" href="#pomodoroSection" data-tooltip="Pomodoro Timer"
+      aria-label="Jump to Pomodoro Timer">
+      <span class="micon" aria-hidden="true">timer</span>
+    </a>
+    <a class="quick-jump-link" href="#musicSection" data-tooltip="Focus Sounds" aria-label="Jump to Focus Sounds">
+      <span class="micon" aria-hidden="true">music_note</span>
+    </a>
+    <a class="quick-jump-link" href="#extensionSettingsSection" data-tooltip="Extension Settings"
+      aria-label="Jump to Extension Settings">
+      <span class="micon" aria-hidden="true">settings</span>
+    </a>
+  </nav>
+
   <main>
-    <section class="section">
+    <section class="section" id="accountSection">
       <h2><span class="micon" aria-hidden="true">account_circle</span>Account</h2>
       <div class="row">
         <!-- Carries only what the buttons cannot: progress and failures. The steady
@@ -35,16 +66,22 @@
       <div class="row">
         <!-- Both buttons report their own outcome: the label and the ligature are swapped
              together, because at 18px the icon is what gets read first. -->
-        <button id="connectBtn" class="btn">
+        <button id="connectBtn" class="btn" data-tooltip="Sign in to sync your saved pages">
           <span class="micon" id="connectIcon" aria-hidden="true">login</span>
           <span id="connectLabel">Connect</span>
         </button>
-        <button id="savePageBtn" class="btn btn-primary" disabled>
+        <button id="savePageBtn" class="btn btn-primary" disabled data-tooltip="Save the current page to your library">
           <span class="micon" id="savePageIcon" aria-hidden="true">cloud_upload</span>
           <span id="savePageLabel">Save This Page</span>
         </button>
       </div>
       <p id="saveStatus" class="hint" role="status"></p>
+
+      <a href="https://hackmelbourne2026.vercel.app/" target="_blank" rel="noopener noreferrer" class="btn"
+        data-tooltip="Open the web dashboard in a new tab">
+        <span class="micon" aria-hidden="true">open_in_new</span>
+        <span>Open Dashboard</span>
+      </a>
 
       <div class="subsection" id="pairingSection">
         <!-- A disclosure, not a listbox: it reveals a group of controls rather than picking a
@@ -53,7 +90,7 @@
              by heading navigation while collapsed. -->
         <h3 class="disclosure-heading">
           <button type="button" id="pairingToggle" class="disclosure-trigger" aria-expanded="false"
-            aria-controls="pairingBody">
+            aria-controls="pairingBody" data-tooltip="Link another browser or device to this library">
             <span class="micon" aria-hidden="true">devices</span>
             <span class="disclosure-title">Linked devices</span>
             <!-- Surfaces a live code's countdown while the section is shut, so collapsing it
@@ -67,7 +104,7 @@
           <p class="hint">Link another browser or the dashboard to this same library. Pages are
             not copied - both devices simply see the one library.</p>
 
-          <button id="pairCreateBtn" class="btn" disabled>
+          <button id="pairCreateBtn" class="btn" disabled data-tooltip="Generate a code to link another device">
             <span class="micon" aria-hidden="true">qr_code_2</span>
             <span>Show a linking code</span>
           </button>
@@ -79,7 +116,7 @@
               <div id="pairExpiryBar" class="pair-expiry-bar"></div>
             </div>
             <div class="row">
-              <button id="pairCopyBtn" class="btn btn-small">
+              <button id="pairCopyBtn" class="btn btn-small" data-tooltip="Copy the code to your clipboard">
                 <span class="micon" aria-hidden="true">content_copy</span>
                 <span>Copy</span>
               </button>
@@ -96,7 +133,7 @@
           </label>
           <p id="pairRedeemWarning" class="hint">Using a code replaces this device's library with
             the other device's. Anything saved here first stays with the old session.</p>
-          <button id="pairRedeemBtn" class="btn">
+          <button id="pairRedeemBtn" class="btn" data-tooltip="Link this device using the code above">
             <span class="micon" aria-hidden="true">link</span>
             <span>Link this device</span>
           </button>
@@ -105,30 +142,33 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" id="themeSection">
       <h2><span class="micon" aria-hidden="true">palette</span>Page Theme</h2>
       <div class="card-grid" id="themeGrid">
         <button type="button" class="card" data-theme="invert" data-icon="invert_colors"
-          data-icon-on="invert_colors_off">
+          data-icon-on="invert_colors_off" data-tooltip="Invert the page's colors">
           <span class="micon card-icon" aria-hidden="true">invert_colors</span>
           <span class="card-label">Invert Colors</span>
         </button>
-        <button type="button" class="card" data-theme="dark" data-icon="bedtime" data-icon-on="bedtime_off">
+        <button type="button" class="card" data-theme="dark" data-icon="bedtime" data-icon-on="bedtime_off"
+          data-tooltip="Force a dark color scheme on the page">
           <span class="micon card-icon" aria-hidden="true">bedtime</span>
           <span class="card-label">Dark Mode</span>
         </button>
-        <button type="button" class="card" data-theme="light" data-icon="sunny" data-icon-on="brightness_low">
+        <button type="button" class="card" data-theme="light" data-icon="sunny" data-icon-on="brightness_low"
+          data-tooltip="Force a light color scheme on the page">
           <span class="micon card-icon" aria-hidden="true">sunny</span>
           <span class="card-label">Light Mode</span>
         </button>
-        <button type="button" class="card" data-theme="contrast" data-icon="contrast" data-icon-on="tonality">
+        <button type="button" class="card" data-theme="contrast" data-icon="contrast" data-icon-on="tonality"
+          data-tooltip="Apply a high-contrast filter to the page">
           <span class="micon card-icon" aria-hidden="true">contrast</span>
           <span class="card-label">High Contrast</span>
         </button>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" id="typographySection">
       <h2><span class="micon" aria-hidden="true">text_fields</span>Typography</h2>
       <div class="field">
         <span class="field-label" id="fontPickerLabel">
@@ -137,7 +177,8 @@
         </span>
         <div class="fontpicker" id="fontPicker">
           <button type="button" class="fontpicker-trigger" id="fontPickerTrigger" aria-haspopup="listbox"
-            aria-expanded="false" aria-labelledby="fontPickerLabel fontPickerValue">
+            aria-expanded="false" aria-labelledby="fontPickerLabel fontPickerValue"
+            data-tooltip="Choose an accessible or dyslexia-friendly font">
             <span class="fontpicker-value" id="fontPickerValue">Off (Original Page Font)</span>
             <span class="micon fontpicker-chevron" aria-hidden="true">expand_more</span>
           </button>
@@ -193,8 +234,10 @@
         </span>
         <div class="stepper-row">
           <div class="stepper-btns">
-            <button type="button" class="stepper-btn" id="fontScaleDown" aria-label="Decrease text size">−</button>
-            <button type="button" class="stepper-btn" id="fontScaleUp" aria-label="Increase text size">+</button>
+            <button type="button" class="stepper-btn" id="fontScaleDown" aria-label="Decrease text size"
+              data-tooltip="Decrease text size">−</button>
+            <button type="button" class="stepper-btn" id="fontScaleUp" aria-label="Increase text size"
+              data-tooltip="Increase text size">+</button>
           </div>
           <input type="range" id="fontScale" min="70" max="200" step="5" value="100" />
         </div>
@@ -209,9 +252,9 @@
         <div class="stepper-row">
           <div class="stepper-btns">
             <button type="button" class="stepper-btn" id="letterSpacingDown"
-              aria-label="Decrease letter spacing">−</button>
+              aria-label="Decrease letter spacing" data-tooltip="Decrease letter spacing">−</button>
             <button type="button" class="stepper-btn" id="letterSpacingUp"
-              aria-label="Increase letter spacing">+</button>
+              aria-label="Increase letter spacing" data-tooltip="Increase letter spacing">+</button>
           </div>
           <input type="range" id="letterSpacing" min="0" max="0.3" step="0.01" value="0" />
         </div>
@@ -224,8 +267,10 @@
         </span>
         <div class="stepper-row">
           <div class="stepper-btns">
-            <button type="button" class="stepper-btn" id="lineHeightDown" aria-label="Decrease line height">−</button>
-            <button type="button" class="stepper-btn" id="lineHeightUp" aria-label="Increase line height">+</button>
+            <button type="button" class="stepper-btn" id="lineHeightDown" aria-label="Decrease line height"
+              data-tooltip="Decrease line height">−</button>
+            <button type="button" class="stepper-btn" id="lineHeightUp" aria-label="Increase line height"
+              data-tooltip="Increase line height">+</button>
           </div>
           <input type="range" id="lineHeight" min="1.2" max="3" step="0.1" value="1.8" />
         </div>
@@ -238,50 +283,84 @@
       </label>
     </section>
 
-    <section class="section">
+    <section class="section" id="visualComfortSection">
       <h2><span class="micon" aria-hidden="true">visibility</span>Visual Comfort</h2>
       <p class="note">
         <span class="micon" aria-hidden="true">warning</span>
         <span>Might be incompatible with certain websites</span>
       </p>
       <div class="card-grid">
-        <button type="button" class="card" id="highlightLinksCard" data-icon="link" data-icon-on="link_off">
+        <button type="button" class="card" id="highlightLinksCard" data-icon="link" data-icon-on="link_off"
+          data-tooltip="Outline links so they stand out">
           <span class="micon card-icon" aria-hidden="true">link</span>
           <span class="card-label">Highlight Links</span>
         </button>
-        <button type="button" class="card" id="hideImagesCard" data-icon="hide_image" data-icon-on="image">
+        <button type="button" class="card" id="hideImagesCard" data-icon="hide_image" data-icon-on="image"
+          data-tooltip="Hide images on the page">
           <span class="micon card-icon" aria-hidden="true">hide_image</span>
           <span class="card-label">Hide Images</span>
         </button>
-        <button type="button" class="card" id="pauseAnimationsCard" data-icon="pause_circle" data-icon-on="play_circle">
+        <button type="button" class="card" id="pauseAnimationsCard" data-icon="pause_circle" data-icon-on="play_circle"
+          data-tooltip="Pause animations and auto-playing motion">
           <span class="micon card-icon" aria-hidden="true">pause_circle</span>
           <span class="card-label">Pause Animations</span>
         </button>
-        <button type="button" class="card" id="declutterCard" data-icon="auto_fix" data-icon-on="auto_fix_off">
+        <button type="button" class="card" id="declutterCard" data-icon="auto_fix" data-icon-on="auto_fix_off"
+          data-tooltip="Hide ads, popups, and clutter">
           <span class="micon card-icon" aria-hidden="true">auto_fix</span>
           <span class="card-label">Reduce Clutter</span>
         </button>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" id="cursorSection">
       <h2><span class="micon" aria-hidden="true">mouse</span>Cursor</h2>
       <label class="checkbox-field">
         <input type="checkbox" id="cursorEnabled" />
         <span class="micon" aria-hidden="true">arrow_selector_tool</span>
         <span>Customizable cursor</span>
       </label>
-      <label class="field">
-        <span class="field-label">
+      <div class="field">
+        <span class="field-label" id="cursorStyleLabel">
           <span class="label-text"><span class="micon" aria-hidden="true">design_services</span>Look</span>
         </span>
-        <select id="cursorStyle">
-          <option value="arrow">Arrow (large pointer)</option>
-          <option value="ring">Ring</option>
-          <option value="dot">Dot</option>
-          <option value="crosshair">Crosshair</option>
-        </select>
-      </label>
+        <div class="trackpicker" id="cursorStylePicker">
+          <button type="button" class="trackpicker-trigger" id="cursorStyleTrigger" aria-haspopup="listbox"
+            aria-expanded="false" aria-labelledby="cursorStyleLabel cursorStyleValue"
+            data-tooltip="Choose the cursor's shape">
+            <span class="micon trackpicker-value-icon" id="cursorStyleValueIcon" aria-hidden="true">arrow_selector_tool</span>
+            <span class="trackpicker-value" id="cursorStyleValue">Arrow (large pointer)</span>
+            <span class="micon trackpicker-chevron" aria-hidden="true">expand_more</span>
+          </button>
+          <ul class="trackpicker-list" id="cursorStyleList" role="listbox" aria-labelledby="cursorStyleLabel"
+            tabindex="-1" hidden>
+            <li class="trackpicker-option" role="option" id="cursor-style-opt-arrow" data-value="arrow"
+              aria-selected="true">
+              <span class="micon trackpicker-option-icon" aria-hidden="true">arrow_selector_tool</span>
+              <span class="trackpicker-name">Arrow (large pointer)</span>
+              <span class="micon trackpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="trackpicker-option" role="option" id="cursor-style-opt-ring" data-value="ring"
+              aria-selected="false">
+              <span class="micon trackpicker-option-icon" aria-hidden="true">radio_button_unchecked</span>
+              <span class="trackpicker-name">Ring</span>
+              <span class="micon trackpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="trackpicker-option" role="option" id="cursor-style-opt-dot" data-value="dot"
+              aria-selected="false">
+              <span class="micon trackpicker-option-icon" aria-hidden="true">fiber_manual_record</span>
+              <span class="trackpicker-name">Dot</span>
+              <span class="micon trackpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="trackpicker-option" role="option" id="cursor-style-opt-crosshair" data-value="crosshair"
+              aria-selected="false">
+              <span class="micon trackpicker-option-icon" aria-hidden="true">gps_fixed</span>
+              <span class="trackpicker-name">Crosshair</span>
+              <span class="micon trackpicker-check" aria-hidden="true">check</span>
+            </li>
+          </ul>
+        </div>
+      </div>
       <div class="stepper-field">
         <span class="stepper-label">
           <span class="label-text"><span class="micon" aria-hidden="true">straighten</span>Size</span>
@@ -289,8 +368,10 @@
         </span>
         <div class="stepper-row">
           <div class="stepper-btns">
-            <button type="button" class="stepper-btn" id="cursorSizeDown" aria-label="Decrease cursor size">−</button>
-            <button type="button" class="stepper-btn" id="cursorSizeUp" aria-label="Increase cursor size">+</button>
+            <button type="button" class="stepper-btn" id="cursorSizeDown" aria-label="Decrease cursor size"
+              data-tooltip="Decrease cursor size">−</button>
+            <button type="button" class="stepper-btn" id="cursorSizeUp" aria-label="Increase cursor size"
+              data-tooltip="Increase cursor size">+</button>
           </div>
           <input type="range" id="cursorSize" min="16" max="96" step="2" value="32" />
         </div>
@@ -301,30 +382,30 @@
         </span>
         <div class="palette" id="cursorPalette" role="radiogroup" aria-labelledby="cursorColorLabel">
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#1c1c1e"
-            style="--swatch: #1c1c1e" title="Ink" aria-label="Ink"></button>
+            style="--swatch: #1c1c1e" data-tooltip="Ink" aria-label="Ink"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#ffffff"
-            style="--swatch: #ffffff" title="White" aria-label="White"></button>
+            style="--swatch: #ffffff" data-tooltip="White" aria-label="White"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#ef4444"
-            style="--swatch: #ef4444" title="Red" aria-label="Red"></button>
-          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#f97316"
-            style="--swatch: #f97316" title="Orange" aria-label="Orange"></button>
+            style="--swatch: #ef4444" data-tooltip="Red" aria-label="Red"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="true" data-color="#f97316"
+            style="--swatch: #f97316" data-tooltip="Orange" aria-label="Orange"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#eab308"
-            style="--swatch: #eab308" title="Yellow" aria-label="Yellow"></button>
+            style="--swatch: #eab308" data-tooltip="Yellow" aria-label="Yellow"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#22c55e"
-            style="--swatch: #22c55e" title="Green" aria-label="Green"></button>
+            style="--swatch: #22c55e" data-tooltip="Green" aria-label="Green"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#06b6d4"
-            style="--swatch: #06b6d4" title="Cyan" aria-label="Cyan"></button>
-          <button type="button" class="swatch" role="radio" aria-checked="true" data-color="#2563eb"
-            style="--swatch: #2563eb" title="Blue" aria-label="Blue"></button>
+            style="--swatch: #06b6d4" data-tooltip="Cyan" aria-label="Cyan"></button>
+          <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#2563eb"
+            style="--swatch: #2563eb" data-tooltip="Blue" aria-label="Blue"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#7c3aed"
-            style="--swatch: #7c3aed" title="Violet" aria-label="Violet"></button>
+            style="--swatch: #7c3aed" data-tooltip="Violet" aria-label="Violet"></button>
           <button type="button" class="swatch" role="radio" aria-checked="false" data-color="#ec4899"
-            style="--swatch: #ec4899" title="Pink" aria-label="Pink"></button>
+            style="--swatch: #ec4899" data-tooltip="Pink" aria-label="Pink"></button>
         </div>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" id="screenReaderSection">
       <h2><span class="micon" aria-hidden="true">hearing</span>Screen Reader</h2>
       <label class="field">
         <span class="field-label">
@@ -348,12 +429,162 @@
         </span>
         <input type="range" id="ttsPitch" min="0" max="2" step="0.1" value="1" />
       </label>
-      <button id="toggleReadBtn" class="btn btn-primary">
+      <button id="toggleReadBtn" class="btn btn-primary" data-tooltip="Read the page aloud, or stop reading">
         <span class="micon" aria-hidden="true">play_arrow</span>
         <span>Start / Stop Reading (Alt+R)</span>
       </button>
       <p class="hint">Alt+N / Alt+P move to the next / previous element.</p>
       <p id="readStatus" class="hint" role="status"></p>
+    </section>
+
+    <section class="section" id="pomodoroSection">
+      <h2><span class="micon" aria-hidden="true">timer</span>Pomodoro Timer</h2>
+
+      <div class="pomodoro-display">
+        <span id="pomodoroModeLabel" class="pomodoro-mode">Focus</span>
+        <div class="pomodoro-ring-wrap">
+          <svg class="pomodoro-ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="pomodoro-ring-track" cx="60" cy="60" r="54"></circle>
+            <circle id="pomodoroRingProgress" class="pomodoro-ring-progress" cx="60" cy="60" r="54"></circle>
+          </svg>
+          <output id="pomodoroTime" class="pomodoro-time" role="timer">25:00</output>
+        </div>
+        <span id="pomodoroCycleLabel" class="hint">Focus session 1</span>
+      </div>
+
+      <div class="row">
+        <button id="pomodoroStartBtn" class="btn btn-primary btn-grow" data-tooltip="Start, pause, or resume the timer">
+          <span class="micon" id="pomodoroStartIcon" aria-hidden="true">play_arrow</span>
+          <span id="pomodoroStartLabel">Start</span>
+        </button>
+        <button id="pomodoroResetBtn" class="btn btn-small" aria-label="Reset timer" data-tooltip="Reset timer">
+          <span class="micon" aria-hidden="true">restart_alt</span>
+        </button>
+        <button id="pomodoroSkipBtn" class="btn btn-small" aria-label="Skip to next session"
+          data-tooltip="Skip to next session">
+          <span class="micon" aria-hidden="true">skip_next</span>
+        </button>
+      </div>
+
+      <div class="subsection">
+        <h3 class="disclosure-heading">
+          <button type="button" id="pomodoroSettingsToggle" class="disclosure-trigger" aria-expanded="false"
+            aria-controls="pomodoroSettingsBody" data-tooltip="Adjust focus and break lengths">
+            <span class="micon" aria-hidden="true">tune</span>
+            <span class="disclosure-title">Session lengths</span>
+            <span class="micon disclosure-chevron" aria-hidden="true">expand_more</span>
+          </button>
+        </h3>
+
+        <div id="pomodoroSettingsBody" class="disclosure-body" hidden>
+          <div class="stepper-field">
+            <span class="stepper-label">
+              <span class="label-text"><span class="micon" aria-hidden="true">work</span>Focus length</span>
+              <output id="pomodoroWorkOut">25 min</output>
+            </span>
+            <div class="stepper-row">
+              <div class="stepper-btns">
+                <button type="button" class="stepper-btn" id="pomodoroWorkDown" aria-label="Decrease focus length"
+                  data-tooltip="Decrease focus length">−</button>
+                <button type="button" class="stepper-btn" id="pomodoroWorkUp" aria-label="Increase focus length"
+                  data-tooltip="Increase focus length">+</button>
+              </div>
+              <input type="range" id="pomodoroWork" min="1" max="90" step="1" value="25" />
+            </div>
+          </div>
+
+          <div class="stepper-field">
+            <span class="stepper-label">
+              <span class="label-text"><span class="micon" aria-hidden="true">local_cafe</span>Short break</span>
+              <output id="pomodoroShortBreakOut">5 min</output>
+            </span>
+            <div class="stepper-row">
+              <div class="stepper-btns">
+                <button type="button" class="stepper-btn" id="pomodoroShortBreakDown"
+                  aria-label="Decrease short break length" data-tooltip="Decrease short break length">−</button>
+                <button type="button" class="stepper-btn" id="pomodoroShortBreakUp"
+                  aria-label="Increase short break length" data-tooltip="Increase short break length">+</button>
+              </div>
+              <input type="range" id="pomodoroShortBreak" min="1" max="30" step="1" value="5" />
+            </div>
+          </div>
+
+          <label class="checkbox-field">
+            <input type="checkbox" id="pomodoroAutoStart" checked />
+            <span class="micon" aria-hidden="true">autoplay</span>
+            <span>Automatically start the next session</span>
+          </label>
+          <label class="checkbox-field">
+            <input type="checkbox" id="pomodoroNotify" checked />
+            <span class="micon" aria-hidden="true">notifications</span>
+            <span>Notify me when a session ends</span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="musicSection">
+      <h2><span class="micon" aria-hidden="true">music_note</span>Focus Sounds</h2>
+
+      <div class="card-grid card-grid-3" id="musicCategoryGrid">
+        <button type="button" class="card" data-category="whiteNoise" data-icon="graphic_eq"
+          data-tooltip="Play or pause a white noise loop">
+          <span class="micon card-icon" aria-hidden="true">graphic_eq</span>
+          <span class="card-label">White Noise</span>
+        </button>
+        <button type="button" class="card" data-category="brownNoise" data-icon="water_drop"
+          data-tooltip="Play or pause a brown noise loop">
+          <span class="micon card-icon" aria-hidden="true">water_drop</span>
+          <span class="card-label">Brown Noise</span>
+        </button>
+        <button type="button" class="card" data-category="lofi" data-icon="headphones"
+          data-tooltip="Play or pause lo-fi background tracks">
+          <span class="micon card-icon" aria-hidden="true">headphones</span>
+          <span class="card-label">Lo-fi</span>
+        </button>
+        <button type="button" class="card" data-category="classical" data-icon="piano"
+          data-tooltip="Play or pause classical background tracks">
+          <span class="micon card-icon" aria-hidden="true">piano</span>
+          <span class="card-label">Classical</span>
+        </button>
+        <button type="button" class="card" data-category="ambient" data-icon="blur_on"
+          data-tooltip="Play or pause ambient background tracks">
+          <span class="micon card-icon" aria-hidden="true">blur_on</span>
+          <span class="card-label">Ambient</span>
+        </button>
+        <button type="button" class="card" data-category="nature" data-icon="forest"
+          data-tooltip="Play or pause nature sound tracks">
+          <span class="micon card-icon" aria-hidden="true">forest</span>
+          <span class="card-label">Nature</span>
+        </button>
+      </div>
+
+      <div class="field" id="musicTrackField" hidden>
+        <span class="field-label" id="musicTrackLabel">
+          <span class="label-text"><span class="micon" aria-hidden="true">queue_music</span>Track</span>
+        </span>
+        <div class="trackpicker" id="musicTrackPicker">
+          <button type="button" class="trackpicker-trigger" id="musicTrackTrigger" aria-haspopup="listbox"
+            aria-expanded="false" aria-labelledby="musicTrackLabel musicTrackValue"
+            data-tooltip="Choose a track from this category">
+            <span class="micon trackpicker-value-icon" id="musicTrackValueIcon" aria-hidden="true">music_note</span>
+            <span class="trackpicker-value" id="musicTrackValue">Track</span>
+            <span class="micon trackpicker-chevron" aria-hidden="true">expand_more</span>
+          </button>
+          <ul class="trackpicker-list" id="musicTrackList" role="listbox" aria-labelledby="musicTrackLabel"
+            tabindex="-1" hidden></ul>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">
+          <span class="label-text"><span class="micon" aria-hidden="true">volume_up</span>Volume</span>
+          <output id="musicVolumeOut">60%</output>
+        </span>
+        <input type="range" id="musicVolume" min="0" max="100" step="5" value="60" />
+      </label>
+
+      <p id="musicStatus" class="hint" role="status"></p>
     </section>
 
     <section class="section" id="extensionSettingsSection">
@@ -363,18 +594,77 @@
           <span class="label-text"><span class="micon" aria-hidden="true">palette</span>Theme Mode</span>
         </span>
         <div class="card-grid card-grid-3" id="extThemeGrid">
-          <button type="button" class="card active" data-ext-theme="light" aria-pressed="true">
+          <button type="button" class="card active" data-ext-theme="light" aria-pressed="true"
+            data-tooltip="Switch this panel to a light theme">
             <span class="micon card-icon" aria-hidden="true">light_mode</span>
             <span class="card-label">Light</span>
           </button>
-          <button type="button" class="card" data-ext-theme="dark" aria-pressed="false">
+          <button type="button" class="card" data-ext-theme="dark" aria-pressed="false"
+            data-tooltip="Switch this panel to a dark theme">
             <span class="micon card-icon" aria-hidden="true">dark_mode</span>
             <span class="card-label">Dark</span>
           </button>
-          <button type="button" class="card" data-ext-theme="contrast" aria-pressed="false">
+          <button type="button" class="card" data-ext-theme="contrast" aria-pressed="false"
+            data-tooltip="Switch this panel to a high-contrast theme">
             <span class="micon card-icon" aria-hidden="true">contrast</span>
             <span class="card-label">High Contrast</span>
           </button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label" id="panelFontPickerLabel">
+          <span class="label-text"><span class="micon" aria-hidden="true">font_download</span>Panel Font</span>
+        </span>
+        <div class="fontpicker" id="panelFontPicker">
+          <button type="button" class="fontpicker-trigger" id="panelFontPickerTrigger" aria-haspopup="listbox"
+            aria-expanded="false" aria-labelledby="panelFontPickerLabel panelFontPickerValue"
+            data-tooltip="Choose the font used by this panel's own interface">
+            <span class="fontpicker-value font-paneldefault" id="panelFontPickerValue">Default</span>
+            <span class="micon fontpicker-chevron" aria-hidden="true">expand_more</span>
+          </button>
+          <ul class="fontpicker-list" id="panelFontPickerList" role="listbox" aria-labelledby="panelFontPickerLabel"
+            tabindex="-1" hidden>
+            <li class="fontpicker-option font-paneldefault" role="option" id="panelfont-opt-default"
+              data-value="default" aria-selected="true">
+              <span class="fontpicker-name">Default</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-lexend" role="option" id="panelfont-opt-lexend" data-value="lexend"
+              aria-selected="false">
+              <span class="fontpicker-name">Lexend</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-opendyslexic" role="option" id="panelfont-opt-opendyslexic"
+              data-value="opendyslexic" aria-selected="false">
+              <span class="fontpicker-name">OpenDyslexic</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-atkinson" role="option" id="panelfont-opt-atkinson"
+              data-value="atkinson" aria-selected="false">
+              <span class="fontpicker-name">Atkinson Hyperlegible</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-opensans" role="option" id="panelfont-opt-opensans"
+              data-value="opensans" aria-selected="false">
+              <span class="fontpicker-name">Open Sans</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-arial" role="option" id="panelfont-opt-arial" data-value="arial"
+              aria-selected="false">
+              <span class="fontpicker-name">Arial / Helvetica</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-verdana" role="option" id="panelfont-opt-verdana" data-value="verdana"
+              aria-selected="false">
+              <span class="fontpicker-name">Verdana</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+            <li class="fontpicker-option font-comicsans" role="option" id="panelfont-opt-comicsans"
+              data-value="comicsans" aria-selected="false">
+              <span class="fontpicker-name">Comic Sans MS</span>
+              <span class="micon fontpicker-check" aria-hidden="true">check</span>
+            </li>
+          </ul>
         </div>
       </div>
       <label class="checkbox-field">
@@ -382,11 +672,17 @@
         <span class="micon" aria-hidden="true">widgets</span>
         <span>Show floating on-page button</span>
       </label>
+      <label class="checkbox-field">
+        <input type="checkbox" id="uiSoundsEnabled" checked />
+        <span class="micon" aria-hidden="true">volume_up</span>
+        <span>Button &amp; slider sound effects</span>
+      </label>
     </section>
   </main>
 
   <footer>
-    <button type="button" id="resetAllBtn" class="btn" style="width: 100%; margin-bottom: 8px;">
+    <button type="button" id="resetAllBtn" class="btn" style="width: 100%; margin-bottom: 8px;"
+      data-tooltip="Reset every setting back to its default">
       <span class="micon" aria-hidden="true">restart_alt</span>
       <span>Reset All Settings</span>
     </button>
@@ -404,8 +700,9 @@
       <p>This device will switch to the other device's saved-page library. Pages you saved
         here before linking stay with the old session and will not appear here.</p>
       <div class="row">
-        <button type="submit" value="cancel" class="btn">Cancel</button>
-        <button type="submit" value="confirm" class="btn btn-primary">Link this device</button>
+        <button type="submit" value="cancel" class="btn" data-tooltip="Keep this device's current library">Cancel</button>
+        <button type="submit" value="confirm" class="btn btn-primary"
+          data-tooltip="Replace this device's library with the linked one's">Link this device</button>
       </div>
     </form>
   </dialog>

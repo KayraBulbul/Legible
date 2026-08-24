@@ -13,23 +13,23 @@ const DEFAULT_SETTINGS = {
   cursorEnabled: false,
   cursorStyle: 'arrow',
   cursorSize: 32,
-  cursorColor: '#2563eb',
+  cursorColor: '#f97316',
   ttsRate: 1,
   ttsPitch: 1,
   voiceURI: null,
   toolbarVisible: true,
   extTheme: 'light',
+  panelFont: 'default',
   // Linked devices is collapsed by default: pairing is a once-per-device errand, and the
   // panel is only 372px wide, so it should not cost the reading controls any height.
   pairingOpen: false,
+  uiSoundsEnabled: true,
 };
 
 const els = {
   resetBtn: document.getElementById('resetBtn'),
   resetAllBtn: document.getElementById('resetAllBtn'),
   hidePanelBtn: document.getElementById('hidePanelBtn'),
-  powerBtn: document.getElementById('powerBtn'),
-  powerIcon: document.getElementById('powerIcon'),
   powerHint: document.getElementById('powerHint'),
   backendStatus: document.getElementById('backendStatus'),
   connectIcon: document.getElementById('connectIcon'),
@@ -58,6 +58,10 @@ const els = {
   fontPickerList: document.getElementById('fontPickerList'),
   themeGrid: document.getElementById('themeGrid'),
   extThemeGrid: document.getElementById('extThemeGrid'),
+  panelFontPicker: document.getElementById('panelFontPicker'),
+  panelFontPickerTrigger: document.getElementById('panelFontPickerTrigger'),
+  panelFontPickerValue: document.getElementById('panelFontPickerValue'),
+  panelFontPickerList: document.getElementById('panelFontPickerList'),
   fontScale: document.getElementById('fontScale'),
   fontScaleOut: document.getElementById('fontScaleOut'),
   fontScaleDown: document.getElementById('fontScaleDown'),
@@ -76,8 +80,13 @@ const els = {
   pauseAnimationsCard: document.getElementById('pauseAnimationsCard'),
   declutterCard: document.getElementById('declutterCard'),
   toolbarVisible: document.getElementById('toolbarVisible'),
+  uiSoundsEnabled: document.getElementById('uiSoundsEnabled'),
   cursorEnabled: document.getElementById('cursorEnabled'),
-  cursorStyle: document.getElementById('cursorStyle'),
+  cursorStylePicker: document.getElementById('cursorStylePicker'),
+  cursorStyleTrigger: document.getElementById('cursorStyleTrigger'),
+  cursorStyleValueIcon: document.getElementById('cursorStyleValueIcon'),
+  cursorStyleValue: document.getElementById('cursorStyleValue'),
+  cursorStyleList: document.getElementById('cursorStyleList'),
   cursorSize: document.getElementById('cursorSize'),
   cursorSizeOut: document.getElementById('cursorSizeOut'),
   cursorSizeDown: document.getElementById('cursorSizeDown'),
@@ -90,6 +99,37 @@ const els = {
   ttsPitchOut: document.getElementById('ttsPitchOut'),
   toggleReadBtn: document.getElementById('toggleReadBtn'),
   readStatus: document.getElementById('readStatus'),
+  pomodoroModeLabel: document.getElementById('pomodoroModeLabel'),
+  pomodoroTime: document.getElementById('pomodoroTime'),
+  pomodoroRingProgress: document.getElementById('pomodoroRingProgress'),
+  pomodoroCycleLabel: document.getElementById('pomodoroCycleLabel'),
+  pomodoroStartBtn: document.getElementById('pomodoroStartBtn'),
+  pomodoroStartIcon: document.getElementById('pomodoroStartIcon'),
+  pomodoroStartLabel: document.getElementById('pomodoroStartLabel'),
+  pomodoroResetBtn: document.getElementById('pomodoroResetBtn'),
+  pomodoroSkipBtn: document.getElementById('pomodoroSkipBtn'),
+  pomodoroSettingsToggle: document.getElementById('pomodoroSettingsToggle'),
+  pomodoroSettingsBody: document.getElementById('pomodoroSettingsBody'),
+  pomodoroWork: document.getElementById('pomodoroWork'),
+  pomodoroWorkOut: document.getElementById('pomodoroWorkOut'),
+  pomodoroWorkDown: document.getElementById('pomodoroWorkDown'),
+  pomodoroWorkUp: document.getElementById('pomodoroWorkUp'),
+  pomodoroShortBreak: document.getElementById('pomodoroShortBreak'),
+  pomodoroShortBreakOut: document.getElementById('pomodoroShortBreakOut'),
+  pomodoroShortBreakDown: document.getElementById('pomodoroShortBreakDown'),
+  pomodoroShortBreakUp: document.getElementById('pomodoroShortBreakUp'),
+  pomodoroAutoStart: document.getElementById('pomodoroAutoStart'),
+  pomodoroNotify: document.getElementById('pomodoroNotify'),
+  musicCategoryGrid: document.getElementById('musicCategoryGrid'),
+  musicTrackField: document.getElementById('musicTrackField'),
+  musicTrackPicker: document.getElementById('musicTrackPicker'),
+  musicTrackTrigger: document.getElementById('musicTrackTrigger'),
+  musicTrackValueIcon: document.getElementById('musicTrackValueIcon'),
+  musicTrackValue: document.getElementById('musicTrackValue'),
+  musicTrackList: document.getElementById('musicTrackList'),
+  musicVolume: document.getElementById('musicVolume'),
+  musicVolumeOut: document.getElementById('musicVolumeOut'),
+  musicStatus: document.getElementById('musicStatus'),
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -176,6 +216,121 @@ function wirePalette() {
         chooseSwatch(e.key === 'Home' ? 0 : swatches.length - 1, { focus: true });
       }
     });
+  });
+}
+
+/* ---------- Cursor style picker ----------
+   A listbox instead of a native <select>, reusing the same trackpicker markup/classes as the
+   Focus Sounds track picker below, so each cursor shape can show the icon that represents it -
+   a native <option> can only ever show plain text. */
+const cursorStyleOptions = Array.from(els.cursorStyleList.querySelectorAll('.trackpicker-option'));
+let cursorStyleListOpen = false;
+let activeCursorStyleIndex = 0;
+
+function syncCursorStylePicker() {
+  const value = settings.cursorStyle || DEFAULT_SETTINGS.cursorStyle;
+  const selected = cursorStyleOptions.find((o) => o.dataset.value === value) || cursorStyleOptions[0];
+
+  cursorStyleOptions.forEach((o) => o.setAttribute('aria-selected', String(o === selected)));
+
+  els.cursorStyleValueIcon.textContent = selected.querySelector('.trackpicker-option-icon').textContent;
+  els.cursorStyleValue.textContent = selected.querySelector('.trackpicker-name').textContent;
+  activeCursorStyleIndex = cursorStyleOptions.indexOf(selected);
+}
+
+function setActiveCursorStyleOption(index) {
+  activeCursorStyleIndex = clamp(index, 0, cursorStyleOptions.length - 1);
+  cursorStyleOptions.forEach((o, i) => o.classList.toggle('is-active', i === activeCursorStyleIndex));
+  const active = cursorStyleOptions[activeCursorStyleIndex];
+  els.cursorStyleList.setAttribute('aria-activedescendant', active.id);
+  active.scrollIntoView({ block: 'nearest' });
+}
+
+function openCursorStyleList() {
+  if (cursorStyleListOpen) return;
+  cursorStyleListOpen = true;
+  els.cursorStyleList.hidden = false;
+  els.cursorStyleTrigger.setAttribute('aria-expanded', 'true');
+  setActiveCursorStyleOption(cursorStyleOptions.findIndex((o) => o.getAttribute('aria-selected') === 'true'));
+  els.cursorStyleList.focus();
+}
+
+function closeCursorStyleList({ refocus = true } = {}) {
+  if (!cursorStyleListOpen) return;
+  cursorStyleListOpen = false;
+  els.cursorStyleList.hidden = true;
+  els.cursorStyleList.removeAttribute('aria-activedescendant');
+  els.cursorStyleTrigger.setAttribute('aria-expanded', 'false');
+  cursorStyleOptions.forEach((o) => o.classList.remove('is-active'));
+  if (refocus) els.cursorStyleTrigger.focus();
+}
+
+function chooseCursorStyle(index) {
+  const option = cursorStyleOptions[clamp(index, 0, cursorStyleOptions.length - 1)];
+  persist({ cursorStyle: option.dataset.value });
+  syncCursorStylePicker();
+  closeCursorStyleList();
+}
+
+function wireCursorStylePicker() {
+  els.cursorStyleTrigger.addEventListener('click', () => {
+    if (cursorStyleListOpen) closeCursorStyleList();
+    else openCursorStyleList();
+  });
+
+  els.cursorStyleTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openCursorStyleList();
+    }
+  });
+
+  els.cursorStyleList.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveCursorStyleOption(activeCursorStyleIndex + 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveCursorStyleOption(activeCursorStyleIndex - 1);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setActiveCursorStyleOption(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setActiveCursorStyleOption(cursorStyleOptions.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        chooseCursorStyle(activeCursorStyleIndex);
+        break;
+      case 'Escape':
+        // Escape closes the list only; the panel-level Escape handler must not also fire.
+        e.stopPropagation();
+        closeCursorStyleList();
+        break;
+      case 'Tab':
+        closeCursorStyleList();
+        break;
+      default:
+        break;
+    }
+  });
+
+  // Keep keyboard focus on the list itself so clicking an option never closes it early.
+  els.cursorStyleList.addEventListener('mousedown', (e) => e.preventDefault());
+
+  cursorStyleOptions.forEach((option, index) => {
+    option.addEventListener('click', () => chooseCursorStyle(index));
+    option.addEventListener('mousemove', () => setActiveCursorStyleOption(index));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (cursorStyleListOpen && !els.cursorStylePicker.contains(e.target)) closeCursorStyleList({ refocus: false });
   });
 }
 
@@ -297,28 +452,145 @@ function wireFontPicker() {
   });
 }
 
-/* ---------- Master on/off ----------
-   The header X saves the current settings and switches every page effect off; it
-   never clears what the user configured, so turning back on restores it all. */
-function syncPowerUI() {
-  const off = settings.extensionEnabled === false;
-  document.body.classList.toggle('is-off', off);
-  els.powerBtn.classList.toggle('is-off', off);
-  els.powerIcon.textContent = off ? 'power_settings_new' : 'close';
+/* ---------- Panel font picker ----------
+   Same listbox pattern and the same font choices as the dyslexia font picker above, but this
+   one changes the typeface of the extension's own interface (this panel), not the visited
+   page - so instead of messaging the content script it just sets a CSS custom property read
+   by body's font-family (see sidebar.css). */
+const PANEL_FONT_STACKS = {
+  lexend: "'A11y Lexend', Verdana, sans-serif",
+  opendyslexic: "'A11y OpenDyslexic', 'Comic Sans MS', sans-serif",
+  atkinson: "'Atkinson Hyperlegible', Arial, sans-serif",
+  opensans: "'Open Sans', 'Segoe UI', Roboto, sans-serif",
+  arial: "Arial, Helvetica, sans-serif",
+  verdana: "Verdana, Geneva, Tahoma, sans-serif",
+  comicsans: "'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', cursive, sans-serif",
+};
 
-  const label = off ? 'Turn accessibility features back on' : 'Save settings and turn off';
-  els.powerBtn.setAttribute('aria-label', label);
-  els.powerBtn.title = label;
-  els.powerHint.textContent = off
-    ? 'Turned off. Your settings are saved — press the power button to resume.'
-    : 'Changes are saved as you make them.';
+const panelFontOptions = Array.from(els.panelFontPickerList.querySelectorAll('.fontpicker-option'));
+let panelFontListOpen = false;
+let activePanelFontIndex = 0;
+
+function applyPanelFont() {
+  const stack = PANEL_FONT_STACKS[settings.panelFont];
+  if (stack) document.documentElement.style.setProperty('--panel-font-family', stack);
+  else document.documentElement.style.removeProperty('--panel-font-family');
+}
+
+function syncPanelFontPicker() {
+  const value = settings.panelFont || 'default';
+  const selected = panelFontOptions.find((o) => o.dataset.value === value) || panelFontOptions[0];
+
+  panelFontOptions.forEach((o) => o.setAttribute('aria-selected', String(o === selected)));
+
+  els.panelFontPickerValue.textContent = selected.querySelector('.fontpicker-name').textContent;
+  els.panelFontPickerValue.className = `fontpicker-value ${fontOptionClass(selected)}`.trim();
+  activePanelFontIndex = panelFontOptions.indexOf(selected);
+}
+
+function setActivePanelFontOption(index) {
+  activePanelFontIndex = clamp(index, 0, panelFontOptions.length - 1);
+  panelFontOptions.forEach((o, i) => o.classList.toggle('is-active', i === activePanelFontIndex));
+  const active = panelFontOptions[activePanelFontIndex];
+  els.panelFontPickerList.setAttribute('aria-activedescendant', active.id);
+  active.scrollIntoView({ block: 'nearest' });
+}
+
+function openPanelFontList() {
+  if (panelFontListOpen) return;
+  panelFontListOpen = true;
+  els.panelFontPickerList.hidden = false;
+  els.panelFontPickerTrigger.setAttribute('aria-expanded', 'true');
+  setActivePanelFontOption(panelFontOptions.findIndex((o) => o.getAttribute('aria-selected') === 'true'));
+  els.panelFontPickerList.focus();
+}
+
+function closePanelFontList({ refocus = true } = {}) {
+  if (!panelFontListOpen) return;
+  panelFontListOpen = false;
+  els.panelFontPickerList.hidden = true;
+  els.panelFontPickerList.removeAttribute('aria-activedescendant');
+  els.panelFontPickerTrigger.setAttribute('aria-expanded', 'false');
+  panelFontOptions.forEach((o) => o.classList.remove('is-active'));
+  if (refocus) els.panelFontPickerTrigger.focus();
+}
+
+function choosePanelFont(index) {
+  const option = panelFontOptions[clamp(index, 0, panelFontOptions.length - 1)];
+  persist({ panelFont: option.dataset.value });
+  syncPanelFontPicker();
+  applyPanelFont();
+  closePanelFontList();
+}
+
+function wirePanelFontPicker() {
+  els.panelFontPickerTrigger.addEventListener('click', () => {
+    if (panelFontListOpen) closePanelFontList();
+    else openPanelFontList();
+  });
+
+  els.panelFontPickerTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openPanelFontList();
+    }
+  });
+
+  els.panelFontPickerList.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActivePanelFontOption(activePanelFontIndex + 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActivePanelFontOption(activePanelFontIndex - 1);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setActivePanelFontOption(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setActivePanelFontOption(panelFontOptions.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        choosePanelFont(activePanelFontIndex);
+        break;
+      case 'Escape':
+        // Escape closes the list only; the panel-level Escape handler must not also fire.
+        e.stopPropagation();
+        closePanelFontList();
+        break;
+      case 'Tab':
+        closePanelFontList();
+        break;
+      default:
+        break;
+    }
+  });
+
+  // Keep keyboard focus on the list itself so clicking an option never closes it early.
+  els.panelFontPickerList.addEventListener('mousedown', (e) => e.preventDefault());
+
+  panelFontOptions.forEach((option, index) => {
+    option.addEventListener('click', () => choosePanelFont(index));
+    option.addEventListener('mousemove', () => setActivePanelFontOption(index));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (panelFontListOpen && !els.panelFontPicker.contains(e.target)) closePanelFontList({ refocus: false });
+  });
 }
 
 function populateUI() {
-  syncPowerUI();
   syncFontPicker();
   syncThemeGrid();
   syncExtThemeGrid();
+  syncPanelFontPicker();
+  applyPanelFont();
   syncFeatureCards();
 
   els.fontScale.value = settings.fontScale;
@@ -332,9 +604,10 @@ function populateUI() {
 
   els.bionicReading.checked = !!settings.bionicReading;
   els.toolbarVisible.checked = settings.toolbarVisible !== false;
+  els.uiSoundsEnabled.checked = settings.uiSoundsEnabled !== false;
 
   els.cursorEnabled.checked = !!settings.cursorEnabled;
-  els.cursorStyle.value = settings.cursorStyle || DEFAULT_SETTINGS.cursorStyle;
+  syncCursorStylePicker();
   els.cursorSize.value = settings.cursorSize || 32;
   els.cursorSizeOut.textContent = `${settings.cursorSize || 32}px`;
   syncPalette();
@@ -729,6 +1002,587 @@ function wireBackendEvents() {
   });
 }
 
+/* ---------- Pomodoro timer ----------
+   Unlike the a11y settings above, the timer's truth lives in the background service worker
+   (see background/background.js) because it has to keep counting down via chrome.alarms even
+   while this panel is closed. This panel is just a renderer: it fetches state on open, mirrors
+   any change the background makes through chrome.storage.onChanged (so two open panels in two
+   tabs never disagree), and sends control messages rather than mutating state itself. */
+
+const POMODORO_TICK_MS = 250;
+const POMODORO_MODE_LABEL = { work: 'Focus', shortBreak: 'Short Break' };
+const POMODORO_RING_RADIUS = 54;
+const POMODORO_RING_CIRCUMFERENCE = 2 * Math.PI * POMODORO_RING_RADIUS;
+let pomodoro = null;
+let pomodoroTimer = null;
+
+els.pomodoroRingProgress.style.strokeDasharray = `${POMODORO_RING_CIRCUMFERENCE}`;
+
+function updatePomodoroRing(remainingMs) {
+  if (!pomodoro) return;
+  const totalMs = pomodoroModeDurationMs(pomodoro.mode, pomodoro.settings);
+  const elapsedRatio = totalMs > 0 ? clamp(1 - remainingMs / totalMs, 0, 1) : 0;
+  els.pomodoroRingProgress.style.strokeDashoffset = `${POMODORO_RING_CIRCUMFERENCE * elapsedRatio}`;
+}
+
+function pomodoroModeDurationMs(mode, settings) {
+  const minutes = mode === 'work' ? settings.workMin : settings.shortBreakMin;
+  return Math.max(1, minutes || 1) * 60 * 1000;
+}
+
+function formatClock(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const mins = Math.floor(total / 60);
+  const secs = String(total % 60).padStart(2, '0');
+  return `${mins}:${secs}`;
+}
+
+// Mirrors the pairing code's deadline-based countdown: read from endsAt vs. now() on every
+// tick rather than decrementing a counter, so a throttled/backgrounded panel can't drift.
+function pomodoroRemainingMs() {
+  if (!pomodoro) return 0;
+  if (pomodoro.running && pomodoro.endsAt) return Math.max(0, pomodoro.endsAt - Date.now());
+  if (pomodoro.remainingMs != null) return pomodoro.remainingMs;
+  return pomodoroModeDurationMs(pomodoro.mode, pomodoro.settings);
+}
+
+function renderPomodoro() {
+  if (!pomodoro) return;
+
+  els.pomodoroModeLabel.textContent = POMODORO_MODE_LABEL[pomodoro.mode] || 'Focus';
+  els.pomodoroModeLabel.classList.toggle('is-break', pomodoro.mode !== 'work');
+  const remainingMs = pomodoroRemainingMs();
+  els.pomodoroTime.textContent = formatClock(remainingMs);
+  updatePomodoroRing(remainingMs);
+
+  els.pomodoroCycleLabel.textContent = `Focus session ${pomodoro.cyclesCompleted + 1}`;
+
+  els.pomodoroStartIcon.textContent = pomodoro.running ? 'pause' : 'play_arrow';
+  els.pomodoroStartLabel.textContent = pomodoro.running
+    ? 'Pause'
+    : (pomodoro.remainingMs != null ? 'Resume' : 'Start');
+
+  els.pomodoroWork.value = pomodoro.settings.workMin;
+  els.pomodoroWorkOut.textContent = `${pomodoro.settings.workMin} min`;
+  els.pomodoroShortBreak.value = pomodoro.settings.shortBreakMin;
+  els.pomodoroShortBreakOut.textContent = `${pomodoro.settings.shortBreakMin} min`;
+  els.pomodoroAutoStart.checked = pomodoro.settings.autoStartNext !== false;
+  els.pomodoroNotify.checked = pomodoro.settings.notify !== false;
+}
+
+function startPomodoroTicker() {
+  stopPomodoroTicker();
+  pomodoroTimer = setInterval(() => {
+    if (pomodoro && pomodoro.running) {
+      const remainingMs = pomodoroRemainingMs();
+      els.pomodoroTime.textContent = formatClock(remainingMs);
+      updatePomodoroRing(remainingMs);
+    }
+  }, POMODORO_TICK_MS);
+}
+
+function stopPomodoroTicker() {
+  if (pomodoroTimer !== null) {
+    clearInterval(pomodoroTimer);
+    pomodoroTimer = null;
+  }
+}
+
+async function refreshPomodoroState() {
+  const res = await chrome.runtime.sendMessage({ type: 'POMODORO_GET_STATE' });
+  if (res && res.ok) {
+    pomodoro = res.state;
+    renderPomodoro();
+  }
+}
+
+function wirePomodoroSetting({ rangeEl, downBtn, upBtn, step, key, outEl, format }) {
+  const min = Number(rangeEl.min);
+  const max = Number(rangeEl.max);
+
+  function preview(rawVal) {
+    outEl.textContent = format(Number(rawVal));
+  }
+
+  async function commit(rawVal) {
+    const val = clamp(Number(rawVal), min, max);
+    rangeEl.value = val;
+    preview(val);
+    const res = await chrome.runtime.sendMessage({ type: 'POMODORO_UPDATE_SETTINGS', payload: { [key]: val } });
+    if (res && res.ok) {
+      pomodoro = res.state;
+      renderPomodoro();
+    }
+  }
+
+  rangeEl.addEventListener('input', () => preview(rangeEl.value));
+  rangeEl.addEventListener('change', () => commit(rangeEl.value));
+  downBtn.addEventListener('click', () => commit(clamp(Number(rangeEl.value) - step, min, max)));
+  upBtn.addEventListener('click', () => commit(clamp(Number(rangeEl.value) + step, min, max)));
+}
+
+function wirePomodoro() {
+  els.pomodoroStartBtn.addEventListener('click', async () => {
+    const type = pomodoro && pomodoro.running ? 'POMODORO_PAUSE' : 'POMODORO_START';
+    const res = await chrome.runtime.sendMessage({ type });
+    if (res && res.ok) {
+      pomodoro = res.state;
+      renderPomodoro();
+    }
+  });
+
+  els.pomodoroResetBtn.addEventListener('click', async () => {
+    const res = await chrome.runtime.sendMessage({ type: 'POMODORO_RESET' });
+    if (res && res.ok) {
+      pomodoro = res.state;
+      renderPomodoro();
+    }
+  });
+
+  els.pomodoroSkipBtn.addEventListener('click', async () => {
+    const res = await chrome.runtime.sendMessage({ type: 'POMODORO_SKIP' });
+    if (res && res.ok) {
+      pomodoro = res.state;
+      renderPomodoro();
+    }
+  });
+
+  els.pomodoroSettingsToggle.addEventListener('click', () => {
+    const open = els.pomodoroSettingsToggle.getAttribute('aria-expanded') !== 'true';
+    els.pomodoroSettingsToggle.setAttribute('aria-expanded', String(open));
+    els.pomodoroSettingsBody.hidden = !open;
+  });
+
+  wirePomodoroSetting({
+    rangeEl: els.pomodoroWork, downBtn: els.pomodoroWorkDown, upBtn: els.pomodoroWorkUp,
+    step: 1, key: 'workMin', outEl: els.pomodoroWorkOut, format: (v) => `${v} min`,
+  });
+  wirePomodoroSetting({
+    rangeEl: els.pomodoroShortBreak, downBtn: els.pomodoroShortBreakDown, upBtn: els.pomodoroShortBreakUp,
+    step: 1, key: 'shortBreakMin', outEl: els.pomodoroShortBreakOut, format: (v) => `${v} min`,
+  });
+
+  els.pomodoroAutoStart.addEventListener('change', async () => {
+    const res = await chrome.runtime.sendMessage({
+      type: 'POMODORO_UPDATE_SETTINGS',
+      payload: { autoStartNext: els.pomodoroAutoStart.checked },
+    });
+    if (res && res.ok) {
+      pomodoro = res.state;
+      renderPomodoro();
+    }
+  });
+
+  els.pomodoroNotify.addEventListener('change', async () => {
+    const res = await chrome.runtime.sendMessage({
+      type: 'POMODORO_UPDATE_SETTINGS',
+      payload: { notify: els.pomodoroNotify.checked },
+    });
+    if (res && res.ok) {
+      pomodoro = res.state;
+      renderPomodoro();
+    }
+  });
+}
+
+/* ---------- Focus Sounds (music) ----------
+   Same split as the pomodoro timer: playback truth lives in the background service worker
+   (which hands it off to an offscreen document so it survives this panel closing - see
+   background/background.js and offscreen/offscreen.js), and this panel just renders state and
+   sends control messages. MUSIC_LIBRARY is intentionally the same static shape as the one in
+   background.js - this codebase already keeps DEFAULT_SETTINGS duplicated the same way across
+   sidebar.js/content.js/background.js rather than sharing a module across the mixed classic-
+   script/ES-module contexts, so this follows that existing convention. */
+// `icon` names below are Material Symbols Rounded ligatures - the bundled woff2 is the full
+// icon set (see the @font-face comment in sidebar.css), so any documented icon name works here.
+const MUSIC_LIBRARY = {
+  whiteNoise: { label: 'White Noise', tracks: [{ id: 'default', label: 'White Noise', icon: 'graphic_eq' }] },
+  brownNoise: { label: 'Brown Noise', tracks: [{ id: 'default', label: 'Brown Noise', icon: 'water_drop' }] },
+  lofi: {
+    label: 'Lo-fi',
+    tracks: [
+      { id: 'lofi-rainy', label: 'Rainy Day', icon: 'water_drop' },
+      { id: 'lofi-latenight', label: 'Late Night', icon: 'bedtime' },
+      { id: 'lofi-studybreak', label: 'Study Break', icon: 'local_cafe' },
+    ],
+  },
+  classical: {
+    label: 'Classical',
+    tracks: [
+      { id: 'classical-moonlight', label: 'Moonlight', icon: 'bedtime' },
+      { id: 'classical-reverie', label: 'Reverie', icon: 'blur_on' },
+      { id: 'classical-sonata', label: 'Sonata', icon: 'piano' },
+    ],
+  },
+  ambient: {
+    label: 'Ambient',
+    tracks: [
+      { id: 'ambient-warm', label: 'Warm Drone', icon: 'sunny' },
+      { id: 'ambient-airy', label: 'Airy Pad', icon: 'blur_on' },
+      { id: 'ambient-deep', label: 'Deep Space', icon: 'dark_mode' },
+    ],
+  },
+  nature: {
+    label: 'Nature',
+    tracks: [
+      { id: 'rain', label: 'Rain', icon: 'water_drop' },
+      { id: 'ocean', label: 'Ocean Waves', icon: 'water_drop' },
+      { id: 'forest', label: 'Forest', icon: 'forest' },
+    ],
+  },
+};
+
+let music = null;
+
+function currentMusicTrackLabel() {
+  const category = MUSIC_LIBRARY[music.categoryId];
+  if (!category) return '';
+  const track = category.tracks.find((t) => t.id === music.trackId);
+  if (!track) return '';
+  // Single-track categories (the generated noises) name the track after the category itself,
+  // so "White Noise — White Noise" would just repeat the same word twice.
+  return category.tracks.length > 1 ? `${category.label} — ${track.label}` : category.label;
+}
+
+// Not setCardState: that helper ties the icon swap to the same boolean as the selection
+// highlight, but here they're independent - a paused card stays visually "selected" (ring) while
+// still showing its category icon, and only swaps to the pause glyph while actually playing.
+function syncMusicCategoryGrid() {
+  els.musicCategoryGrid.querySelectorAll('.card').forEach((btn) => {
+    const selected = !!music && music.categoryId === btn.dataset.category;
+    btn.classList.toggle('active', selected);
+    btn.setAttribute('aria-pressed', String(selected));
+    const icon = btn.querySelector('.card-icon');
+    if (icon) icon.textContent = (selected && music.playing) ? 'pause' : btn.dataset.icon;
+  });
+}
+
+/* ---------- Track picker ----------
+   A custom listbox rather than a plain <select>, mirroring the Typography section's font
+   picker (see wireFontPicker below) - a native <select>'s <option> can only ever show plain
+   text, so it cannot put an icon next to each track name. Unlike the font picker's static
+   list, these options depend on whichever category is currently selected, so they're rebuilt
+   on every category switch (buildTrackOptions) rather than living fixed in the HTML; the
+   interaction wiring below still only needs to run once, since it's attached to the picker's
+   stable container elements and listens for options via delegation. */
+let trackListOpen = false;
+let activeTrackIndex = 0;
+let trackOptionEls = [];
+
+function buildTrackOptions(category) {
+  els.musicTrackList.innerHTML = '';
+  trackOptionEls = category.tracks.map((t) => {
+    const li = document.createElement('li');
+    li.className = 'trackpicker-option';
+    li.setAttribute('role', 'option');
+    li.id = `track-opt-${t.id}`;
+    li.dataset.value = t.id;
+    li.setAttribute('aria-selected', String(t.id === music.trackId));
+
+    const icon = document.createElement('span');
+    icon.className = 'micon trackpicker-option-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = t.icon;
+
+    const name = document.createElement('span');
+    name.className = 'trackpicker-name';
+    name.textContent = t.label;
+
+    const check = document.createElement('span');
+    check.className = 'micon trackpicker-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.textContent = 'check';
+
+    li.append(icon, name, check);
+    els.musicTrackList.appendChild(li);
+    return li;
+  });
+}
+
+function setActiveTrackOption(index) {
+  if (trackOptionEls.length === 0) return;
+  activeTrackIndex = clamp(index, 0, trackOptionEls.length - 1);
+  trackOptionEls.forEach((o, i) => o.classList.toggle('is-active', i === activeTrackIndex));
+  const active = trackOptionEls[activeTrackIndex];
+  els.musicTrackList.setAttribute('aria-activedescendant', active.id);
+  active.scrollIntoView({ block: 'nearest' });
+}
+
+function openTrackList() {
+  if (trackListOpen || trackOptionEls.length === 0) return;
+  trackListOpen = true;
+  els.musicTrackList.hidden = false;
+  els.musicTrackTrigger.setAttribute('aria-expanded', 'true');
+  const selectedIndex = trackOptionEls.findIndex((o) => o.getAttribute('aria-selected') === 'true');
+  setActiveTrackOption(selectedIndex === -1 ? 0 : selectedIndex);
+  els.musicTrackList.focus();
+}
+
+function closeTrackList({ refocus = true } = {}) {
+  if (!trackListOpen) return;
+  trackListOpen = false;
+  els.musicTrackList.hidden = true;
+  els.musicTrackList.removeAttribute('aria-activedescendant');
+  els.musicTrackTrigger.setAttribute('aria-expanded', 'false');
+  trackOptionEls.forEach((o) => o.classList.remove('is-active'));
+  if (refocus) els.musicTrackTrigger.focus();
+}
+
+async function chooseTrack(index) {
+  const option = trackOptionEls[clamp(index, 0, trackOptionEls.length - 1)];
+  if (!option) return;
+  closeTrackList();
+  const res = await chrome.runtime.sendMessage({
+    type: 'MUSIC_SELECT',
+    payload: { categoryId: music.categoryId, trackId: option.dataset.value },
+  });
+  if (res && res.ok) {
+    music = res.state;
+    renderMusic();
+  }
+}
+
+function wireTrackPicker() {
+  els.musicTrackTrigger.addEventListener('click', () => {
+    if (trackListOpen) closeTrackList();
+    else openTrackList();
+  });
+
+  els.musicTrackTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openTrackList();
+    }
+  });
+
+  els.musicTrackList.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveTrackOption(activeTrackIndex + 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveTrackOption(activeTrackIndex - 1);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setActiveTrackOption(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setActiveTrackOption(trackOptionEls.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        chooseTrack(activeTrackIndex);
+        break;
+      case 'Escape':
+        // Escape closes the list only; the panel-level Escape handler must not also fire.
+        e.stopPropagation();
+        closeTrackList();
+        break;
+      case 'Tab':
+        closeTrackList();
+        break;
+      default:
+        break;
+    }
+  });
+
+  // Keep keyboard focus on the list itself so clicking an option never closes it early.
+  els.musicTrackList.addEventListener('mousedown', (e) => e.preventDefault());
+
+  // Delegated rather than attached per-option, since options are rebuilt on every category
+  // switch (buildTrackOptions) rather than living fixed in the HTML like the font picker's.
+  els.musicTrackList.addEventListener('click', (e) => {
+    const option = e.target.closest('.trackpicker-option');
+    if (!option) return;
+    chooseTrack(trackOptionEls.indexOf(option));
+  });
+  els.musicTrackList.addEventListener('mousemove', (e) => {
+    const option = e.target.closest('.trackpicker-option');
+    if (!option) return;
+    const index = trackOptionEls.indexOf(option);
+    if (index !== -1 && index !== activeTrackIndex) setActiveTrackOption(index);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (trackListOpen && !els.musicTrackPicker.contains(e.target)) closeTrackList({ refocus: false });
+  });
+}
+
+function syncMusicTrackSelect() {
+  const category = MUSIC_LIBRARY[music.categoryId];
+  if (!category || category.tracks.length <= 1) {
+    els.musicTrackField.hidden = true;
+    closeTrackList({ refocus: false });
+    return;
+  }
+  els.musicTrackField.hidden = false;
+  buildTrackOptions(category);
+
+  const selected = category.tracks.find((t) => t.id === music.trackId) || category.tracks[0];
+  els.musicTrackValueIcon.textContent = selected.icon;
+  els.musicTrackValue.textContent = selected.label;
+}
+
+function renderMusic() {
+  if (!music) return;
+
+  syncMusicCategoryGrid();
+  syncMusicTrackSelect();
+
+  const volumePct = Math.round((music.volume != null ? music.volume : 0.6) * 100);
+  els.musicVolume.value = volumePct;
+  els.musicVolumeOut.textContent = `${volumePct}%`;
+
+  els.musicStatus.textContent = music.lastError
+    ? music.lastError
+    : (music.playing ? `Playing: ${currentMusicTrackLabel()}` : '');
+  els.musicStatus.className = music.lastError ? 'hint err' : 'hint';
+}
+
+async function refreshMusicState() {
+  const res = await chrome.runtime.sendMessage({ type: 'MUSIC_GET_STATE' });
+  if (res && res.ok) {
+    music = res.state;
+    renderMusic();
+  }
+}
+
+function wireMusic() {
+  els.musicCategoryGrid.querySelectorAll('.card').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const category = btn.dataset.category;
+      const isSameCategory = music && music.categoryId === category;
+
+      // The dedicated Play/Pause button is gone - each card now doubles as one: clicking the
+      // sound that's already playing pauses it, and clicking any other card (or the same one
+      // while paused) selects and (re)starts it, in one click instead of select-then-press-play.
+      if (isSameCategory && music.playing) {
+        const res = await chrome.runtime.sendMessage({ type: 'MUSIC_PAUSE' });
+        if (res && res.ok) {
+          music = res.state;
+          renderMusic();
+        }
+        return;
+      }
+
+      // Only re-select when actually switching category - MUSIC_SELECT resets to that
+      // category's default track, so resuming the same (paused) category must skip it and go
+      // straight to MUSIC_PLAY, or it would silently drop whichever track was picked before.
+      if (!isSameCategory) {
+        const selectRes = await chrome.runtime.sendMessage({
+          type: 'MUSIC_SELECT',
+          payload: { categoryId: category },
+        });
+        if (selectRes && selectRes.ok) {
+          music = selectRes.state;
+          renderMusic();
+        }
+      }
+
+      const playRes = await chrome.runtime.sendMessage({ type: 'MUSIC_PLAY' });
+      if (playRes && playRes.ok) {
+        music = playRes.state;
+        renderMusic();
+      }
+    });
+  });
+
+  wireTrackPicker();
+
+  els.musicVolume.addEventListener('input', () => {
+    els.musicVolumeOut.textContent = `${els.musicVolume.value}%`;
+  });
+  els.musicVolume.addEventListener('change', async () => {
+    const volume = Number(els.musicVolume.value) / 100;
+    const res = await chrome.runtime.sendMessage({ type: 'MUSIC_SET_VOLUME', payload: { volume } });
+    if (res && res.ok) {
+      music = res.state;
+      renderMusic();
+    }
+  });
+}
+
+/* ---------- UI sound effects ----------
+   Short synthesized blips (Web Audio, no bundled files - same reasoning as the generated Focus
+   Sounds) confirming a button press or a slider/checkbox/select commit. Delegated at the
+   document level rather than wired into every individual handler, so every control in the
+   panel gets it automatically - including the pomodoro/music buttons above and anything added
+   later - without having to remember to call it from each one. */
+let sfxCtx = null;
+
+function getSfxCtx() {
+  if (!sfxCtx) sfxCtx = new AudioContext();
+  if (sfxCtx.state === 'suspended') sfxCtx.resume();
+  return sfxCtx;
+}
+
+function playBlip({ freq, duration, type, gain }) {
+  if (settings.uiSoundsEnabled === false) return;
+  const ctx = getSfxCtx();
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  osc.type = type;
+  osc.frequency.value = freq;
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, now);
+  env.gain.linearRampToValueAtTime(gain, now + 0.008);
+  // Ramping to a near-zero (never exactly zero - exponential ramps can't target 0) value
+  // instead of a flat cutoff is what keeps this sounding like a soft blip rather than a click.
+  env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  osc.connect(env).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + duration + 0.02);
+}
+
+function playClickSfx() {
+  playBlip({ freq: 620, duration: 0.09, type: 'triangle', gain: 0.14 });
+}
+
+function playTickSfx() {
+  playBlip({ freq: 900, duration: 0.05, type: 'sine', gain: 0.09 });
+}
+
+// Quieter/shorter than playTickSfx: a slider drag can cross many steps a second, so this needs
+// to read as a texture of detents (like a volume knob) rather than stack into a blur of the
+// louder, longer confirmation tick used for checkboxes/selects.
+function playSliderTickSfx() {
+  playBlip({ freq: 1100, duration: 0.025, type: 'sine', gain: 0.05 });
+}
+
+// Tracks each range's last-ticked value so a redundant 'input' (same value re-dispatched) never
+// double-ticks - keyed by element rather than deduped globally, since two sliders can legitimately
+// sit on the same value at once.
+const sliderTickValues = new WeakMap();
+
+function wireUiSfx() {
+  // Bubbling means a click on an icon <span> inside a <button> still resolves via closest().
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('button, a.btn, .swatch, .fontpicker-option, .quick-jump-link')) playClickSfx();
+  });
+  // 'input' rather than 'change' for ranges: a browser range input only dispatches 'input' when
+  // the (step-quantized) value actually moves, so this ticks once per step boundary crossed
+  // while dragging - not once on release - the way a physical detented knob would.
+  document.addEventListener('input', (e) => {
+    if (!e.target.matches('input[type="range"]')) return;
+    if (sliderTickValues.get(e.target) === e.target.value) return;
+    sliderTickValues.set(e.target, e.target.value);
+    playSliderTickSfx();
+  });
+  // Checkboxes and selects only ever commit once, so 'change' (not 'input') is the right event
+  // for them; ranges are excluded here since the 'input' listener above already covers them.
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"], select')) playTickSfx();
+  });
+}
+
 /* The panel runs as an overlay iframe inside the page (see content/panel.js), so hiding it
    is a message to the host frame rather than a window close. */
 function hidePanel() {
@@ -737,15 +1591,11 @@ function hidePanel() {
 
 function wireEvents() {
   wireFontPicker();
+  wirePanelFontPicker();
 
   els.hidePanelBtn.addEventListener('click', hidePanel);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !fontListOpen) hidePanel();
-  });
-
-  els.powerBtn.addEventListener('click', () => {
-    persist({ extensionEnabled: settings.extensionEnabled === false });
-    syncPowerUI();
+    if (e.key === 'Escape' && !fontListOpen && !trackListOpen && !panelFontListOpen) hidePanel();
   });
 
   els.themeGrid.querySelectorAll('.card').forEach((btn) => {
@@ -803,9 +1653,10 @@ function wireEvents() {
   });
 
   els.toolbarVisible.addEventListener('change', () => persist({ toolbarVisible: els.toolbarVisible.checked }));
+  els.uiSoundsEnabled.addEventListener('change', () => persist({ uiSoundsEnabled: els.uiSoundsEnabled.checked }));
 
   els.cursorEnabled.addEventListener('change', () => persist({ cursorEnabled: els.cursorEnabled.checked }));
-  els.cursorStyle.addEventListener('change', () => persist({ cursorStyle: els.cursorStyle.value }));
+  wireCursorStylePicker();
   wirePalette();
   wireStepper({
     rangeEl: els.cursorSize,
@@ -857,7 +1708,7 @@ function wireEvents() {
     els.powerHint.textContent = 'All settings have been reset to defaults.';
     els.powerHint.style.color = 'var(--color-accent)';
     setTimeout(() => {
-      syncPowerUI();
+      els.powerHint.textContent = 'Changes are saved as you make them.';
       els.powerHint.style.removeProperty('color');
     }, 2500);
   };
@@ -865,6 +1716,21 @@ function wireEvents() {
   if (els.resetBtn) els.resetBtn.addEventListener('click', handleReset);
   if (els.resetAllBtn) els.resetAllBtn.addEventListener('click', handleReset);
 }
+
+// Background writes to storage on every pomodoro state change; mirroring that here means a
+// second panel open in another tab (or a session-end alarm firing while this one sits idle)
+// still shows up without the panel having to poll for it.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes.pomodoroState) {
+    pomodoro = changes.pomodoroState.newValue;
+    renderPomodoro();
+  }
+  if (changes.musicState) {
+    music = changes.musicState.newValue;
+    renderMusic();
+  }
+});
 
 async function init() {
   const stored = await chrome.storage.local.get(['a11ySettings']);
@@ -877,6 +1743,12 @@ async function init() {
   wirePairingDisclosure();
   wirePairingEvents();
   refreshBackendStatus();
+  wirePomodoro();
+  await refreshPomodoroState();
+  startPomodoroTicker();
+  wireMusic();
+  await refreshMusicState();
+  wireUiSfx();
 }
 
 init();

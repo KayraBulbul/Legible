@@ -13,6 +13,43 @@ html.a11y-contrast-dark body * {
   box-shadow: none !important;
 }
 
+/* Headings, paragraphs, inline text-level elements, and links are rarely given their own
+   background by a page's own CSS - they're plain text content, or (for links) sometimes an
+   invisible full-card/full-hero click target. Painting a solid box behind every one of them
+   (the rule above does, unconditionally) either boxes off individual words/headlines against
+   their surroundings or, worse, turns an invisible overlay link into an opaque rectangle that
+   hides the real content stacked beneath it. Leaving them transparent lets the forced
+   background on their container (div/section/etc.) show through instead. */
+html.a11y-contrast-dark a,
+html.a11y-contrast-dark h1,
+html.a11y-contrast-dark h2,
+html.a11y-contrast-dark h3,
+html.a11y-contrast-dark h4,
+html.a11y-contrast-dark h5,
+html.a11y-contrast-dark h6,
+html.a11y-contrast-dark p,
+html.a11y-contrast-dark span,
+html.a11y-contrast-dark em,
+html.a11y-contrast-dark strong,
+html.a11y-contrast-dark b,
+html.a11y-contrast-dark i,
+html.a11y-contrast-dark small,
+html.a11y-contrast-dark mark,
+html.a11y-contrast-dark sub,
+html.a11y-contrast-dark sup,
+html.a11y-contrast-dark abbr,
+html.a11y-contrast-dark cite,
+html.a11y-contrast-dark code,
+html.a11y-contrast-dark kbd,
+html.a11y-contrast-dark s,
+html.a11y-contrast-dark u,
+html.a11y-contrast-dark time,
+html.a11y-contrast-dark q,
+html.a11y-contrast-dark var,
+html.a11y-contrast-dark samp {
+  background-color: transparent !important;
+}
+
 html.a11y-contrast-dark a,
 html.a11y-contrast-dark a * {
   color: #00ffcc !important;
