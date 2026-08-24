@@ -1,103 +1,166 @@
-# AI Accessible Screen Reader & Web Restyler
+# Legible
 
-A Manifest V3 Chrome extension combining dyslexia-friendly typography, high-contrast/de-clutter restyling, an AI (Gemini) vision-powered alt-text/ARIA enricher, and a keyboard-driven screen reader with synchronized highlighting.
+Legible is an accessibility layer for reading the web. Its Chrome extension changes how a live page looks and sounds, while the web dashboard keeps readable snapshots for later.
 
-## Production backend
+The extension and dashboard share one saved-page library through a FastAPI and PostgreSQL backend. A page is saved as sanitised semantic content with the accessibility settings that were active when it was captured.
 
-The FastAPI backend is deployed at [hackmelbourne2026-production.up.railway.app](https://hackmelbourne2026-production.up.railway.app). Useful links:
+## What it does
+
+### Chrome extension
+
+Load the extension on a normal web page and open its floating control panel from the toolbar. It can:
+
+- switch between light, dark, inverted, and high-contrast page themes;
+- use Lexend, OpenDyslexic, Atkinson Hyperlegible, Arial/Helvetica, Verdana, Open Sans, or Comic Sans MS;
+- change font size, letter spacing, and line height;
+- apply bionic reading, decluttering, link highlighting, image hiding, or paused animations;
+- add a configurable on-page cursor;
+- read the page aloud with keyboard navigation and synchronized highlighting;
+- run a Pomodoro focus timer that keeps running when the panel is closed;
+- play generated focus sounds, including white noise, rain, ocean, lo-fi, ambient, and classical sounds;
+- extract the readable part of a page and save it to the shared library.
+
+The live page settings stay local to the extension. Saving a page sends the page URL, title, capture time, extracted semantic content, and a settings snapshot through the service worker. It does not send cookies, credentials, forms, or browser storage.
+
+### Web dashboard
+
+The dashboard lets you browse and search saved pages, switch between grid and list views, sort by title or save date, mark pages as favourites, add tags, and open a saved page in the reader.
+
+The saved reader restores the page's settings and adds:
+
+- dyslexia-friendly font, contrast, size, spacing, bionic reading, and reading-width controls;
+- fullscreen and focus modes;
+- Gemini-backed summarize, simplify, restructure, and focus tools;
+- on-demand PDF export of saved content.
+
+AI requests and PDF generation run on the backend. Gemini credentials are never shipped in the extension or dashboard.
+
+## Try the product
+
+### Load the extension
+
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode**.
+3. Select **Load unpacked** and choose the repository's `extension/` directory.
+4. Open a regular web page and click the Legible toolbar icon.
+
+The extension is configured to use the production API. In the panel, open **Account** and choose **Connect** before saving a page. The extension creates an anonymous guest session and stores its access token in extension storage.
+
+### Open the dashboard
+
+The hosted dashboard is available at [hackmelbourne2026.vercel.app](https://hackmelbourne2026.vercel.app/).
+
+To run it locally from the repository root:
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+Without an API URL, the dashboard uses local fixtures so its interface can be explored offline. To use the Railway API locally, create `dashboard/.env.local` with:
+
+```text
+VITE_API_BASE_URL=https://hackmelbourne2026-production.up.railway.app
+```
+
+The dashboard does not create a separate guest user. To share the extension's library, open **Account → Linked devices** in the extension, create a code, then enter it on the dashboard pairing screen. Pairing creates another session for the same anonymous user. It does not copy pages.
+
+## Production services
+
+- Frontend: [hackmelbourne2026.vercel.app](https://hackmelbourne2026.vercel.app/)
+- FastAPI backend: [hackmelbourne2026-production.up.railway.app](https://hackmelbourne2026-production.up.railway.app)
+- PostgreSQL database: hosted on Railway with the backend
+- Gemini: called by the backend through its server-side credentials
+
+Useful API links:
 
 - [Health check](https://hackmelbourne2026-production.up.railway.app/health)
 - [Interactive API documentation](https://hackmelbourne2026-production.up.railway.app/docs)
 - [OpenAPI schema](https://hackmelbourne2026-production.up.railway.app/openapi.json)
-- [Frontend integration guide](docs/README.md)
+- [API integration guide](docs/README.md)
 - [Full API contract](docs/api.md)
 
-The backend implements anonymous guest sessions with optional display names, one-time
-extension/dashboard pairing, user-owned saved-page CRUD, Gemini transformations and image
-descriptions, and synchronous PDF export. Accessibility profiles remain planned. The
-production deployment may lag behind `main` until its next successful deploy; use its OpenAPI
-document to confirm the live version.
+The API currently handles anonymous guest sessions, display names, one-time extension/dashboard pairing, saved-page CRUD, favourites, tags, Gemini transformations, image descriptions, and synchronous PDF export. Accessibility profiles are planned.
 
-## Load the extension
+## Run the backend locally
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode** (top right).
-3. Click **Load unpacked** and select `extension/`.
-4. Pin the extension from the toolbar puzzle-piece icon for quick access.
+The backend uses Python 3.14, `uv`, FastAPI, SQLAlchemy, and PostgreSQL.
 
-## Set up legacy AI vision (optional prototype)
-
-1. Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
-2. Click the extension icon → **AI Vision (Gemini)** section → paste the key → **Save Key**.
-3. The key is stored locally via `chrome.storage.local` and never leaves the browser except in direct calls to `generativelanguage.googleapis.com`.
-
-Without a key, all typography, contrast, and screen-reader features still work. Only the AI alt-text and ARIA scan is disabled.
-
-This direct browser-to-Gemini path is legacy prototype behaviour. Do not build new features on
-it or ship its API key flow. The backend Gemini endpoints already exist, but the extension has
-not yet migrated to them.
-
-## Using it
-
-- **Sidebar**: click the toolbar icon to open the side panel — theme presets (invert, dark, light, high-contrast), accessible & dyslexia fonts (**Lexend, OpenDyslexic, Atkinson Hyperlegible, Arial/Helvetica, Verdana, Open Sans, Comic Sans MS**), fine-grained text size/letter spacing/line height controls, highlight links, hide images, pause animations, de-clutter mode, bionic reading, a customizable on-page cursor, TTS voice/rate/pitch, and an AI scan of the current page.
-- **Pomodoro Timer**: a focus/short-break countdown (customizable session lengths) that keeps running via `chrome.alarms` even while the panel is closed, with a toolbar badge countdown (`Nm`) and an optional desktop notification when a session ends.
-- **Focus Sounds**: background ambience while reading, played continuously through an offscreen document independent of any tab. White Noise, Brown Noise, Ambient, Rain, Ocean, Lo-fi, and Classical are all generated on the fly in `extension/offscreen/offscreen.js` (noise/oscillator synthesis, not recordings) — no audio files needed. Nature → Forest is the one exception (birdsong isn't fakeable that way); it's wired up to play a file dropped into `extension/audio/nature/forest.mp3` (path documented in `MUSIC_LIBRARY` in `extension/background/background.js`) once one exists.
-- **Floating HUD**: click the ♿ pill in the bottom-right corner of any page for quick access to the same theme, highlight/hide, de-clutter, and bionic reading toggles without opening the sidebar.
-- **Linked devices**: the sidebar's Account section connects an anonymous guest session and saves pages to it. **Show a linking code** mints an eight-character code that another browser or the dashboard redeems to join the *same* anonymous user — a live countdown shows the ten minutes before it expires. Pairing links sessions, it does not copy pages: both clients then read one library, and signing out of one leaves the other signed in. See [Pairing](#pairing) below.
-- **Keyboard shortcuts** (customizable at `chrome://extensions/shortcuts`):
-  - `Alt+R` — start/stop reading from the current position
-  - `Alt+N` / `Alt+P` — next/previous readable element
-  - `Alt+A` — run an AI vision scan on the hovered/focused image
-
-## Pairing
-
-Saved pages belong to a user, not to a device. Every saved page stores the `user.id` its
-session resolves to, and every list, read, update, delete, export and AI call filters by that
-id — so two clients share a library exactly when they share a user.
-
-Pairing is how a second client gets onto an existing user:
-
-1. The extension creates a guest session (`POST /api/v1/auth/guest`). The backend creates a
-   `User` and a 30-day session, and returns an access token — only the token's hash is stored.
-2. That authenticated client asks for a code (`POST /api/v1/auth/pairing-codes`). The backend
-   returns eight characters, keeps only an HMAC of them, sets a 10-minute expiry, and
-   invalidates any earlier unused code for that user.
-3. The second client redeems it (`POST /api/v1/auth/pairing-codes/redeem`). The backend
-   verifies and consumes the code, then issues a *different* token for the *same* user.
-
-What follows from that:
-
-- Two paired clients see one saved-page library, because they resolve to one `user.id`.
-- Nothing is copied anywhere. Pairing joins sessions; it is not sync.
-- Creating a fresh guest session instead creates a **new user** and therefore an empty,
-  separate library.
-- Revoking one session (`DELETE /api/v1/auth/session`, or the dashboard's Sign out) leaves the
-  paired session working.
-- Another user cannot read a page even given its UUID — it comes back `404`.
-
-Codes use an alphabet without `I`, `O`, `0` or `1` so they survive being read aloud, work
-once, and expire ten minutes after they are issued. The backend normalises nothing, so both
-clients strip spaces, dashes and case before sending. Both also count down to the deadline
-from the absolute expiry instant and pull the code off screen when it lapses, rather than
-leaving a dead code on display for someone to type.
-
-Where to find it: **extension** → sidebar Account → Linked devices (mint and redeem).
-**Dashboard** → the pairing screen shown when unpaired (redeem), and the account menu →
-Link another device (mint). The full contract is in [docs/api.md](docs/api.md).
-
-## Notes
-
-- `fonts/` bundles real Lexend (Google Fonts, OFL) and OpenDyslexic (OpenDyslexic project, OFL) font files for offline use.
-- The AI scanner fetches each unlabeled image as a blob and sends it inline (base64) to Gemini — cross-origin images without CORS headers may fail to fetch; those get a dotted red outline instead of a dashed green one.
-- Analysis results are cached in `chrome.storage.local` by a hash of the image source to avoid re-billing repeat scans.
-
-## Dashboard development
-
-This repository has multiple packages. To run the React dashboard locally:
+From the repository root, start PostgreSQL:
 
 ```bash
-cd dashboard
-npm run dev
+docker compose up -d db
 ```
 
-Vite will print a local URL (typically `http://localhost:5173`).
+Then configure and start the API:
+
+```bash
+cd backend
+cp .env.example .env
+# Set PAIRING_CODE_SECRET and GEMINI_API_KEY in .env
+uv sync
+uv run alembic upgrade head
+uv run fastapi dev api/main.py
+```
+
+The local API runs at `http://127.0.0.1:8000`. Its Swagger UI is at `/docs` and its health check is at `/health`.
+
+## Keyboard shortcuts
+
+The extension shortcuts can be changed at `chrome://extensions/shortcuts`.
+
+- `Alt+R` starts or stops reading from the current position.
+- `Alt+N` moves to the next readable element.
+- `Alt+P` moves to the previous readable element.
+
+## How the pieces fit
+
+```text
+web page
+   ↓
+Legible extension: restyle, read aloud, extract
+   ↓ service worker
+FastAPI API → PostgreSQL saved-page library
+   ↑
+React dashboard: browse, reread, transform, export
+```
+
+The extension owns live tab settings. The backend owns sessions, pairing, saved pages, sanitisation, AI coordination, and exports. The dashboard consumes the backend contract in [`docs/api.md`](docs/api.md).
+
+## Repository layout
+
+```text
+extension/  Manifest V3 extension, content scripts, service worker, and controls
+backend/    FastAPI application, database models, migrations, AI, PDF export, and tests
+dashboard/  React and TypeScript saved-page library and reader
+docs/       API contract and client integration notes
+shared/     Reserved for generated contracts and cross-client examples
+```
+
+## Checks
+
+Backend checks run from `backend/`:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy api database tests
+uv run pytest
+```
+
+Dashboard checks run from `dashboard/`:
+
+```bash
+npm run build
+npm run lint
+npm test
+```
+
+The extension has no automated test setup yet. Load `extension/` as an unpacked extension and manually check it on a regular web page.
+
+## Current limits
+
+- Accessibility profiles are not implemented yet.
+- The extension's live accessibility settings and the dashboard's saved-reader settings are related but not identical. The extension maps its current settings into the versioned saved-page settings contract when a page is saved.
+- The dashboard can run against local fixtures or the API. The Railway backend must be configured with PostgreSQL and Gemini credentials for live persistence and AI tools.
