@@ -10,31 +10,25 @@
 export type FontMode = "none" | "lexend" | "opendyslexic";
 
 /**
- * `accessibilitySettings.contrastMode` in docs/api.md.
- * NOTE: the contract currently spells the third value `light`; the reader UI
- * calls it `warm`. Reconcile in the mapper (src/api/pages.ts) once settled.
+ * Mirrors `Theme` in context/themeContext.ts one-for-one, so the reader can
+ * offer the same contrast choices — and the same colours — as the
+ * dashboard's own theme, as an independent per-reader pick. This has drifted
+ * from the `contrastMode` enum in docs/api.md (`none` | `dark` | `light`):
+ * reading contrast is still local-only (see useReaderSettings.ts).
  */
-export type ContrastMode = "none" | "dark" | "warm";
+export type ContrastMode = "light" | "dark" | "invert" | "high-contrast";
 
 export interface SavedPage {
   id: string;
   title: string;
   domain: string;
-  /** ISO date or datetime — `capturedAt` on the wire. */
+  originalUrl: string;
   savedAt: string;
-  /** `isFavourited` on the wire. */
   favorited: boolean;
-  /** Dashboard-only: the contract deletes outright, with no trash state. */
   trashed: boolean;
-  /**
-   * Trimmed, case-folded, deduplicated, at most 20 entries of at most 50
-   * characters each — the backend enforces this (docs/api.md); see
-   * `src/utils/tags.ts` for the client-side mirror of those rules.
-   */
   tags: string[];
   dyslexiaFont: FontMode;
   contrastMode: ContrastMode;
-  /** Count of AI-generated labels applied to the snapshot. */
   aiLabels: number;
 }
 
@@ -42,6 +36,34 @@ export interface SavedPage {
 export type SavedPagePatch = Partial<
   Pick<SavedPage, "title" | "favorited" | "trashed" | "tags">
 >;
+
+export interface SemanticDocument {
+  format: "semantic_html";
+  html: string;
+  text: string;
+  language: string | null;
+}
+
+/**
+ * The subset of `accessibilitySettings` (docs/api.md) the reader seeds its
+ * local settings from. `contrastMode` is deliberately excluded — the wire
+ * enum (`none`/`dark`/`light`) doesn't match `ContrastMode` above, and the
+ * reader's contrast pick isn't sourced from here anyway (useReaderSettings.ts).
+ */
+export interface SavedAccessibilitySettings {
+  dyslexiaFont: FontMode;
+  bionicReading: boolean;
+  fontScale: number;
+  lineHeight: number | null;
+  letterSpacing: number | null;
+}
+
+/** The reader's article body — fetched separately from `GET /saved-pages/{id}`. */
+export interface SavedPageContent {
+  sourceDocument: SemanticDocument;
+  transformedDocument: SemanticDocument | null;
+  accessibilitySettings: SavedAccessibilitySettings;
+}
 
 /* ---------------------------------------------------------------- navigation */
 
@@ -53,21 +75,43 @@ export type SortBy = "date" | "title";
 
 /* -------------------------------------------------------------------- reader */
 
-export type ToolPanel = "summary" | "simplify" | "focus" | null;
+export type ToolPanel = "summary" | "simplify" | "restructure" | "focus" | null;
 
-/** Mirrors the reader half of `accessibilitySettings` in docs/api.md. */
 export interface ReaderSettings {
   dyslexiaFont: FontMode;
   contrastMode: ContrastMode;
-  /** Percentage, 80–200. */
   fontScale: number;
   bionicReading: boolean;
-  /** Em units, 0–0.3. */
   letterSpacing: number;
-  /** Unitless line-height multiplier, 1.2–2.4. */
   lineHeight: number;
 }
 
 /* ------------------------------------------------------------- async loading */
 
 export type LoadStatus = "loading" | "ready" | "error";
+
+/* ------------------------------------------------------------------------ ai */
+
+/** `TextTransformationOperation` in docs/api.md — `POST /api/v1/transformations`. */
+export type TransformOperation =
+  | "simplify"
+  | "summarize"
+  | "restructure"
+  | "focus";
+
+/** `aiPreferences.simplificationLevel` in docs/api.md. */
+export type SimplificationLevel = "light" | "moderate" | "strong";
+
+/** `options` body of `POST /api/v1/transformations` — mirrors `AiPreferences`. */
+export interface AiPreferences {
+  simplificationLevel: SimplificationLevel;
+  preserveTechnicalTerms: boolean;
+}
+
+/** One successful `POST /api/v1/transformations` call. */
+export interface TransformResult {
+  document: SemanticDocument;
+  model: string;
+  promptVersion: string;
+  performedAt: string;
+}

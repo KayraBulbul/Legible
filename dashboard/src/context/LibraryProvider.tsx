@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -13,6 +14,14 @@ import {
   type LibraryContextValue,
 } from "@/context/libraryContext";
 
+/**
+ * Fallback cadence for background revalidation while the dashboard tab is
+ * open and visible. Focus/visibility revalidation (below) handles the common
+ * case — switching back from the extension — near-instantly; this just
+ * covers a dashboard tab left open and watched in the foreground.
+ */
+const BACKGROUND_REFRESH_INTERVAL_MS = 60_000;
+
 /** Turns anything thrown by the API layer into something worth showing a user. */
 function describeError(cause: unknown, fallback: string): string {
   if (cause instanceof ApiError) {
@@ -21,6 +30,22 @@ function describeError(cause: unknown, fallback: string): string {
       : cause.message;
   }
   return fallback;
+}
+
+/**
+ * `trashed` is client-only (see {@link LibraryProvider}'s `setTrashed`) — the
+ * server has no concept of it, so every list response reports `false`.
+ * Background revalidation runs silently and often, so without this it would
+ * routinely un-trash whatever the user had just moved to trash.
+ */
+function mergeTrashState(current: SavedPage[], next: SavedPage[]): SavedPage[] {
+  const trashedIds = new Set(
+    current.filter((page) => page.trashed).map((page) => page.id),
+  );
+  if (trashedIds.size === 0) return next;
+  return next.map((page) =>
+    trashedIds.has(page.id) ? { ...page, trashed: true } : page,
+  );
 }
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
@@ -59,6 +84,53 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const dismissError = useCallback(() => setError(null), []);
 
   /**
+   * Refetches without touching `status` or `error` — no spinner, no error
+   * banner for a transient blip — so pages saved from the extension while
+   * this tab sat in the background just appear next time it's looked at.
+   */
+  const isRevalidatingRef = useRef(false);
+  const revalidate = useCallback(() => {
+    if (isRevalidatingRef.current) return;
+    isRevalidatingRef.current = true;
+    listPages()
+      .then((nextPages) => {
+        setPages((current) => mergeTrashState(current, nextPages));
+      })
+      .catch(() => {
+        // Background revalidation failing isn't worth surfacing; the next
+        // focus, poll tick, or explicit reload will just try again.
+      })
+      .finally(() => {
+        isRevalidatingRef.current = false;
+      });
+  }, []);
+
+  // The extension saves pages from a separate tab (or window), so there's no
+  // channel to push that save into this one — the dashboard has to notice.
+  // The moment a user is most likely to expect a freshly saved page to show
+  // up is switching back to this tab, so that's the primary trigger; a
+  // fixed-interval poll on top covers a dashboard left open in the
+  // foreground the whole time.
+  useEffect(() => {
+    const onFocus = () => revalidate();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") revalidate();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") revalidate();
+    }, BACKGROUND_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [revalidate]);
+
+  /**
    * Applies a patch immediately, then reverts just that page if the request
    * fails — per page rather than per snapshot, so a failure can't undo an
    * unrelated edit that landed while it was in flight.
@@ -94,14 +166,26 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [patchPage],
   );
 
+  /**
+   * Trash has no server representation (docs/api.md doesn't model it, only a
+   * hard `DELETE`) — so unlike {@link patchPage}, this never calls the API.
+   * Sending `{ trashed }` through `updatePage` would map to an empty PATCH
+   * body and the server rejects that with `422 validation_error`.
+   */
+  const setTrashed = useCallback((id: string, trashed: boolean) => {
+    setPages((current) =>
+      current.map((page) => (page.id === id ? { ...page, trashed } : page)),
+    );
+  }, []);
+
   const moveToTrash = useCallback(
-    (id: string) => patchPage(id, { trashed: true }),
-    [patchPage],
+    (id: string) => setTrashed(id, true),
+    [setTrashed],
   );
 
   const restorePage = useCallback(
-    (id: string) => patchPage(id, { trashed: false }),
-    [patchPage],
+    (id: string) => setTrashed(id, false),
+    [setTrashed],
   );
 
   const deleteForever = useCallback((id: string) => {

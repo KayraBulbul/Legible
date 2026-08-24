@@ -10,6 +10,7 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import DashboardContent from "@/components/DashboardContent";
 import PairingScreen from "@/components/PairingScreen";
+import DisplayNamePrompt from "@/components/DisplayNamePrompt";
 import ReaderModal from "@/components/ReaderModal";
 
 /* ============================================================================
@@ -54,11 +55,17 @@ function DashboardShell() {
 }
 
 function AuthGate() {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
 
   // "checking" briefly revalidates a persisted token — same shell either way
   // avoids a screen flash for the common case of an already-paired visit.
   if (status === "unauthenticated") return <PairingScreen />;
+
+  // A freshly created guest (or one paired from such a device) has no name
+  // yet — collect one before showing the rest of the dashboard.
+  if (status === "authenticated" && user?.displayName == null) {
+    return <DisplayNamePrompt />;
+  }
 
   return (
     <LibraryProvider>

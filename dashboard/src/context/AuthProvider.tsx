@@ -10,6 +10,7 @@ import {
   fetchCurrentUser,
   redeemPairingCode,
   revokeCurrentSession,
+  updateDisplayName,
 } from "@/api/auth";
 import { ApiError, getAccessToken, setAccessToken } from "@/api/client";
 import {
@@ -102,9 +103,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("unauthenticated");
   }, []);
 
+  const setDisplayName = useCallback(async (displayName: string | null) => {
+    const nextUser = await updateDisplayName(displayName);
+    setUser(nextUser);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, isPairing, pairError, pair, signOut }),
-    [status, user, isPairing, pairError, pair, signOut],
+    () => ({
+      status,
+      user,
+      isPairing,
+      pairError,
+      pair,
+      signOut,
+      setDisplayName,
+    }),
+    [status, user, isPairing, pairError, pair, signOut, setDisplayName],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

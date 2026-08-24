@@ -1,9 +1,26 @@
-import { FileDown, Sparkles, Target, Trash2, Wand2 } from "lucide-react";
-import type { ContrastMode, FontMode, ReaderSettings, ToolPanel } from "@/types";
+import {
+  AlertTriangle,
+  FileDown,
+  Loader2,
+  Sparkles,
+  Target,
+  Trash2,
+  Wand2,
+} from "lucide-react";
+import type {
+  AiPreferences,
+  ContrastMode,
+  FontMode,
+  ReaderSettings,
+  SimplificationLevel,
+  ToolPanel,
+} from "@/types";
 import cn from "@/utils/cn";
 import TagEditor from "@/components/TagEditor";
+import { useExportPdf } from "@/hooks/useExportPdf";
 
 interface ReaderControlsProps {
+  pageId: string;
   settings: ReaderSettings;
   onChange: <K extends keyof ReaderSettings>(
     key: K,
@@ -11,10 +28,22 @@ interface ReaderControlsProps {
   ) => void;
   activeTool: ToolPanel;
   onToggleTool: (tool: Exclude<ToolPanel, null>) => void;
+  aiPreferences: AiPreferences;
+  onAiPreferencesChange: <K extends keyof AiPreferences>(
+    key: K,
+    value: AiPreferences[K],
+  ) => void;
   tags: string[];
   onTagsChange: (tags: string[]) => void;
   onTrash: () => void;
 }
+
+const SIMPLIFICATION_OPTIONS: { value: SimplificationLevel; label: string }[] =
+  [
+    { value: "light", label: "Light" },
+    { value: "moderate", label: "Moderate" },
+    { value: "strong", label: "Strong" },
+  ];
 
 const FONT_OPTIONS: { value: FontMode; label: string }[] = [
   { value: "none", label: "Off" },
@@ -23,9 +52,10 @@ const FONT_OPTIONS: { value: FontMode; label: string }[] = [
 ];
 
 const CONTRAST_OPTIONS: { value: ContrastMode; label: string }[] = [
-  { value: "none", label: "Off" },
-  { value: "dark", label: "Dark (black / yellow)" },
-  { value: "warm", label: "Warm (cream / navy)" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "invert", label: "Invert" },
+  { value: "high-contrast", label: "High contrast" },
 ];
 
 const TOOL_BUTTON_BASE =
@@ -36,14 +66,20 @@ const TOOL_BUTTON_BASE =
  * the same settings object can drive both surfaces.
  */
 export default function ReaderControls({
+  pageId,
   settings,
   onChange,
   activeTool,
   onToggleTool,
+  aiPreferences,
+  onAiPreferencesChange,
   tags,
   onTagsChange,
   onTrash,
 }: ReaderControlsProps) {
+  const { exportingId, error, exportPdf, dismissError } = useExportPdf();
+  const exporting = exportingId === pageId;
+
   return (
     <div className="flex w-56 shrink-0 select-none flex-col gap-4 overflow-y-auto border-r border-border bg-surface-hover p-4">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
@@ -92,7 +128,9 @@ export default function ReaderControls({
           max={200}
           step={10}
           value={settings.fontScale}
-          onChange={(event) => onChange("fontScale", Number(event.target.value))}
+          onChange={(event) =>
+            onChange("fontScale", Number(event.target.value))
+          }
           className="accent-accent"
         />
       </label>
@@ -148,8 +186,40 @@ export default function ReaderControls({
         <h3 className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
           Reader tools
         </h3>
-        {/* TODO(AI): POST /api/v1/transformations with operation
-            summarize | simplify | focus (docs/api.md). */}
+        <label className="mt-1 flex flex-col gap-1 text-xs font-medium text-text-secondary">
+          AI strength
+          <select
+            value={aiPreferences.simplificationLevel}
+            onChange={(event) =>
+              onAiPreferencesChange(
+                "simplificationLevel",
+                event.target.value as SimplificationLevel,
+              )
+            }
+            className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-text-primary"
+          >
+            {SIMPLIFICATION_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center mt-1 gap-2 text-xs font-medium text-text-secondary">
+          <input
+            type="checkbox"
+            checked={aiPreferences.preserveTechnicalTerms}
+            onChange={(event) =>
+              onAiPreferencesChange(
+                "preserveTechnicalTerms",
+                event.target.checked,
+              )
+            }
+            className="h-3.5 w-3.5 accent-warning"
+          />
+          Preserve technical terms
+        </label>
+
         <ToolButton
           icon={Sparkles}
           label="Summarize"
@@ -170,14 +240,43 @@ export default function ReaderControls({
         />
       </div>
 
-      {/* TODO(backend): GET /api/v1/saved-pages/{id}/export.pdf. */}
-      <button
-        disabled
-        title="Available once page export is connected"
-        className="mt-1 flex cursor-not-allowed items-center gap-2 rounded-lg bg-accent px-2.5 py-3 text-left text-sm font-medium text-text-inverse opacity-60"
-      >
-        <FileDown size={16} aria-hidden="true" /> Export as PDF
-      </button>
+      <div className="flex flex-col gap-1.5">
+        <button
+          onClick={() => exportPdf(pageId)}
+          disabled={exporting}
+          className={cn(
+            "mt-1 flex items-center gap-2 rounded-lg bg-accent px-2.5 py-3 text-left text-sm font-medium text-text-inverse",
+            exporting && "cursor-wait opacity-70",
+          )}
+        >
+          {exporting ? (
+            <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <FileDown size={16} aria-hidden="true" />
+          )}
+          {exporting ? "Exporting…" : "Export as PDF"}
+        </button>
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-1.5 rounded-lg bg-danger-muted/20 px-2.5 py-2 text-xs text-danger"
+          >
+            <AlertTriangle
+              size={13}
+              className="mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            <span className="flex-1">{error}</span>
+            <button
+              onClick={dismissError}
+              aria-label="Dismiss export error"
+              className="shrink-0 text-danger/70 hover:text-danger"
+            >
+              ×
+            </button>
+          </div>
+        )}
+      </div>
 
       <button
         onClick={onTrash}

@@ -110,6 +110,25 @@ export async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser> 
   return apiRequest<AuthUser>("/auth/me", { signal });
 }
 
+/**
+ * Sets or clears the current user's display name (`PATCH /auth/me`, docs/api.md).
+ * The backend trims and collapses whitespace and rejects a blank string, so
+ * callers should send `null` rather than `""` to clear the name.
+ */
+export async function updateDisplayName(
+  displayName: string | null,
+): Promise<AuthUser> {
+  if (USE_MOCK_API) {
+    MOCK_USER.displayName = displayName;
+    return mockDelay(MOCK_USER);
+  }
+
+  return apiRequest<AuthUser>("/auth/me", {
+    method: "PATCH",
+    body: { displayName },
+  });
+}
+
 /** Revokes only the current session's token. Best-effort: callers clear local state regardless. */
 export async function revokeCurrentSession(): Promise<void> {
   if (USE_MOCK_API) {

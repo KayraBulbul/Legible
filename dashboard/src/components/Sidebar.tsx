@@ -1,5 +1,4 @@
 import {
-  Accessibility,
   Clock,
   FileText,
   Home,
@@ -11,6 +10,7 @@ import type { StaticView } from "@/types";
 import { VIEW_NAV_LABELS } from "@/navigation/views";
 import NavItem from "@/components/NavItem";
 import { useWorkspace } from "@/context/workspaceContext";
+import logo from "@/assets/logo.svg";
 
 /** Order matters here — it is the order they appear in the sidebar. */
 const NAV_ITEMS: { view: StaticView; icon: LucideIcon }[] = [
@@ -31,17 +31,11 @@ export default function Sidebar() {
     >
       <button
         onClick={() => (window.location.href = "/")}
-        className="mb-4 flex items-center gap-2 px-2"
+        className="mb-4 flex items-center px-2"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-          <Accessibility
-            size={18}
-            className="text-text-inverse"
-            aria-hidden="true"
-          />
-        </span>
-        <span className="font-display text-[15px] font-bold text-text-primary">
-          A11y Reader
+        <img src={logo} alt="Legible Logo" className="h-12 w-12" />
+        <span className="font-display text-[17px] font-bold text-text-primary">
+          Legible
         </span>
       </button>
 

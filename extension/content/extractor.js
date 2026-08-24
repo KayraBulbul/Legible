@@ -24,7 +24,17 @@
   }
 
   function pickContentRoot() {
-    return document.querySelector('main') || document.querySelector('article') || document.body;
+    // `<article>` is the more specific landmark — many sites wrap header/sidebar
+    // chrome (or, as on Wikipedia, an entire TOC/tools/language rail) inside
+    // `<main>` alongside the real content, so prefer the narrower element
+    // whenever both exist. `[role="main"]` covers pre-HTML5 sites that mark the
+    // content region with ARIA instead of the `<main>` tag.
+    return (
+      document.querySelector('article') ||
+      document.querySelector('main') ||
+      document.querySelector('[role="main"]') ||
+      document.body
+    );
   }
 
   function cleanClone(sourceRoot) {

@@ -25,6 +25,9 @@ export interface AuthContextValue {
 
   /** Revokes the session and returns to "unauthenticated". */
   signOut: () => Promise<void>;
+
+  /** Sets or clears the current user's display name and updates `user` on success. */
+  setDisplayName: (displayName: string | null) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

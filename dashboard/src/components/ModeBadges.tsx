@@ -7,9 +7,11 @@ const FONT_LABELS: Record<Exclude<FontMode, "none">, string> = {
   opendyslexic: "OpenDyslexic",
 };
 
-const CONTRAST_LABELS: Record<Exclude<ContrastMode, "none">, string> = {
+const CONTRAST_LABELS: Record<ContrastMode, string> = {
+  light: "Light",
   dark: "Dark",
-  warm: "Warm",
+  invert: "Invert",
+  "high-contrast": "High contrast",
 };
 
 /** The reading modes saved with a page, as compact badges. */
@@ -21,7 +23,7 @@ export default function ModeBadges({ page }: { page: SavedPage }) {
           <Type size={11} aria-hidden="true" /> {FONT_LABELS[page.dyslexiaFont]}
         </Badge>
       )}
-      {page.contrastMode !== "none" && (
+      {page.contrastMode !== "light" && (
         <Badge tone="info">
           <Contrast size={11} aria-hidden="true" />{" "}
           {CONTRAST_LABELS[page.contrastMode]}

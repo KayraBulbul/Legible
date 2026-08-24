@@ -19,7 +19,6 @@ export default class AppErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // TODO(observability): forward to a reporting service when one exists.
     console.error("Dashboard crashed:", error, info.componentStack);
   }
 

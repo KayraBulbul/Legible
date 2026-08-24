@@ -27,7 +27,7 @@ export default function PairingScreen() {
         </h1>
         <p className="mt-2 text-sm text-text-secondary">
           Open the extension, create a pairing code, and enter it here to load
-          your saved pages. Codes last ten minutes and work once.
+          your saved pages.
         </p>
 
         <form className="mt-6 flex flex-col gap-3" onSubmit={handleSubmit}>
@@ -43,7 +43,9 @@ export default function PairingScreen() {
             // the dashes people add when copying a code off another screen all
             // have to be stripped here. Doing it on every keystroke rather
             // than at submit keeps what is on screen the same as what is sent.
-            onChange={(event) => setCode(normalizePairingCode(event.target.value))}
+            onChange={(event) =>
+              setCode(normalizePairingCode(event.target.value))
+            }
             maxLength={PAIRING_CODE_LENGTH}
             autoComplete="off"
             autoCapitalize="characters"

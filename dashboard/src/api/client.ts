@@ -172,3 +172,48 @@ export async function apiRequest<T>(
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
+
+/* -------------------------------------------------------------------- binary */
+
+export interface BinaryResponse {
+  blob: Blob;
+  /** Decoded from `Content-Disposition`, RFC 5987 filename preferred. */
+  filename: string | null;
+}
+
+function filenameFromDisposition(disposition: string | null): string | null {
+  if (!disposition) return null;
+  const encoded = /filename\*=UTF-8''([^;]+)/.exec(disposition)?.[1];
+  if (encoded) return decodeURIComponent(encoded);
+  return /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? null;
+}
+
+/**
+ * Performs an authenticated request for a binary body, such as the PDF export
+ * endpoint — {@link apiRequest} assumes a JSON response, so this stays
+ * separate rather than teaching that path to branch on content type.
+ */
+export async function apiBlobRequest(
+  path: string,
+  { signal, query }: Pick<RequestOptions, "signal" | "query"> = {},
+): Promise<BinaryResponse> {
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path, query), {
+      signal,
+      credentials: "omit",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    });
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === "AbortError")
+      throw cause;
+    throw new ApiError(0, "network_error", "Could not reach the server.");
+  }
+
+  if (!response.ok) throw await toApiError(response);
+  const blob = await response.blob();
+  return {
+    blob,
+    filename: filenameFromDisposition(response.headers.get("Content-Disposition")),
+  };
+}

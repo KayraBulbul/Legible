@@ -1,6 +1,12 @@
-import type { SavedPage, SavedPagePatch } from "@/types";
+import type {
+  SavedAccessibilitySettings,
+  SavedPage,
+  SavedPageContent,
+  SavedPagePatch,
+} from "@/types";
 import { MOCK_PAGES } from "@/data/mockPages";
-import { USE_MOCK_API, apiRequest } from "@/api/client";
+import { SAMPLE_ARTICLE } from "@/data/sampleContent";
+import { USE_MOCK_API, apiBlobRequest, apiRequest } from "@/api/client";
 import { mockDelay } from "@/api/mock";
 
 /* ============================================================================
@@ -35,6 +41,33 @@ interface PaginatedDto<T> {
   pagination: { limit: number; offset: number; total: number };
 }
 
+interface SemanticDocumentDto {
+  format: "semantic_html";
+  html: string;
+  text: string;
+  language: string | null;
+}
+
+/**
+ * `accessibilitySettings` in docs/api.md — only the fields
+ * {@link SavedAccessibilitySettings} needs; `contrastMode` and the rest of
+ * the wire object are intentionally not modelled yet.
+ */
+interface AccessibilitySettingsDto {
+  dyslexiaFont: SavedAccessibilitySettings["dyslexiaFont"];
+  bionicReading: boolean;
+  fontScale: number;
+  lineHeight: number | null;
+  letterSpacing: number | null;
+}
+
+/** `GET /saved-pages/{id}` full response — see docs/api.md. Only the content fields the reader needs. */
+interface SavedPageDetailDto {
+  sourceDocument: SemanticDocumentDto;
+  transformedDocument: SemanticDocumentDto | null;
+  accessibilitySettings: AccessibilitySettingsDto;
+}
+
 function domainOf(originalUrl: string): string {
   try {
     return new URL(originalUrl).hostname.replace(/^www\./, "");
@@ -54,12 +87,13 @@ function toSavedPage(dto: SavedPageListItemDto): SavedPage {
     id: dto.id,
     title: dto.title,
     domain: domainOf(dto.originalUrl),
+    originalUrl: dto.originalUrl,
     savedAt: dto.capturedAt,
     favorited: dto.isFavourited,
     trashed: false,
     tags: dto.tags,
     dyslexiaFont: "none",
-    contrastMode: "none",
+    contrastMode: "light",
     aiLabels: 0,
   };
 }
@@ -89,6 +123,26 @@ function mockPageOrThrow(id: string): SavedPage {
   return page;
 }
 
+/** Fixture content for the mock branch of {@link getPageContent} — no real per-page body exists in mock mode. */
+function mockContentFor(page: SavedPage): SavedPageContent {
+  return {
+    sourceDocument: {
+      format: "semantic_html",
+      html: `<article><h1>${page.title}</h1><p>${SAMPLE_ARTICLE}</p></article>`,
+      text: `${page.title}\n\n${SAMPLE_ARTICLE}`,
+      language: "en",
+    },
+    transformedDocument: null,
+    accessibilitySettings: {
+      dyslexiaFont: page.dyslexiaFont,
+      bionicReading: false,
+      fontScale: 100,
+      lineHeight: 1.8,
+      letterSpacing: 0,
+    },
+  };
+}
+
 /* ------------------------------------------------------------------ requests */
 
 export async function listPages(signal?: AbortSignal): Promise<SavedPage[]> {
@@ -99,6 +153,28 @@ export async function listPages(signal?: AbortSignal): Promise<SavedPage[]> {
     { signal, query: { limit: 100 } },
   );
   return response.items.map(toSavedPage);
+}
+
+/**
+ * Fetches one saved page's article body. List items never carry
+ * `sourceDocument` / `transformedDocument` (docs/api.md) — only
+ * `GET /saved-pages/{id}` does — so the reader loads this separately from
+ * whatever list item opened it.
+ */
+export async function getPageContent(
+  id: string,
+  signal?: AbortSignal,
+): Promise<SavedPageContent> {
+  if (USE_MOCK_API) return mockDelay(mockContentFor(mockPageOrThrow(id)));
+
+  const dto = await apiRequest<SavedPageDetailDto>(`/saved-pages/${id}`, {
+    signal,
+  });
+  return {
+    sourceDocument: dto.sourceDocument,
+    transformedDocument: dto.transformedDocument,
+    accessibilitySettings: dto.accessibilitySettings,
+  };
 }
 
 /**
@@ -134,4 +210,80 @@ export async function deletePage(id: string): Promise<void> {
   }
 
   await apiRequest<void>(`/saved-pages/${id}`, { method: "DELETE" });
+}
+
+/* --------------------------------------------------------------- PDF export */
+
+/** `content` query on `GET /saved-pages/{id}/export.pdf` — see docs/api.md. */
+export type PdfContentMode = "preferred" | "source" | "transformed";
+
+export interface ExportedPdf {
+  blob: Blob;
+  filename: string;
+}
+
+function slugify(title: string): string {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "saved-page";
+}
+
+/**
+ * A minimal, byte-offset-correct one-page PDF so the export button has
+ * something real to download in mock mode, without pulling in a PDF library
+ * for a fixture. The real backend renders the saved document (docs/api.md).
+ */
+function buildMockPdf(title: string): Blob {
+  const safeTitle = title.replace(/[()\\]/g, "\\$&").slice(0, 70);
+  const contentStream = `BT /F1 16 Tf 72 720 Td (Mock export: ${safeTitle}) Tj ET`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`,
+  ];
+
+  let pdf = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  for (const [index, body] of objects.entries()) {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+  }
+
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets) {
+    pdf += `${offset.toString().padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+/**
+ * Downloads a saved page as a PDF via `GET /saved-pages/{id}/export.pdf`
+ * (docs/api.md). Returns the blob and a filename derived from the response's
+ * `Content-Disposition`, falling back to the saved title.
+ */
+export async function exportSavedPagePdf(
+  id: string,
+  content: PdfContentMode = "preferred",
+): Promise<ExportedPdf> {
+  if (USE_MOCK_API) {
+    const page = mockPageOrThrow(id);
+    const blob = await mockDelay(buildMockPdf(page.title));
+    return { blob, filename: `${slugify(page.title)}.pdf` };
+  }
+
+  const { blob, filename } = await apiBlobRequest(
+    `/saved-pages/${id}/export.pdf`,
+    {
+      query: { content },
+    },
+  );
+  return { blob, filename: filename ?? "saved-page.pdf" };
 }

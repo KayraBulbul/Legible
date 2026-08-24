@@ -1,19 +1,53 @@
-import { useCallback, useId, useRef, useState } from "react";
-import { Maximize2, Minimize2, Star, Target, X } from "lucide-react";
-import type { ContrastMode, FontMode, SavedPage, ToolPanel } from "@/types";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ExternalLink,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Star,
+  Target,
+  X,
+} from "lucide-react";
+import type {
+  AiPreferences,
+  FontMode,
+  SavedPage,
+  SemanticDocument,
+  ToolPanel,
+  TransformOperation,
+} from "@/types";
 import cn from "@/utils/cn";
 import bionicSpans from "@/utils/bionicSpans";
-import {
-  SAMPLE_ARTICLE,
-  SAMPLE_SIMPLIFIED,
-  SAMPLE_SUMMARY,
-} from "@/data/sampleContent";
+import sanitizeHtml from "@/utils/sanitizeHtml";
+import declutterHtml from "@/utils/declutterHtml";
 import { useDialog } from "@/hooks/useDialog";
 import { useDismiss } from "@/hooks/useDismiss";
+import { usePageContent } from "@/hooks/usePageContent";
 import { useReaderSettings } from "@/hooks/useReaderSettings";
+import { useAiTransform } from "@/hooks/useAiTransform";
 import { useLibrary } from "@/context/libraryContext";
 import { useWorkspace } from "@/context/workspaceContext";
 import ReaderControls from "@/components/ReaderControls";
+
+/** Maps a reader tool panel to the transformation operation it runs (docs/api.md). */
+const TOOL_OPERATIONS: Record<Exclude<ToolPanel, null>, TransformOperation> = {
+  summary: "summarize",
+  simplify: "simplify",
+  restructure: "restructure",
+  focus: "focus",
+};
+
+const DEFAULT_AI_PREFERENCES: AiPreferences = {
+  simplificationLevel: "moderate",
+  preserveTechnicalTerms: true,
+};
 
 const FONT_STACKS: Record<FontMode, string> = {
   none: "'Inter', sans-serif",
@@ -21,24 +55,6 @@ const FONT_STACKS: Record<FontMode, string> = {
   opendyslexic: "'OpenDyslexic', 'Comic Sans MS', Verdana, sans-serif",
 };
 
-/**
- * Literal preset swatches previewing how the saved page will render for its
- * reader — deliberately not theme tokens, since they preview the reader's
- * chosen contrast rather than the dashboard's own light/dark UI.
- */
-const CONTRAST_CLASSES: Record<ContrastMode, string> = {
-  none: "bg-white text-stone-800",
-  dark: "bg-black text-yellow-300",
-  warm: "bg-amber-50 text-indigo-950",
-};
-
-/**
- * Reads one saved page with the accessibility controls applied live.
- *
- * Mounted with `key={page.id}` by the shell, so opening a different page
- * remounts it and its settings re-seed from that page instead of carrying the
- * previous page's over.
- */
 export default function ReaderModal({ page }: { page: SavedPage }) {
   const { setFavorite, setTags, moveToTrash } = useLibrary();
   const {
@@ -48,8 +64,12 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
     exitReaderFullScreen,
   } = useWorkspace();
 
-  const { settings, update } = useReaderSettings(page);
-  const [activeTool, setActiveTool] = useState<ToolPanel>(null);
+  const { status: contentStatus, content } = usePageContent(page.id);
+  const { settings, update } = useReaderSettings(
+    page,
+    content?.accessibilitySettings ?? null,
+  );
+  const [activeTool, setActiveTool] = useState<ToolPanel>("restructure");
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -73,15 +93,63 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
     [enterReaderFullScreen, page.id],
   );
 
-  const bodyText =
-    activeTool === "simplify" ? SAMPLE_SIMPLIFIED : SAMPLE_ARTICLE;
+  const [aiPreferences, setAiPreferences] = useState<AiPreferences>(
+    DEFAULT_AI_PREFERENCES,
+  );
+  const updateAiPreferences = useCallback(
+    <K extends keyof AiPreferences>(key: K, value: AiPreferences[K]) =>
+      setAiPreferences((current) => ({ ...current, [key]: value })),
+    [],
+  );
+
+  const { run: runTransform, resultFor } = useAiTransform();
+  const operation = activeTool ? TOOL_OPERATIONS[activeTool] : null;
+  const transformState = operation
+    ? resultFor(operation, aiPreferences)
+    : undefined;
+
+  // Runs (or re-runs, on an options change) the transformation behind
+  // whichever tool is open — POST /api/v1/transformations (docs/api.md).
+  useEffect(() => {
+    if (!operation || !content) return;
+    runTransform(operation, content.sourceDocument, aiPreferences);
+  }, [operation, content, aiPreferences, runTransform]);
+
+  // "Summarize" is a supplementary callout (rendered below) rather than a
+  // content swap, so the article itself only swaps for the other three tools.
+  const liveDocument: SemanticDocument | null =
+    operation && operation !== "summarize" && transformState?.status === "ready"
+      ? transformState.result.document
+      : null;
+
+  const activeDocument =
+    liveDocument ??
+    (operation === "simplify" && content?.transformedDocument
+      ? content.transformedDocument
+      : operation === null || operation === "summarize"
+        ? (content?.sourceDocument ?? null)
+        : null);
   const expanded = fullScreen || focusMode;
+
+  const renderedHtml = useMemo(
+    () =>
+      activeDocument ? sanitizeHtml(declutterHtml(activeDocument.html)) : "",
+    [activeDocument],
+  );
+
+  const renderedText = useMemo(() => {
+    if (!renderedHtml) return "";
+    const doc = new DOMParser().parseFromString(renderedHtml, "text/html");
+    return doc.body.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  }, [renderedHtml]);
 
   return (
     <div
       className={cn(
         "z-50 flex bg-overlay",
-        expanded ? "fixed inset-0" : "fixed inset-0 items-center justify-center p-4",
+        expanded
+          ? "fixed inset-0"
+          : "fixed inset-0 items-center justify-center p-4",
       )}
     >
       <div
@@ -92,15 +160,20 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
         tabIndex={-1}
         className={cn(
           "flex overflow-hidden bg-surface outline-none",
-          expanded ? "h-full w-full" : "h-[85vh] w-full max-w-4xl rounded-2xl shadow-2xl",
+          expanded
+            ? "h-full w-full"
+            : "h-[85vh] w-full max-w-4xl rounded-2xl shadow-2xl",
         )}
       >
         {!focusMode && (
           <ReaderControls
+            pageId={page.id}
             settings={settings}
             onChange={update}
             activeTool={activeTool}
             onToggleTool={toggleTool}
+            aiPreferences={aiPreferences}
+            onAiPreferencesChange={updateAiPreferences}
             tags={page.tags}
             onTagsChange={(tags) => setTags(page.id, tags)}
             onTrash={() => {
@@ -120,7 +193,15 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
                 {page.title}
               </h2>
               {!focusMode && (
-                <p className="text-xs text-text-secondary">{page.domain}</p>
+                <a
+                  href={page.originalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary hover:underline"
+                >
+                  {page.domain}
+                  <ExternalLink size={11} />
+                </a>
               )}
             </div>
 
@@ -151,7 +232,9 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
                   />
                   <IconButton
                     icon={fullScreen ? Minimize2 : Maximize2}
-                    label={fullScreen ? "Exit full screen" : "Enter full screen"}
+                    label={
+                      fullScreen ? "Exit full screen" : "Enter full screen"
+                    }
                     onClick={
                       fullScreen
                         ? exitReaderFullScreen
@@ -169,20 +252,19 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
           </div>
 
           {activeTool === "summary" && (
-            /* TODO(AI): replace with real output from POST /api/v1/transformations. */
             <div className="m-5 mb-0 rounded-xl border border-warning-muted bg-warning-subtle p-3 text-xs text-warning">
-              <span className="font-semibold">AI summary (example)</span> —{" "}
-              {SAMPLE_SUMMARY}
+              <span className="font-semibold">AI summary</span> —{" "}
+              {(!transformState || transformState.status === "loading") &&
+                "Generating…"}
+              {transformState?.status === "error" && transformState.message}
+              {transformState?.status === "ready" &&
+                transformState.result.document.text}
             </div>
           )}
 
-          {/* TODO(backend): render the saved page's sanitised sourceDocument
-              here — never raw HTML from the source site (docs/api.md). */}
           <article
-            className={cn(
-              "m-5 flex-1 rounded-xl p-6 transition-colors",
-              CONTRAST_CLASSES[settings.contrastMode],
-            )}
+            data-theme={settings.contrastMode}
+            className="m-5 flex-1 rounded-xl bg-surface p-6 text-text-primary transition-colors"
             style={{
               fontFamily: FONT_STACKS[settings.dyslexiaFont],
               fontSize: `${settings.fontScale}%`,
@@ -190,8 +272,30 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
               lineHeight: settings.lineHeight,
             }}
           >
-            <h3 className="mb-3 text-lg font-bold">{page.title}</h3>
-            <p>{settings.bionicReading ? bionicSpans(bodyText) : bodyText}</p>
+            {contentStatus === "ready" &&
+              operation &&
+              operation !== "summarize" &&
+              !activeDocument &&
+              (transformState?.status === "error" ? (
+                <p className="text-danger">{transformState.message}</p>
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-16 text-text-secondary">
+                  <Loader2
+                    size={22}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                  <p className="text-sm">
+                    Generating the {activeTool} version…
+                  </p>
+                </div>
+              ))}
+            {activeDocument &&
+              (settings.bionicReading ? (
+                <p>{bionicSpans(renderedText)}</p>
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
+              ))}
           </article>
         </div>
       </div>
