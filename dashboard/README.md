@@ -9,10 +9,14 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # typecheck (tsc -b) + production build
 npm run lint
+npm test         # standalone Vitest suite
+npm run test:watch
 ```
 
 The dashboard runs standalone out of the box, against the fixtures in
 `src/data`. No backend or environment file is needed to develop against it.
+The test suite uses jsdom and mocked HTTP responses, so it also runs without a
+backend process, PostgreSQL, or Gemini credentials.
 
 ## Architecture
 
