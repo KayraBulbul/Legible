@@ -224,8 +224,20 @@ class SavedPageUpdate(ApiModel):
     title: str | SkipJsonSchema[None] = Field(default=None, min_length=1, max_length=512)
     is_favourited: StrictBool | SkipJsonSchema[None] = None
     tags: TagList | SkipJsonSchema[None] = None
+    transformed_document: SemanticDocument | SkipJsonSchema[None] = None
+    transformations: (
+        Annotated[list[TransformationRecord], Field(min_length=1, max_length=20)]
+        | SkipJsonSchema[None]
+    ) = None
 
-    @field_validator("title", "is_favourited", "tags", mode="before")
+    @field_validator(
+        "title",
+        "is_favourited",
+        "tags",
+        "transformed_document",
+        "transformations",
+        mode="before",
+    )
     @classmethod
     def reject_null_updates(cls, value: object) -> object:
         if value is None:
@@ -267,6 +279,10 @@ class SavedPageUpdate(ApiModel):
     def require_update(self) -> SavedPageUpdate:
         if not self.model_fields_set:
             raise ValueError("at least one field must be provided")
+        updates_document = "transformed_document" in self.model_fields_set
+        updates_metadata = "transformations" in self.model_fields_set
+        if updates_document != updates_metadata:
+            raise ValueError("transformedDocument and transformations must be provided together")
         return self
 
 

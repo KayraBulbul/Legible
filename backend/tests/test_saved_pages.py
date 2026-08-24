@@ -8,6 +8,19 @@ from httpx import AsyncClient
 from tests.helpers import create_guest_headers
 
 
+def _transformation_record(
+    operation: str, prompt_version: str, performed_at: str
+) -> dict[str, Any]:
+    return {
+        "operation": operation,
+        "provider": "google",
+        "model": "gemini-3.6-flash",
+        "promptVersion": prompt_version,
+        "parameters": {},
+        "performedAt": performed_at,
+    }
+
+
 async def test_guest_can_save_list_and_retrieve_page(
     client: AsyncClient, saved_page_payload: dict[str, Any]
 ) -> None:
@@ -333,6 +346,95 @@ async def test_owner_can_update_title_favourite_and_tags_atomically(
     assert response.json()["tags"] == ["reference"]
 
 
+async def test_owner_can_replace_transformed_document_and_provenance(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+    first_transformation = _transformation_record("simplify", "simplify-v1", "2026-08-24T00:00:00Z")
+    replacement_transformation = _transformation_record(
+        "summarize", "summarize-v1", "2026-08-24T00:01:00Z"
+    )
+
+    first = await client.patch(
+        path,
+        json={
+            "transformedDocument": {
+                "format": "semantic_html",
+                "html": "<article><p>Simplified content.</p></article>",
+                "text": "Simplified content.",
+                "language": "en",
+            },
+            "transformations": [first_transformation],
+        },
+        headers=headers,
+    )
+    response = await client.patch(
+        path,
+        json={
+            "transformedDocument": {
+                "format": "semantic_html",
+                "html": (
+                    '<article onclick="bad()"><script>bad()</script>'
+                    "<p>Replacement summary.</p></article>"
+                ),
+                "text": "Replacement summary.",
+                "language": "en",
+            },
+            "transformations": [replacement_transformation],
+        },
+        headers=headers,
+    )
+    retrieved = await client.get(path, headers=headers)
+    listing = await client.get("/api/v1/saved-pages", headers=headers)
+
+    assert first.status_code == 200
+    assert response.status_code == 200
+    transformed = response.json()["transformedDocument"]
+    assert transformed["text"] == "Replacement summary."
+    assert "<script" not in transformed["html"]
+    assert "onclick" not in transformed["html"]
+    transformations = response.json()["transformations"]
+    assert transformations == [replacement_transformation]
+    assert retrieved.json()["transformedDocument"] == transformed
+    assert retrieved.json()["transformations"] == transformations
+    assert listing.json()["items"][0]["hasTransformedContent"] is True
+
+
+async def test_transformed_document_and_metadata_must_be_updated_together(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+    document = {
+        "format": "semantic_html",
+        "html": "<article><p>Simplified content.</p></article>",
+        "text": "Simplified content.",
+        "language": "en",
+    }
+    metadata = _transformation_record("simplify", "simplify-v1", "2026-08-24T00:00:00Z")
+    invalid_payloads = [
+        {"title": "Changed title", "transformedDocument": document},
+        {"title": "Changed title", "transformations": [metadata]},
+        {
+            "title": "Changed title",
+            "transformedDocument": document,
+            "transformations": [],
+        },
+    ]
+
+    for payload in invalid_payloads:
+        response = await client.patch(path, json=payload, headers=headers)
+        assert response.status_code == 422
+
+    retrieved = await client.get(path, headers=headers)
+    assert retrieved.json()["title"] == "Example article"
+    assert retrieved.json()["transformedDocument"] is None
+    assert retrieved.json()["transformations"] == []
+
+
 async def test_invalid_combined_update_changes_neither_field(
     client: AsyncClient, saved_page_payload: dict[str, Any]
 ) -> None:
@@ -380,6 +482,7 @@ async def test_invalid_tags_do_not_change_other_fields(
         {"isFavourited": "true"},
         {"isFavourited": 1},
         {"tags": None},
+        {"transformedDocument": None},
         {"tags": "research"},
         {"tags": ["   "]},
         {"tags": [1]},
