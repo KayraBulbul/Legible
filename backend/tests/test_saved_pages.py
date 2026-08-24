@@ -58,6 +58,45 @@ async def test_guest_can_save_list_and_retrieve_page(
     assert detail_response.json() == created
 
 
+async def test_saved_page_rejects_blank_source_document(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    saved_page_payload["sourceDocument"] = {
+        "format": "semantic_html",
+        "html": "  ",
+        "text": "\n",
+        "language": None,
+    }
+
+    response = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    assert response.status_code == 422
+    assert any(field["path"] == "sourceDocument" for field in response.json()["error"]["fields"])
+
+
+async def test_saved_page_rejects_blank_transformed_document(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    saved_page_payload["transformedDocument"] = {
+        "format": "semantic_html",
+        "html": "  ",
+        "text": "\n",
+        "language": None,
+    }
+    saved_page_payload["transformations"] = [
+        _transformation_record("restructure", "restructure-v1", "2026-08-24T00:00:00Z")
+    ]
+
+    response = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+
+    assert response.status_code == 422
+    assert any(
+        field["path"] == "transformedDocument" for field in response.json()["error"]["fields"]
+    )
+
+
 async def test_saved_page_sanitizer_preserves_safe_text_direction(
     client: AsyncClient, saved_page_payload: dict[str, Any]
 ) -> None:
@@ -433,6 +472,35 @@ async def test_transformed_document_and_metadata_must_be_updated_together(
     assert retrieved.json()["title"] == "Example article"
     assert retrieved.json()["transformedDocument"] is None
     assert retrieved.json()["transformations"] == []
+
+
+async def test_blank_transformed_document_is_rejected(
+    client: AsyncClient, saved_page_payload: dict[str, Any]
+) -> None:
+    headers = await create_guest_headers(client)
+    created = await client.post("/api/v1/saved-pages", json=saved_page_payload, headers=headers)
+    path = f"/api/v1/saved-pages/{created.json()['id']}"
+
+    response = await client.patch(
+        path,
+        json={
+            "transformedDocument": {
+                "format": "semantic_html",
+                "html": " ",
+                "text": "\n",
+                "language": None,
+            },
+            "transformations": [
+                _transformation_record("restructure", "restructure-v1", "2026-08-24T00:00:00Z")
+            ],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert any(
+        field["path"] == "transformedDocument" for field in response.json()["error"]["fields"]
+    )
 
 
 async def test_invalid_combined_update_changes_neither_field(

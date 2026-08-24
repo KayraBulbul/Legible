@@ -370,6 +370,27 @@ async def test_transform_returns_sanitized_document_and_metadata(
     assert fake_provider.transform_calls[0][1].html == "<article><p>Dense</p></article>"
 
 
+async def test_transform_rejects_blank_input(
+    client: AsyncClient,
+    ai_service: AiApplicationService,
+    fake_provider: FakeGeminiService,
+) -> None:
+    headers = await create_guest_headers(client)
+
+    response = await client.post(
+        "/api/v1/transformations",
+        headers=headers,
+        json={
+            "operation": "restructure",
+            "input": {"html": "  ", "text": "\n", "language": None},
+        },
+    )
+
+    assert response.status_code == 422
+    assert any(field["path"] == "input" for field in response.json()["error"]["fields"])
+    assert fake_provider.transform_calls == []
+
+
 async def test_transform_does_not_write_to_postgresql(
     client: AsyncClient,
     ai_service: AiApplicationService,

@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AiPreferences, SemanticDocument, TransformOperation, TransformResult } from "@/types";
 import { ApiError } from "@/api/client";
 import { transformContent } from "@/api/ai";
+import { savePageTransformation } from "@/api/pages";
 
 export type AiTransformState =
   | { status: "loading" }
@@ -26,41 +27,71 @@ function describeError(cause: unknown): string {
 }
 
 /**
- * Runs and caches `POST /api/v1/transformations` results (docs/api.md) for
- * one open saved page. Keyed by operation *and* options, so switching the
- * simplification level naturally produces a fresh call while re-selecting a
- * tool with unchanged options reuses the cached result instead of re-hitting
- * Gemini's 15-requests-per-minute quota (backend/ai/README.md).
+ * Runs, persists, and caches `POST /api/v1/transformations` results
+ * (docs/api.md) for one open saved page. Keyed by operation *and* options, so
+ * switching the simplification level naturally produces a fresh call while
+ * re-selecting a tool with unchanged options reuses the cached result instead
+ * of re-hitting Gemini's 15-requests-per-minute quota (backend/ai/README.md).
  *
  * Mounted alongside the reader — which remounts per `key={page.id}` — so a
  * new page always starts with an empty cache instead of carrying a previous
  * page's results over.
  */
-export function useAiTransform() {
+export function useAiTransform(pageId: string) {
   const [cache, setCache] = useState<Record<string, AiTransformState>>({});
   // Tracks in-flight/completed keys synchronously so a duplicate `run` call
   // (e.g. an effect re-firing before the state update above lands) never
   // fires a second network request for the same key.
   const requested = useRef<Set<string>>(new Set());
   const requestId = useRef<Record<string, number>>({});
+  const activeRequest = useRef<{
+    key: string;
+    controller: AbortController;
+  } | null>(null);
+
+  useEffect(
+    () => () => {
+      activeRequest.current?.controller.abort();
+      activeRequest.current = null;
+      requested.current.clear();
+    },
+    [],
+  );
 
   const run = useCallback(
     (operation: TransformOperation, document: SemanticDocument, options: AiPreferences) => {
       const key = cacheKey(operation, options);
+      if (activeRequest.current && activeRequest.current.key !== key) {
+        activeRequest.current.controller.abort();
+        requested.current.delete(activeRequest.current.key);
+        activeRequest.current = null;
+      }
       if (requested.current.has(key)) return;
       requested.current.add(key);
 
       const thisRequest = (requestId.current[key] ?? 0) + 1;
       requestId.current[key] = thisRequest;
+      const controller = new AbortController();
+      activeRequest.current = { key, controller };
       setCache((current) => ({ ...current, [key]: { status: "loading" } }));
 
-      transformContent(operation, document, options)
+      transformContent(operation, document, options, controller.signal)
+        .then(async (result) => {
+          await savePageTransformation(
+            pageId,
+            result.document,
+            result.metadata,
+            controller.signal,
+          );
+          return result;
+        })
         .then((result) => {
           if (requestId.current[key] !== thisRequest) return;
           setCache((current) => ({ ...current, [key]: { status: "ready", result } }));
         })
         .catch((cause: unknown) => {
           if (requestId.current[key] !== thisRequest) return;
+          if (cause instanceof DOMException && cause.name === "AbortError") return;
           // Errors are retriable: drop the guard so a later `run` (e.g. the
           // user re-opening the tool) can try again instead of staying stuck.
           requested.current.delete(key);
@@ -68,9 +99,14 @@ export function useAiTransform() {
             ...current,
             [key]: { status: "error", message: describeError(cause) },
           }));
+        })
+        .finally(() => {
+          if (activeRequest.current?.controller === controller) {
+            activeRequest.current = null;
+          }
         });
     },
-    [],
+    [pageId],
   );
 
   const resultFor = useCallback(

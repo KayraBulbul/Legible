@@ -88,6 +88,7 @@ export async function transformContent(
   operation: TransformOperation,
   input: SemanticDocument,
   options: AiPreferences,
+  signal?: AbortSignal,
 ): Promise<TransformResult> {
   if (USE_MOCK_API) {
     return mockDelay({
@@ -108,6 +109,7 @@ export async function transformContent(
 
   const dto = await apiRequest<TransformationResponseDto>("/transformations", {
     method: "POST",
+    signal,
     body: {
       operation,
       input,

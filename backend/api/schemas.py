@@ -126,6 +126,12 @@ class SemanticDocument(ApiModel):
         return value
 
 
+def require_document_content(document: SemanticDocument) -> SemanticDocument:
+    if not document.html.strip() and not document.text.strip():
+        raise ValueError("document must contain HTML or text")
+    return document
+
+
 TransformationParameter = str | int | float | bool | None
 
 
@@ -149,6 +155,11 @@ class TransformationRequest(ApiModel):
     operation: TextTransformationOperation
     input: SemanticDocument
     options: AiPreferences = Field(default_factory=AiPreferences)
+
+    @field_validator("input")
+    @classmethod
+    def require_input_content(cls, value: SemanticDocument) -> SemanticDocument:
+        return require_document_content(value)
 
 
 class TransformationResponse(ApiModel):
@@ -197,6 +208,18 @@ class SavedPageCreate(ApiModel):
     transformations: list[TransformationRecord] = Field(default_factory=list, max_length=20)
     profile_id: None = None
 
+    @field_validator("source_document")
+    @classmethod
+    def require_source_content(cls, value: SemanticDocument) -> SemanticDocument:
+        return require_document_content(value)
+
+    @field_validator("transformed_document")
+    @classmethod
+    def require_transformed_content(cls, value: SemanticDocument | None) -> SemanticDocument | None:
+        if value is None:
+            return None
+        return require_document_content(value)
+
     @field_validator("title")
     @classmethod
     def normalize_title(cls, value: str) -> str:
@@ -243,6 +266,13 @@ class SavedPageUpdate(ApiModel):
         if value is None:
             raise ValueError("updated fields must not be null")
         return value
+
+    @field_validator("transformed_document")
+    @classmethod
+    def require_transformed_content(cls, value: SemanticDocument | None) -> SemanticDocument | None:
+        if value is None:
+            return None
+        return require_document_content(value)
 
     @field_validator("tags", mode="before")
     @classmethod

@@ -1,5 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as aiApi from "@/api/ai";
+import * as pagesApi from "@/api/pages";
 import ReaderModal from "@/components/ReaderModal";
 import { LibraryContext, type LibraryContextValue } from "@/context/libraryContext";
 import { ThemeContext } from "@/context/themeContext";
@@ -8,8 +10,42 @@ import {
   type WorkspaceContextValue,
 } from "@/context/workspaceContext";
 import { MOCK_PAGES } from "@/data/mockPages";
+import type { SavedPageContent } from "@/types";
 
 const PAGE = MOCK_PAGES[0];
+const BLANK_CONTENT: SavedPageContent = {
+  sourceDocument: {
+    format: "semantic_html",
+    html: " ",
+    text: "\n",
+    language: null,
+  },
+  transformedDocument: null,
+  accessibilitySettings: {
+    schemaVersion: 1,
+    dyslexiaFont: "none",
+    contrastMode: "light",
+    declutter: false,
+    bionicReading: false,
+    fontScale: 100,
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    wordSpacing: 0,
+    reducedMotion: false,
+    readingWidth: null,
+    ttsRate: 1,
+    ttsPitch: 1,
+    voiceURI: null,
+    hudVisible: true,
+    aiEnabled: true,
+    aiPreferences: {
+      simplificationLevel: "moderate",
+      preserveTechnicalTerms: true,
+    },
+  },
+};
+
+afterEach(() => vi.restoreAllMocks());
 
 function ReaderTestContext() {
   const library: LibraryContextValue = {
@@ -66,5 +102,17 @@ describe("ReaderModal", () => {
       },
       { timeout: 1_500 },
     );
+  });
+
+  it("does not transform a saved page with no readable content", async () => {
+    vi.spyOn(pagesApi, "getPageContent").mockResolvedValue(BLANK_CONTENT);
+    const transform = vi.spyOn(aiApi, "transformContent");
+
+    render(<ReaderTestContext />);
+
+    expect(
+      await screen.findByText("No readable content was captured for this page."),
+    ).toBeTruthy();
+    expect(transform).not.toHaveBeenCalled();
   });
 });
