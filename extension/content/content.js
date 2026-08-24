@@ -15,7 +15,7 @@
     cursorEnabled: false,
     cursorStyle: 'arrow',
     cursorSize: 32,
-    cursorColor: '#2563eb',
+    cursorColor: '#f97316',
     ttsRate: 1,
     ttsPitch: 1,
     voiceURI: null,

@@ -5,18 +5,21 @@
   font-weight: 400;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'A11y OpenDyslexic';
   src: url('../fonts/OpenDyslexic-Regular.otf') format('opentype');
   font-weight: 400;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'Atkinson Hyperlegible';
   src: url('../fonts/AtkinsonHyperlegible-Regular.ttf') format('truetype');
   font-weight: 400;
   font-display: swap;
 }
+
 @font-face {
   font-family: 'Open Sans';
   src: url('../fonts/OpenSans-Regular.ttf') format('truetype');
@@ -24,10 +27,17 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Rammetto One';
+  src: url('../fonts/RammettoOne-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --color-bg: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f4f4f5;
+  --color-surface: #ffffffeb;
+  --color-surface-hover: #9c9c9c;
   --color-border: #dcdcdc;
   --color-text-primary: #1c1c1e;
   --color-accent: #F57600;
@@ -40,9 +50,12 @@
   --color-danger: #b91c1c;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   height: 100%;
 }
 
@@ -50,7 +63,9 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* --panel-font-family is set from the Extension Settings > Panel Font picker; unset, it
+     falls straight back to the original system stack below. */
+  font-family: var(--panel-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -62,8 +77,9 @@ body {
 }
 
 /* ---------- Google Material Symbols ----------
-   Bundled as a subsetted variable woff2 (only the glyphs this panel uses) so the icons
-   work offline and no request ever leaves the browser. The FILL axis gives every icon a
+   Bundled as the full variable woff2 (all ~6600 icons, not a hand-picked subset - it's a
+   5MB file) so the icons work offline and no request ever leaves the browser. Any documented
+   Material Symbols Rounded ligature name is safe to use. The FILL axis gives every icon a
    filled counterpart, which is what active cards switch to. */
 @font-face {
   font-family: 'Material Symbols Rounded';
@@ -92,7 +108,10 @@ body {
   user-select: none;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-.icon-lg { font-size: 22px; }
+
+.icon-lg {
+  font-size: 22px;
+}
 
 .header {
   display: flex;
@@ -104,6 +123,7 @@ body {
   color: var(--color-text-primary);
   flex: 0 0 auto;
 }
+
 .header-logo {
   width: 24px;
   height: 24px;
@@ -111,42 +131,34 @@ body {
   flex: 0 0 auto;
   display: block;
 }
+
 .header h1 {
+  font-family: 'Rammetto One', var(--panel-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   font-size: 15px;
   margin: 0;
-  font-weight: 700;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
   flex: 1 1 auto;
 }
+
 .header .icon-btn {
   background: var(--color-accent);
   border: 1px solid var(--color-accent);
   color: var(--color-on-accent);
 }
+
 .header .icon-btn .micon {
   color: var(--color-on-accent);
 }
+
 .header .icon-btn:hover {
   background: var(--color-accent-hover);
   border-color: var(--color-accent-hover);
   color: var(--color-on-accent);
 }
+
 .header .icon-btn:hover .micon {
-  color: var(--color-on-accent);
-}
-.header .icon-btn.is-off {
-  background: var(--color-text-primary);
-  border-color: var(--color-text-primary);
-  color: var(--color-on-accent);
-}
-.header .icon-btn.is-off .micon {
-  color: var(--color-on-accent);
-}
-.header .icon-btn.is-off:hover {
-  background: var(--color-text-muted);
-  border-color: var(--color-text-muted);
-  color: var(--color-on-accent);
-}
-.header .icon-btn.is-off:hover .micon {
   color: var(--color-on-accent);
 }
 
@@ -164,31 +176,55 @@ body {
   color: var(--color-text-primary);
   cursor: pointer;
 }
+
 .icon-btn:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
-.icon-btn.is-off {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-accent);
+
+/* ---------- Quick jump ----------
+   Icon-only shortcuts to each section below, pinned between the header and the scrolling
+   `main` (rather than inside it) so the row itself never scrolls out of reach. Plain anchor
+   links to each section's id - the browser scrolls `main` (the nearest scrollable ancestor)
+   to the target on its own, no click handler needed. */
+.quick-jump {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex: 0 0 auto;
 }
-.icon-btn.is-off .micon {
-  color: var(--color-on-accent);
+
+.quick-jump-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  text-decoration: none;
 }
-.icon-btn.is-off:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+
+.quick-jump-link:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-accent);
+}
+
+.quick-jump-link .micon {
+  color: inherit;
+}
 
 main {
   flex: 1 1 auto;
   overflow-y: auto;
+  scroll-behavior: smooth;
   padding: 12px 16px 4px;
-}
-
-/* Turned off: settings stay on screen (and stay saved) but read as inactive. */
-body.is-off main {
-  opacity: 0.55;
-  filter: grayscale(1);
 }
 
 .section {
@@ -202,15 +238,19 @@ body.is-off main {
 .section h2 {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  /* Full-contrast text, not the muted tone body copy uses - these are the section landmarks
+     someone scans the whole panel by, so they need to read clearly before anything else does. */
+  color: var(--color-text-primary);
   margin: 0 0 10px;
 }
+
 .section h2 .micon {
-  font-size: 17px;
+  font-size: 20px;
   color: var(--color-accent);
 }
 
@@ -222,7 +262,10 @@ body.is-off main {
   color: var(--color-text-muted);
   margin: -4px 0 10px;
 }
-.note .micon { font-size: 15px; }
+
+.note .micon {
+  font-size: 15px;
+}
 
 .card-grid {
   display: grid;
@@ -245,20 +288,36 @@ body.is-off main {
   cursor: pointer;
   text-align: center;
 }
+
 .card:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-accent);
 }
+
 .card.active {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-on-accent);
 }
-.card.active:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+
+.card.active:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
 /* Active cards switch to the icon's filled cut — the state change reads even in greyscale. */
-.card.active .micon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-.card-icon { font-size: 24px; }
-.card-label { font-size: 11.5px; font-weight: 600; }
+.card.active .micon {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.card-icon {
+  font-size: 24px;
+}
+
+.card-label {
+  font-size: 11.5px;
+  font-weight: 600;
+}
 
 .field {
   display: flex;
@@ -266,7 +325,16 @@ body.is-off main {
   gap: 4px;
   margin-bottom: 10px;
 }
-.field > span,
+
+/* Without this, `.field`'s own `display: flex` (an author rule) outranks the browser's built-in
+   `[hidden] { display: none }` (a same-specificity but lower-priority user-agent rule), so a
+   hidden .field - like the music track picker when its category has only one track - would
+   stay visible. */
+.field[hidden] {
+  display: none;
+}
+
+.field>span,
 .field-label,
 .stepper-label {
   color: var(--color-text-primary);
@@ -276,6 +344,7 @@ body.is-off main {
   justify-content: space-between;
   gap: 8px;
 }
+
 /* Icon + wording stay glued together on the left; the value sits hard right. */
 .label-text {
   display: inline-flex;
@@ -283,8 +352,21 @@ body.is-off main {
   gap: 7px;
   min-width: 0;
 }
-.label-text .micon { font-size: 17px; color: var(--color-text-muted); }
-.field select, .field input[type="password"] {
+
+.label-text .micon {
+  font-size: 17px;
+  color: var(--color-text-muted);
+}
+
+/* Slider rows pair an icon+label with a live result value (label-text immediately followed
+   by an <output>) - that combination is what marks a row as a slider, so it's also what
+   scopes the accent-coloured icon and the larger, more legible result text below. */
+.label-text:has(+ output) .micon {
+  color: var(--color-accent);
+}
+
+.field select,
+.field input[type="password"] {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
@@ -292,7 +374,12 @@ body.is-off main {
   padding: 7px 8px;
   font-size: 12.5px;
 }
-.field select:hover, .field input[type="password"]:hover { border-color: var(--color-accent); }
+
+.field select:hover,
+.field input[type="password"]:hover {
+  border-color: var(--color-accent);
+}
+
 /* ---------- Colour palette (cursor) ---------- */
 .palette {
   display: grid;
@@ -300,6 +387,7 @@ body.is-off main {
   gap: 6px;
   padding: 2px;
 }
+
 .swatch {
   aspect-ratio: 1 / 1;
   width: 100%;
@@ -309,16 +397,20 @@ body.is-off main {
   background: var(--swatch);
   cursor: pointer;
 }
+
 .swatch:hover {
   transform: scale(1.12);
 }
+
 .swatch[aria-checked="true"] {
   border-color: var(--color-surface);
   box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-accent);
 }
 
 /* ---------- Font picker: each option previews its own typeface ---------- */
-.fontpicker { position: relative; }
+.fontpicker {
+  position: relative;
+}
 
 .fontpicker-trigger {
   width: 100%;
@@ -335,19 +427,31 @@ body.is-off main {
   text-align: left;
   cursor: pointer;
 }
-.fontpicker-trigger:hover { background: var(--color-surface-hover); border-color: var(--color-accent); }
-.fontpicker-trigger[aria-expanded="true"] { border-color: var(--color-accent); }
+
+.fontpicker-trigger:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
+}
+
+.fontpicker-trigger[aria-expanded="true"] {
+  border-color: var(--color-accent);
+}
+
 .fontpicker-value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .fontpicker-chevron {
   font-size: 18px;
   color: var(--color-text-muted);
   transition: transform 0.15s ease;
 }
-.fontpicker-trigger[aria-expanded="true"] .fontpicker-chevron { transform: rotate(180deg); }
+
+.fontpicker-trigger[aria-expanded="true"] .fontpicker-chevron {
+  transform: rotate(180deg);
+}
 
 .fontpicker-list {
   position: absolute;
@@ -365,7 +469,10 @@ body.is-off main {
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(28, 28, 30, 0.12);
 }
-.fontpicker-list[hidden] { display: none; }
+
+.fontpicker-list[hidden] {
+  display: none;
+}
 
 .fontpicker-option {
   display: flex;
@@ -378,29 +485,219 @@ body.is-off main {
   color: var(--color-text-primary);
   cursor: pointer;
 }
+
 .fontpicker-option:hover,
 .fontpicker-option.is-active {
   background: var(--color-surface-hover);
 }
+
 .fontpicker-option[aria-selected="true"] {
   color: var(--color-accent);
   font-weight: 600;
 }
+
 .fontpicker-check {
   font-size: 16px;
   visibility: hidden;
   color: var(--color-accent);
 }
-.fontpicker-option[aria-selected="true"] .fontpicker-check { visibility: visible; }
+
+.fontpicker-option[aria-selected="true"] .fontpicker-check {
+  visibility: visible;
+}
+
+/* ---------- Track picker: same listbox pattern as the font picker above, with a leading
+   Material icon per option instead of a typeface preview. A native <select> can't render an
+   icon next to its option text, which is the whole reason this exists as its own component
+   rather than a plain <select> like Voice. The cursor style picker reuses these same classes
+   for the same reason. ---------- */
+.trackpicker {
+  position: relative;
+}
+
+.trackpicker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trackpicker-trigger:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
+}
+
+.trackpicker-trigger[aria-expanded="true"] {
+  border-color: var(--color-accent);
+}
+
+.trackpicker-value-icon {
+  flex: 0 0 auto;
+  color: var(--color-accent);
+}
+
+.trackpicker-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trackpicker-chevron {
+  flex: 0 0 auto;
+  font-size: 18px;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.trackpicker-trigger[aria-expanded="true"] .trackpicker-chevron {
+  transform: rotate(180deg);
+}
+
+.trackpicker-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(28, 28, 30, 0.12);
+}
+
+.trackpicker-list[hidden] {
+  display: none;
+}
+
+.trackpicker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.trackpicker-option:hover,
+.trackpicker-option.is-active {
+  background: var(--color-surface-hover);
+}
+
+.trackpicker-option-icon {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+}
+
+.trackpicker-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trackpicker-option[aria-selected="true"] {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.trackpicker-option[aria-selected="true"] .trackpicker-option-icon {
+  color: var(--color-accent);
+}
+
+.trackpicker-check {
+  flex: 0 0 auto;
+  font-size: 16px;
+  visibility: hidden;
+  color: var(--color-accent);
+}
+
+.trackpicker-option[aria-selected="true"] .trackpicker-check {
+  visibility: visible;
+}
+
+html[data-ext-theme="dark"] .trackpicker-list {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+html[data-ext-theme="dark"] .trackpicker-option:hover,
+html[data-ext-theme="dark"] .trackpicker-option.is-active {
+  background: var(--color-surface-hover);
+}
+
+html[data-ext-theme="contrast"] .trackpicker-trigger {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  color: #ffff00;
+}
+html[data-ext-theme="contrast"] .trackpicker-trigger:hover {
+  background: #181820;
+  border-color: #ffff00;
+}
+html[data-ext-theme="contrast"] .trackpicker-list {
+  background: #000000;
+  border: 2px solid #00ffcc;
+  box-shadow: 0 10px 28px rgba(0, 255, 204, 0.25);
+}
+html[data-ext-theme="contrast"] .trackpicker-option {
+  color: #ffff00;
+}
+html[data-ext-theme="contrast"] .trackpicker-option:hover,
+html[data-ext-theme="contrast"] .trackpicker-option.is-active {
+  background: #181820;
+  color: #ffffff;
+}
 
 /* Preview typefaces, applied to both the list options and the trigger value. */
-.font-lexend { font-family: 'A11y Lexend', Verdana, sans-serif; }
-.font-opendyslexic { font-family: 'A11y OpenDyslexic', 'Comic Sans MS', sans-serif; }
-.font-atkinson { font-family: 'Atkinson Hyperlegible', Arial, sans-serif; }
-.font-arial { font-family: Arial, Helvetica, sans-serif; }
-.font-verdana { font-family: Verdana, Geneva, Tahoma, sans-serif; }
-.font-opensans { font-family: 'Open Sans', 'Segoe UI', Roboto, sans-serif; }
-.font-comicsans { font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', cursive, sans-serif; }
+.font-paneldefault {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-lexend {
+  font-family: 'A11y Lexend', Verdana, sans-serif;
+}
+
+.font-opendyslexic {
+  font-family: 'A11y OpenDyslexic', 'Comic Sans MS', sans-serif;
+}
+
+.font-atkinson {
+  font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+}
+
+.font-arial {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.font-verdana {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.font-opensans {
+  font-family: 'Open Sans', 'Segoe UI', Roboto, sans-serif;
+}
+
+.font-comicsans {
+  font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', cursive, sans-serif;
+}
 
 .stepper-field {
   display: flex;
@@ -408,11 +705,13 @@ body.is-off main {
   gap: 4px;
   margin-bottom: 10px;
 }
+
 .stepper-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
 /* Both steppers sit together to the left of the track, so the value can be nudged
    without the pointer travelling across the slider. */
 .stepper-btns {
@@ -421,6 +720,7 @@ body.is-off main {
   align-items: center;
   gap: 4px;
 }
+
 input[type="range"] {
   accent-color: var(--color-accent);
   cursor: pointer;
@@ -456,10 +756,12 @@ input[type="range"] {
   line-height: 1;
   cursor: pointer;
 }
+
 .stepper-btn:hover {
   background: var(--color-accent-hover);
   border-color: var(--color-accent-hover);
 }
+
 .stepper-btn:active {
   background: var(--color-text-primary);
   border-color: var(--color-text-primary);
@@ -472,10 +774,21 @@ input[type="range"] {
   margin-bottom: 10px;
   font-size: 12.5px;
 }
-.checkbox-field input { accent-color: var(--color-accent); width: 16px; height: 16px; flex: 0 0 auto; }
-.checkbox-field .micon { font-size: 17px; color: var(--color-text-muted); }
+
+.checkbox-field input {
+  accent-color: var(--color-accent);
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.checkbox-field .micon {
+  font-size: 17px;
+  color: var(--color-text-muted);
+}
+
 /* Checked options fill and colour their icon, matching how active cards read. */
-.checkbox-field input:checked + .micon {
+.checkbox-field input:checked+.micon {
   color: var(--color-accent);
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
@@ -495,27 +808,134 @@ input[type="range"] {
   font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
+  /* .btn is also used on the dashboard <a> below - buttons never have an underline to begin
+     with, so this only changes anything for that anchor. */
+  text-decoration: none;
 }
-.btn:hover { background: var(--color-surface-hover); border-color: var(--color-accent); }
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn:disabled:hover { background: var(--color-surface); border-color: var(--color-border); }
+
+.btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn:disabled:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
 .btn-primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-on-accent);
 }
-.btn-primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
-.btn-primary:disabled:hover { background: var(--color-accent); border-color: var(--color-accent); }
+
+.btn-primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.btn-primary:disabled:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
 
 .row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.row .btn { width: auto; flex: 0 0 auto; }
 
-.status-text { font-size: 12px; color: var(--color-text-muted); }
-.status-text.err { color: var(--color-danger); }
+.row .btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.row .btn.btn-grow {
+  flex: 1 1 auto;
+}
+
+/* ---------- Pomodoro timer ---------- */
+.pomodoro-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 0 14px;
+}
+
+.pomodoro-mode {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+}
+
+.pomodoro-mode.is-break {
+  color: var(--color-success);
+}
+
+.pomodoro-ring-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 156px;
+  height: 156px;
+  margin: 6px 0;
+}
+
+.pomodoro-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Start the stroke at 12 o'clock instead of SVG's default 3 o'clock. */
+  transform: rotate(-90deg);
+}
+
+.pomodoro-ring-track {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 8;
+}
+
+.pomodoro-ring-progress {
+  fill: none;
+  /* A touch lighter than the accent so the ring reads distinctly from accent-colored buttons/text nearby. */
+  stroke: color-mix(in srgb, var(--color-accent) 78%, white);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.2s linear;
+}
+
+.pomodoro-mode.is-break ~ .pomodoro-ring-wrap .pomodoro-ring-progress {
+  stroke: color-mix(in srgb, var(--color-success) 78%, white);
+}
+
+.pomodoro-time {
+  position: relative;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: var(--color-text-primary);
+}
+
+.status-text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.status-text.err {
+  color: var(--color-danger);
+}
 
 .hint {
   font-size: 11px;
@@ -523,14 +943,34 @@ input[type="range"] {
   margin: 6px 0 0;
 }
 
+.hint.err {
+  color: var(--color-danger);
+}
+
 footer {
   flex: 0 0 auto;
   padding: 10px 16px 16px;
   text-align: center;
 }
-footer .hint { margin: 0; }
 
-output { color: var(--color-text-muted); font-weight: 400; }
+footer .hint {
+  margin: 0;
+}
+
+output {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* Slider result values: bumped well past the 12.5px label text so the number someone is
+   actively dragging toward is the easiest thing in the row to read at a glance. */
+.stepper-label output,
+.field-label output {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
 
 .card-grid-3 {
   grid-template-columns: repeat(3, 1fr);
@@ -560,6 +1000,7 @@ html[data-ext-theme="dark"] .fontpicker-list {
   border-color: var(--color-border);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
+
 html[data-ext-theme="dark"] .fontpicker-option:hover,
 html[data-ext-theme="dark"] .fontpicker-option.is-active {
   background: var(--color-surface-hover);
@@ -587,42 +1028,51 @@ html[data-ext-theme="contrast"] body {
 html[data-ext-theme="contrast"] .header {
   border-bottom: 2px solid #00ffcc;
 }
+
 html[data-ext-theme="contrast"] .card {
   border-width: 2px;
 }
+
 html[data-ext-theme="contrast"] .card.active {
   background: #ffff00;
   border-color: #ffff00;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .card.active .micon,
 html[data-ext-theme="contrast"] .card.active .card-label {
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .btn-primary {
   background: #ffff00;
   border-color: #ffff00;
   color: #000000;
   font-weight: 700;
 }
+
 html[data-ext-theme="contrast"] .btn-primary:hover {
   background: #ffffff;
   border-color: #ffffff;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .fontpicker-list {
   background: #000000;
   border: 2px solid #00ffcc;
   box-shadow: 0 10px 28px rgba(0, 255, 204, 0.25);
 }
+
 html[data-ext-theme="contrast"] .fontpicker-option {
   color: #ffff00;
 }
+
 html[data-ext-theme="contrast"] .fontpicker-option:hover,
 html[data-ext-theme="contrast"] .fontpicker-option.is-active {
   background: #181820;
   color: #ffffff;
 }
+
 html[data-ext-theme="contrast"] .stepper-btn {
   background: #000000;
   border: 2px solid #00ffcc;
@@ -630,59 +1080,72 @@ html[data-ext-theme="contrast"] .stepper-btn {
   font-size: 17px;
   font-weight: 900;
 }
+
 html[data-ext-theme="contrast"] .stepper-btn:hover {
   background: #00ffcc;
   border-color: #00ffcc;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .stepper-btn:active {
   background: #ffff00;
   border-color: #ffff00;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .header .icon-btn {
   background: #ffff00;
   border: 1px solid #ffff00;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .header .icon-btn .micon {
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .header .icon-btn:hover {
   background: #ffffff;
   border-color: #ffffff;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .header .icon-btn:hover .micon {
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .icon-btn {
   background: #000000;
   border: 1px solid #00ffcc;
   color: #00ffcc;
 }
+
 html[data-ext-theme="contrast"] .icon-btn:hover {
   background: #00ffcc;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] input[type="range"] {
   accent-color: #00ffcc;
 }
+
 html[data-ext-theme="contrast"] .field select,
 html[data-ext-theme="contrast"] .field input[type="password"] {
   background: #000000;
   border: 2px solid #00ffcc;
   color: #ffff00;
 }
+
 html[data-ext-theme="contrast"] .btn {
   background: #000000;
   border: 2px solid #00ffcc;
   color: #00ffcc;
 }
+
 html[data-ext-theme="contrast"] .btn:hover {
   background: #00ffcc;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .btn-primary,
 html[data-ext-theme="contrast"] #connectBtn,
 html[data-ext-theme="contrast"] #savePageBtn,
@@ -692,11 +1155,13 @@ html[data-ext-theme="contrast"] #pairingSection .btn {
   color: #000000;
   font-weight: 800;
 }
+
 html[data-ext-theme="contrast"] #connectBtn .micon,
 html[data-ext-theme="contrast"] #savePageBtn .micon,
 html[data-ext-theme="contrast"] #pairingSection .btn .micon {
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .btn-primary:hover,
 html[data-ext-theme="contrast"] #connectBtn:hover,
 html[data-ext-theme="contrast"] #savePageBtn:hover,
@@ -705,20 +1170,24 @@ html[data-ext-theme="contrast"] #pairingSection .btn:hover {
   border-color: #ffffff;
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] #connectBtn:hover .micon,
 html[data-ext-theme="contrast"] #savePageBtn:hover .micon,
 html[data-ext-theme="contrast"] #pairingSection .btn:hover .micon {
   color: #000000;
 }
+
 html[data-ext-theme="contrast"] .fontpicker-trigger {
   background: #000000;
   border: 2px solid #00ffcc;
   color: #ffff00;
 }
+
 html[data-ext-theme="contrast"] .fontpicker-trigger:hover {
   background: #181820;
   border-color: #ffff00;
 }
+
 html[data-ext-theme="contrast"] .checkbox-field input {
   accent-color: #00ffcc;
 }
@@ -960,4 +1429,228 @@ html[data-ext-theme="contrast"] .checkbox-field input {
 .btn.is-done .micon,
 .btn-primary.is-done .micon {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ==========================================================================
+   Hover tooltips
+   Built from the same surface/border/text tokens as the font picker and the
+   confirm dialog, so they inherit whichever panel theme is active for free
+   instead of needing per-theme overrides. Native `title` bubbles are avoided
+   here - only the OS can theme those, and it never matches the panel.
+   ========================================================================== */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after,
+[data-tooltip]::before {
+  position: absolute;
+  left: 50%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition-delay: 0.35s;
+  z-index: 30;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  bottom: calc(100% + 9px);
+  transform: translate(-50%, 4px);
+  width: max-content;
+  max-width: 160px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+/* Diamond clipped to its top-left corner reads as a downward arrow once rotated,
+   tucked half a pixel behind the bubble's bottom edge so the seam never shows. */
+[data-tooltip]::before {
+  content: '';
+  bottom: calc(100% + 5px);
+  width: 8px;
+  height: 8px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transform: translate(-50%, 4px) rotate(45deg);
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0) rotate(45deg);
+}
+
+/* The header sits flush against the top of the panel, so its tooltips have nowhere
+   to open upward into - flip them below the icon and point the arrow up instead. The
+   quick-jump row directly beneath it has the same problem, one icon-height lower. */
+.header [data-tooltip]::after,
+.quick-jump [data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 9px);
+  transform: translate(-50%, -4px);
+}
+
+.header [data-tooltip]::before,
+.quick-jump [data-tooltip]::before {
+  bottom: auto;
+  top: calc(100% + 5px);
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
+  transform: translate(-50%, -4px) rotate(45deg);
+}
+
+.quick-jump [data-tooltip]::after,
+.quick-jump [data-tooltip]::before {
+  transition-delay: 0s;
+}
+
+.header [data-tooltip]:hover::after,
+.header [data-tooltip]:focus-visible::after,
+.quick-jump [data-tooltip]:hover::after,
+.quick-jump [data-tooltip]:focus-visible::after {
+  transform: translate(-50%, 0);
+}
+
+.header [data-tooltip]:hover::before,
+.header [data-tooltip]:focus-visible::before,
+.quick-jump [data-tooltip]:hover::before,
+.quick-jump [data-tooltip]:focus-visible::before {
+  transform: translate(-50%, 0) rotate(45deg);
+}
+
+/* Card grids run edge to edge, so a centred bubble on an outer column would spill past the
+   panel - keep the leftmost and rightmost column of every row flush to that button's outer
+   edge instead. :first-child/:last-child alone would only catch the first and last card
+   overall, missing the right edge of every row above the last in a multi-row 3-column grid
+   (Focus Sounds, panel theme), so this keys off the column instead via :nth-child. */
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]::after,
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]::before,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]::after,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]::before {
+  left: 0;
+  transform: translate(0, 4px);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]::before,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]::before {
+  transform: translate(0, 4px) rotate(45deg);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]:hover::after,
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]:focus-visible::after,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]:hover::after,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]:hover::before,
+.card-grid:not(.card-grid-3) .card:nth-child(2n+1)[data-tooltip]:focus-visible::before,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]:hover::before,
+.card-grid-3 .card:nth-child(3n+1)[data-tooltip]:focus-visible::before {
+  transform: translate(0, 0) rotate(45deg);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]::after,
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]::before,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]::after,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]::before {
+  left: auto;
+  right: 0;
+  transform: translate(0, 4px);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]::before,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]::before {
+  left: auto;
+  right: 6px;
+  transform: translate(0, 4px) rotate(45deg);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]:hover::after,
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]:focus-visible::after,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]:hover::after,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]:hover::before,
+.card-grid:not(.card-grid-3) .card:nth-child(2n)[data-tooltip]:focus-visible::before,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]:hover::before,
+.card-grid-3 .card:nth-child(3n)[data-tooltip]:focus-visible::before {
+  transform: translate(0, 0) rotate(45deg);
+}
+
+/* Same edge-flush problem as the card grids above: the quick-jump row runs its first and
+   last icons flush to the panel's own edges, so a centred bubble on either one would spill
+   past it. The header's last button (power) sits just as close to the right edge, so it gets
+   the same right-edge fix. Vertical placement (top, not bottom) is inherited from the
+   .header/.quick-jump flip rules above - only the horizontal side changes here. */
+.quick-jump-link:first-child[data-tooltip]::after,
+.quick-jump-link:first-child[data-tooltip]::before {
+  left: 0;
+  transform: translate(0, -4px);
+}
+
+.quick-jump-link:first-child[data-tooltip]::before {
+  transform: translate(0, -4px) rotate(45deg);
+}
+
+.quick-jump-link:first-child[data-tooltip]:hover::after,
+.quick-jump-link:first-child[data-tooltip]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+.quick-jump-link:first-child[data-tooltip]:hover::before,
+.quick-jump-link:first-child[data-tooltip]:focus-visible::before {
+  transform: translate(0, 0) rotate(45deg);
+}
+
+.quick-jump-link:last-child[data-tooltip]::after,
+.header .icon-btn:last-child[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: translate(0, -4px);
+}
+
+.quick-jump-link:last-child[data-tooltip]::before,
+.header .icon-btn:last-child[data-tooltip]::before {
+  left: auto;
+  right: 6px;
+  transform: translate(0, -4px) rotate(45deg);
+}
+
+.quick-jump-link:last-child[data-tooltip]:hover::after,
+.quick-jump-link:last-child[data-tooltip]:focus-visible::after,
+.header .icon-btn:last-child[data-tooltip]:hover::after,
+.header .icon-btn:last-child[data-tooltip]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+.quick-jump-link:last-child[data-tooltip]:hover::before,
+.quick-jump-link:last-child[data-tooltip]:focus-visible::before,
+.header .icon-btn:last-child[data-tooltip]:hover::before,
+.header .icon-btn:last-child[data-tooltip]:focus-visible::before {
+  transform: translate(0, 0) rotate(45deg);
 }

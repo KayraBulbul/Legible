@@ -97,5 +97,16 @@
     setOpen(false);
   });
 
+  // Click-outside-to-close, like any dropdown/popover. This only ever sees genuine clicks
+  // elsewhere on the page: the floating toolbar button that opens the panel calls
+  // stopPropagation() on its own click (see content/toolbar.js), so that click never reaches
+  // here, and clicks inside the panel's iframe can't bubble into this document at all - a
+  // child frame's events never propagate into its parent's DOM regardless of origin.
+  document.addEventListener('click', (event) => {
+    if (!open || !host) return;
+    if (host.contains(event.target)) return;
+    setOpen(false);
+  });
+
   window.A11yPanel = { toggle, setOpen, isOpen: () => open };
 })();

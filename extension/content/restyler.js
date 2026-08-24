@@ -72,9 +72,13 @@
     if (scaleRuleInjected) return;
     scaleRuleInjected = true;
     const style = document.createElement('style');
+    // `zoom` scales the page once, like the browser's native zoom. A per-element
+    // `font-size: calc(1em * scale)` override (the previous approach) compounds:
+    // each descendant's 1em resolves against its parent's already-scaled size, so
+    // pages with deep DOM nesting blew up far more than the chosen percentage.
     style.textContent = `
-      html.a11y-font-scaled body, html.a11y-font-scaled body * {
-        font-size: calc(1em * var(--a11y-font-scale, 1)) !important;
+      html.a11y-font-scaled body {
+        zoom: var(--a11y-font-scale, 1);
       }
     `;
     document.head.appendChild(style);
@@ -290,7 +294,7 @@
         enabled: !!state.cursorEnabled,
         style: state.cursorStyle || 'ring',
         size: state.cursorSize || 32,
-        color: state.cursorColor || '#5b3cdc',
+        color: state.cursorColor || '#f97316',
       });
     }
   }
