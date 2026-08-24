@@ -114,10 +114,20 @@ export interface AiPreferences {
   preserveTechnicalTerms: boolean;
 }
 
+export type TransformationParameter = string | number | boolean | null;
+
+/** Provenance returned with a Gemini transformation and stored with its document. */
+export interface TransformationRecord {
+  operation: TransformOperation;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  parameters: Record<string, TransformationParameter>;
+  performedAt: string;
+}
+
 /** One successful `POST /api/v1/transformations` call. */
 export interface TransformResult {
   document: SemanticDocument;
-  model: string;
-  promptVersion: string;
-  performedAt: string;
+  metadata: TransformationRecord;
 }
