@@ -34,6 +34,7 @@ describe("transformContent", () => {
     const { setAccessToken } = await import("@/api/client");
     setAccessToken("paired-token");
     const { transformContent } = await import("@/api/ai");
+    const controller = new AbortController();
 
     const result = await transformContent(
       "simplify",
@@ -44,6 +45,7 @@ describe("transformContent", () => {
         language: "en",
       },
       { simplificationLevel: "strong", preserveTechnicalTerms: false },
+      controller.signal,
     );
 
     expect(result).toEqual({
@@ -72,6 +74,7 @@ describe("transformContent", () => {
       "Content-Type": "application/json",
       Authorization: "Bearer paired-token",
     });
+    expect(request.signal).toBe(controller.signal);
     expect(JSON.parse(request.body as string)).toEqual({
       operation: "simplify",
       input: {

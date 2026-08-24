@@ -57,3 +57,77 @@ describe("getPageContent", () => {
     );
   });
 });
+
+describe("savePageTransformation", () => {
+  it("stores transformed content with its provenance", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.example.test");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { setAccessToken } = await import("@/api/client");
+    setAccessToken("paired-token");
+    const { savePageTransformation } = await import("@/api/pages");
+    const controller = new AbortController();
+
+    await savePageTransformation(
+      "saved-page-id",
+      {
+        format: "semantic_html",
+        html: "<article><p>Restructured</p></article>",
+        text: "Restructured",
+        language: "en",
+      },
+      {
+        operation: "restructure",
+        provider: "google",
+        model: "gemini-3.6-flash",
+        promptVersion: "restructure-v1",
+        parameters: {
+          simplificationLevel: "moderate",
+          preserveTechnicalTerms: true,
+        },
+        performedAt: "2026-08-24T07:30:00Z",
+      },
+      controller.signal,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/saved-pages/saved-page-id",
+      {
+        method: "PATCH",
+        signal: controller.signal,
+        credentials: "omit",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer paired-token",
+        },
+        body: JSON.stringify({
+          transformedDocument: {
+            format: "semantic_html",
+            html: "<article><p>Restructured</p></article>",
+            text: "Restructured",
+            language: "en",
+          },
+          transformations: [
+            {
+              operation: "restructure",
+              provider: "google",
+              model: "gemini-3.6-flash",
+              promptVersion: "restructure-v1",
+              parameters: {
+                simplificationLevel: "moderate",
+                preserveTechnicalTerms: true,
+              },
+              performedAt: "2026-08-24T07:30:00Z",
+            },
+          ],
+        }),
+      },
+    );
+  });
+});

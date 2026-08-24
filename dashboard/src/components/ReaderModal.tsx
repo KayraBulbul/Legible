@@ -48,6 +48,7 @@ const DEFAULT_AI_PREFERENCES: AiPreferences = {
   simplificationLevel: "moderate",
   preserveTechnicalTerms: true,
 };
+const EMPTY_CONTENT_MESSAGE = "No readable content was captured for this page.";
 
 const FONT_STACKS: Record<FontMode, string> = {
   none: "'Inter', sans-serif",
@@ -109,18 +110,23 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
     [aiPreferences],
   );
 
-  const { run: runTransform, resultFor } = useAiTransform();
+  const { run: runTransform, resultFor } = useAiTransform(page.id);
   const operation = activeTool ? TOOL_OPERATIONS[activeTool] : null;
   const transformState = operation
     ? resultFor(operation, aiPreferences)
     : undefined;
+  const sourceHasContent = Boolean(
+    content &&
+      (content.sourceDocument.html.trim() || content.sourceDocument.text.trim()),
+  );
+  const contentIsBlank = contentStatus === "ready" && !sourceHasContent;
 
   // Runs (or re-runs, on an options change) the transformation behind
   // whichever tool is open — POST /api/v1/transformations (docs/api.md).
   useEffect(() => {
-    if (!operation || !content) return;
+    if (!operation || !content || !sourceHasContent) return;
     runTransform(operation, content.sourceDocument, aiPreferences);
-  }, [operation, content, aiPreferences, runTransform]);
+  }, [operation, content, sourceHasContent, aiPreferences, runTransform]);
 
   // "Summarize" is a supplementary callout (rendered below) rather than a
   // content swap, so the article itself only swaps for the other three tools.
@@ -268,10 +274,15 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
           {activeTool === "summary" && (
             <div className="m-5 mb-0 rounded-xl border border-warning-muted bg-warning-subtle p-3 text-xs text-warning">
               <span className="font-semibold">AI summary</span> —{" "}
-              {(!transformState || transformState.status === "loading") &&
+              {contentIsBlank && EMPTY_CONTENT_MESSAGE}
+              {!contentIsBlank &&
+                (!transformState || transformState.status === "loading") &&
                 "Generating…"}
-              {transformState?.status === "error" && transformState.message}
-              {transformState?.status === "ready" &&
+              {!contentIsBlank &&
+                transformState?.status === "error" &&
+                transformState.message}
+              {!contentIsBlank &&
+                transformState?.status === "ready" &&
                 transformState.result.document.text}
             </div>
           )}
@@ -297,7 +308,9 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
               operation &&
               operation !== "summarize" &&
               !activeDocument &&
-              (transformState?.status === "error" ? (
+              (contentIsBlank ? (
+                <p className="text-danger">{EMPTY_CONTENT_MESSAGE}</p>
+              ) : transformState?.status === "error" ? (
                 <p className="text-danger">{transformState.message}</p>
               ) : (
                 <div className="flex flex-col items-center gap-3 py-16 text-text-secondary">

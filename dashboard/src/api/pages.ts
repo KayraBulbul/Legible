@@ -3,6 +3,8 @@ import type {
   SavedPage,
   SavedPageContent,
   SavedPagePatch,
+  SemanticDocument,
+  TransformationRecord,
 } from "@/types";
 import { MOCK_PAGES } from "@/data/mockPages";
 import { SAMPLE_ARTICLE } from "@/data/sampleContent";
@@ -183,9 +185,9 @@ export async function getPageContent(
  * Persists an edit. Callers apply the change optimistically, so this only has
  * to report success or failure.
  *
- * NOTE: `PATCH /saved-pages/{id}` accepts `title`, `isFavourited` and `tags`
- * (docs/api.md); trash state stays client-side since the contract deletes
- * outright rather than modelling a trash state.
+ * This path handles library metadata only. Transformed content uses
+ * `savePageTransformation`, while trash stays client-side because the
+ * contract deletes outright rather than modelling a trash state.
  */
 export async function updatePage(
   id: string,
@@ -202,6 +204,27 @@ export async function updatePage(
     body: toPatchDto(patch),
   });
   return toSavedPage(dto);
+}
+
+export async function savePageTransformation(
+  id: string,
+  document: SemanticDocument,
+  metadata: TransformationRecord,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (USE_MOCK_API) {
+    await mockDelay(undefined);
+    return;
+  }
+
+  await apiRequest(`/saved-pages/${id}`, {
+    method: "PATCH",
+    signal,
+    body: {
+      transformedDocument: document,
+      transformations: [metadata],
+    },
+  });
 }
 
 export async function deletePage(id: string): Promise<void> {
