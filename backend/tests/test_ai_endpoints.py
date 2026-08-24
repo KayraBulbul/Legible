@@ -122,6 +122,8 @@ def fake_provider() -> FakeGeminiService:
 async def test_gemini_transform_preserves_unknown_language(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    fake_client = SimpleNamespace()
+    monkeypatch.setattr("api.services.gemini.genai.Client", lambda **_kwargs: fake_client)
     provider = GoogleGeminiService(api_key="test-key", model="fake-gemini")
 
     def call_gemini(
@@ -333,6 +335,24 @@ async def test_ai_endpoints_require_authentication(client: AsyncClient, path: st
 
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "authentication_required"
+
+
+async def test_transformations_do_not_use_a_real_provider_by_default(
+    client: AsyncClient,
+) -> None:
+    headers = await create_guest_headers(client)
+
+    response = await client.post(
+        "/api/v1/transformations",
+        headers=headers,
+        json={
+            "operation": "restructure",
+            "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "ai_unavailable"
 
 
 async def test_transform_returns_sanitized_document_and_metadata(
