@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text, update
 
@@ -26,6 +27,7 @@ from api.services.gemini import (
     GeminiImageDescription,
     GeminiProviderError,
     GeminiRateLimitError,
+    GeminiService,
     GeminiTransformation,
     GeminiUnavailableError,
     GoogleGeminiService,
@@ -92,7 +94,7 @@ class FakeGeminiService:
 
 
 def make_service(
-    provider: FakeGeminiService,
+    provider: GeminiService,
     *,
     timeout: float = 1,
     concurrency: int = 2,
@@ -172,7 +174,10 @@ async def test_gemini_transform_uses_supported_json_config(
     )
 
     assert len(captured_configs) == 1
-    assert captured_configs[0] == {"response_mime_type": "application/json"}
+    assert captured_configs[0] == {
+        "response_mime_type": "application/json",
+        "thinking_config": {"thinking_level": genai_types.ThinkingLevel.LOW},
+    }
 
 
 async def test_gemini_image_description_uses_supported_json_config(
@@ -206,7 +211,10 @@ async def test_gemini_image_description_uses_supported_json_config(
     )
 
     assert len(captured_configs) == 1
-    assert captured_configs[0] == {"response_mime_type": "application/json"}
+    assert captured_configs[0] == {
+        "response_mime_type": "application/json",
+        "thinking_config": {"thinking_level": genai_types.ThinkingLevel.LOW},
+    }
 
 
 @pytest.mark.parametrize(
@@ -568,6 +576,39 @@ async def test_transform_maps_safe_provider_errors(
     assert response.status_code == status
     assert response.json()["error"]["code"] == code
     assert "secret" not in response.text
+
+
+async def test_transform_maps_gemini_deadline_to_timeout(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def generate_content(**_kwargs: object) -> object:
+        raise genai_errors.ServerError(
+            504,
+            {"error": {"status": "DEADLINE_EXCEEDED", "message": "private detail"}},
+        )
+
+    fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    monkeypatch.setattr("api.services.gemini.genai.Client", lambda **_kwargs: fake_client)
+    provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
+    service = make_service(provider)
+    app.dependency_overrides[get_ai_service] = lambda: service
+    try:
+        headers = await create_guest_headers(client)
+        response = await client.post(
+            "/api/v1/transformations",
+            headers=headers,
+            json={
+                "operation": "restructure",
+                "input": {"html": "<p>Text</p>", "text": "Text", "language": "en"},
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(get_ai_service, None)
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "ai_timeout"
+    assert "private detail" not in response.text
 
 
 async def test_transform_times_out(

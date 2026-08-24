@@ -26,6 +26,7 @@ from api.services.gemini import (
     GeminiProviderError,
     GeminiRateLimitError,
     GeminiService,
+    GeminiTimeoutError,
     GeminiUnavailableError,
 )
 
@@ -133,7 +134,7 @@ class AiApplicationService:
                 asyncio.shield(task),
                 timeout=self._timeout_seconds,
             )
-        except TimeoutError as exc:
+        except (TimeoutError, GeminiTimeoutError) as exc:
             raise AppError(503, "ai_timeout", "The AI request timed out.") from exc
         except GeminiRateLimitError as exc:
             raise AppError(
