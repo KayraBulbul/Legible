@@ -21,7 +21,7 @@ src/
   api/          the only place that talks to a server
   navigation/   view <-> URL mapping (pure, no React)
   context/      three providers, one concern each
-  hooks/        reusable behaviour (dialogs, reader routing, reader settings)
+  hooks/        reusable behaviour (dialogs, reader routing, reader settings, pairing)
   components/   presentation
   theme/        decorative swatch palette
   data/         mock fixtures, deleted once the API is live
@@ -37,6 +37,43 @@ concern:
 | `ThemeProvider` | light/dark preference | `useTheme()` |
 | `LibraryProvider` | saved pages, folders, and the mutations on them | `useLibrary()` |
 | `WorkspaceProvider` | current view, filters, reader, dialogs | `useWorkspace()` |
+
+`AuthProvider` sits above all three and gates them — see Pairing below.
+
+### Pairing
+
+The dashboard has no login and never creates a guest session of its own. It
+joins one that already exists in the extension: the extension mints a one-time
+code, the dashboard redeems it at `POST /auth/pairing-codes/redeem`, and the
+token that comes back belongs to the **same anonymous user**.
+
+Pairing links sessions; it copies nothing. Both clients resolve to one
+`user.id`, and every saved-page request filters by that id, so they read and
+write one library. A new guest session is a different user and therefore a
+different library. Revoking one session leaves the other signed in.
+
+Codes are eight characters from an alphabet that omits `I`, `O`, `0` and `1`,
+work once, and expire ten minutes after they are issued. Creating a new one
+retires the previous unused one, so only the newest code on screen works.
+
+| Piece | Role |
+|---|---|
+| `utils/pairingCode.ts` | pure: cleans typed codes to the backend alphabet, formats the countdown |
+| `api/auth.ts` | the wire calls — mint and redeem |
+| `hooks/usePairingCode.ts` | owns one code and its countdown to expiry |
+| `components/PairingScreen.tsx` | redeem side, shown whenever there is no valid session |
+| `components/LinkDeviceModal.tsx` | mint side, from the account menu once paired |
+
+The backend does no normalising, so a code pasted in lower case or with the
+dashes people add when reading one off another screen would 422. Every entry
+point runs `normalizePairingCode` first.
+
+The countdown is recomputed from the absolute `expiresAt` on each tick rather
+than decremented, because a backgrounded tab throttles its timers and a
+sleeping machine stops them — a decremented counter would resume showing a
+number from minutes ago. When it hits zero the code is struck through and
+replaced with a prompt for a new one, rather than being left on screen for
+someone to type and be told, with no explanation, that it is invalid.
 
 Server state and view state are kept apart deliberately: typing in the search
 box must not re-render anything that only reads pages, and a page mutation must

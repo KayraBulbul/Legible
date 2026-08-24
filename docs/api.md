@@ -44,11 +44,7 @@ The backend does not fetch `originalUrl`. Clients send extracted semantic conten
 
 The backend rejects request bodies larger than 20 MiB with `413 payload_too_large`.
 
-The dashboard origin must be in the backend CORS allowlist. The deployed dashboard is
-`https://hackmelbourne2026.vercel.app/`; configure its origin without the trailing slash as
-`https://hackmelbourne2026.vercel.app` alongside `http://localhost:5173` for local development.
-The extension manifest must grant host permission for the API origin. Extension requests
-should set `credentials: "omit"` so cookies from browsed sites are never forwarded.
+The dashboard origin must be in the backend CORS allowlist. Production currently allows local dashboard development from `http://localhost:5173`; add the final dashboard origin when it is deployed. The extension manifest must grant host permission for the API origin. Extension requests should set `credentials: "omit"` so cookies from browsed sites are never forwarded.
 
 `GET /health` returns `200 OK` when the application and database are ready:
 

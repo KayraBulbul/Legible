@@ -51,6 +51,10 @@
     frame = document.createElement('iframe');
     frame.src = chrome.runtime.getURL('sidebar/sidebar.html');
     frame.title = 'Web Accessibility settings';
+    // The panel is cross-origin to the page hosting it, and `clipboard-write` defaults to
+    // `self` - without this delegation the async clipboard API is denied outright, which is
+    // what the "Copy" button next to a pairing code needs.
+    frame.allow = 'clipboard-write';
     css(
       frame,
       `display: block !important;

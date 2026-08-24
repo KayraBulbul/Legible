@@ -1,13 +1,21 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/context/authContext";
+import {
+  PAIRING_CODE_LENGTH,
+  isCompletePairingCode,
+  normalizePairingCode,
+} from "@/utils/pairingCode";
 
 /** Shown instead of the dashboard shell whenever there is no valid session. */
 export default function PairingScreen() {
   const { isPairing, pairError, pair } = useAuth();
   const [code, setCode] = useState("");
 
+  const isComplete = isCompletePairingCode(code);
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (!isComplete) return;
     pair(code).catch(() => {});
   }
 
@@ -19,7 +27,7 @@ export default function PairingScreen() {
         </h1>
         <p className="mt-2 text-sm text-text-secondary">
           Open the extension, create a pairing code, and enter it here to load
-          your saved pages.
+          your saved pages. Codes last ten minutes and work once.
         </p>
 
         <form className="mt-6 flex flex-col gap-3" onSubmit={handleSubmit}>
@@ -30,10 +38,13 @@ export default function PairingScreen() {
             id="pairing-code"
             type="text"
             value={code}
-            // Codes are 8 uppercase characters (docs/api.md); normalising
-            // here means a pasted lowercase code doesn't fail validation.
-            onChange={(event) => setCode(event.target.value.toUpperCase())}
-            maxLength={8}
+            // The backend takes eight characters from a restricted alphabet
+            // and normalises nothing (docs/api.md), so lower case, spaces, and
+            // the dashes people add when copying a code off another screen all
+            // have to be stripped here. Doing it on every keystroke rather
+            // than at submit keeps what is on screen the same as what is sent.
+            onChange={(event) => setCode(normalizePairingCode(event.target.value))}
+            maxLength={PAIRING_CODE_LENGTH}
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
@@ -42,7 +53,7 @@ export default function PairingScreen() {
           />
           <button
             type="submit"
-            disabled={isPairing || !code}
+            disabled={isPairing || !isComplete}
             className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-text-inverse hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPairing ? "Pairing…" : "Pair"}
