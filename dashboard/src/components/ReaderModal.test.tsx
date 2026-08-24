@@ -44,6 +44,21 @@ const BLANK_CONTENT: SavedPageContent = {
     },
   },
 };
+const SAVED_TRANSFORMED_CONTENT: SavedPageContent = {
+  ...BLANK_CONTENT,
+  sourceDocument: {
+    format: "semantic_html",
+    html: "<article><p>Original content</p></article>",
+    text: "Original content",
+    language: "en",
+  },
+  transformedDocument: {
+    format: "semantic_html",
+    html: "<article><h1>Saved restructure</h1><p>Already transformed</p></article>",
+    text: "Saved restructure\n\nAlready transformed",
+    language: "en",
+  },
+};
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -113,6 +128,19 @@ describe("ReaderModal", () => {
     expect(
       await screen.findByText("No readable content was captured for this page."),
     ).toBeTruthy();
+    expect(transform).not.toHaveBeenCalled();
+  });
+
+  it("reuses a saved transformed document without restructuring it again", async () => {
+    vi.spyOn(pagesApi, "getPageContent").mockResolvedValue(
+      SAVED_TRANSFORMED_CONTENT,
+    );
+    const transform = vi.spyOn(aiApi, "transformContent");
+
+    render(<ReaderTestContext />);
+
+    expect(await screen.findByText("Saved restructure")).toBeTruthy();
+    expect(screen.getByText("Already transformed")).toBeTruthy();
     expect(transform).not.toHaveBeenCalled();
   });
 });

@@ -120,11 +120,16 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
       (content.sourceDocument.html.trim() || content.sourceDocument.text.trim()),
   );
   const contentIsBlank = contentStatus === "ready" && !sourceHasContent;
+  const savedTransformedDocument =
+    operation === "restructure" || operation === "simplify"
+      ? (content?.transformedDocument ?? null)
+      : null;
 
   // Runs (or re-runs, on an options change) the transformation behind
   // whichever tool is open — POST /api/v1/transformations (docs/api.md).
   useEffect(() => {
     if (!operation || !content || !sourceHasContent) return;
+    if (operation === "restructure" && content.transformedDocument) return;
     runTransform(operation, content.sourceDocument, aiPreferences);
   }, [operation, content, sourceHasContent, aiPreferences, runTransform]);
 
@@ -137,11 +142,10 @@ export default function ReaderModal({ page }: { page: SavedPage }) {
 
   const activeDocument =
     liveDocument ??
-    (operation === "simplify" && content?.transformedDocument
-      ? content.transformedDocument
-      : operation === null || operation === "summarize"
-        ? (content?.sourceDocument ?? null)
-        : null);
+    savedTransformedDocument ??
+    (operation === null || operation === "summarize"
+      ? (content?.sourceDocument ?? null)
+      : null);
   const expanded = fullScreen || focusMode;
 
   const renderedHtml = useMemo(() => {
