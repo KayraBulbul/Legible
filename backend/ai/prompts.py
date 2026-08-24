@@ -18,10 +18,15 @@ TRANSFORM_PROMPTS = {
         "Return a short semantic HTML fragment (a few paragraphs at most).",
     ),
     "restructure": (
-        "restructure-v1",
+        "restructure-v2",
         "Rewrite the following content with clearer structure: add headings, break up "
-        "long paragraphs, and use lists where it helps readability. Do not change the "
-        "meaning.",
+        "long paragraphs, and use lists where it helps readability. Preserve every fact, "
+        "detail, and nuance from the substantive content — never summarize, condense, or "
+        "omit anything the reader came for. Remove only boilerplate that is not part of "
+        "the actual content, such as language/region pickers, cookie or newsletter "
+        "banners, social-share prompts, 'related articles' lists, navigation menus, ads, "
+        "and legal/copyright footers. If you're unsure whether something is boilerplate "
+        "or real content, keep it.",
     ),
     "focus": (
         "focus-v1",
