@@ -207,6 +207,14 @@ async def update_saved_page(
         page.is_favourited = payload.is_favourited
     if payload.tags is not None:
         page.tags = payload.tags
+    transformed_document = payload.transformed_document
+    transformations = payload.transformations
+    if transformed_document is not None and transformations is not None:
+        transformed_document = sanitize_document(transformed_document)
+        page.transformed_document = transformed_document.model_dump(mode="json", by_alias=True)
+        page.transformations = [
+            item.model_dump(mode="json", by_alias=True) for item in transformations
+        ]
     await database.commit()
     await database.refresh(page)
     return page

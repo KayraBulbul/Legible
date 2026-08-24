@@ -55,12 +55,26 @@ async def test_openapi_publishes_saved_page_update_contract(client: AsyncClient)
     assert response.status_code == 200
     schemas = response.json()["components"]["schemas"]
     update = schemas["SavedPageUpdate"]
-    assert set(update["properties"]) == {"title", "isFavourited", "tags"}
+    assert set(update["properties"]) == {
+        "title",
+        "isFavourited",
+        "tags",
+        "transformedDocument",
+        "transformations",
+    }
     assert update.get("required", []) == []
     assert update["properties"]["title"]["type"] == "string"
     assert update["properties"]["isFavourited"]["type"] == "boolean"
     assert update["properties"]["tags"]["type"] == "array"
     assert update["properties"]["tags"]["maxItems"] == 20
+    assert update["properties"]["transformedDocument"]["$ref"] == (
+        "#/components/schemas/SemanticDocument"
+    )
+    transformations = update["properties"]["transformations"]
+    assert transformations["type"] == "array"
+    assert transformations["minItems"] == 1
+    assert transformations["maxItems"] == 20
+    assert transformations["items"]["$ref"] == "#/components/schemas/TransformationRecord"
     assert schemas["SavedPageResponse"]["properties"]["isFavourited"]["type"] == "boolean"
     assert schemas["SavedPageResponse"]["properties"]["tags"]["type"] == "array"
     assert schemas["SavedPageSummary"]["properties"]["isFavourited"]["type"] == "boolean"
