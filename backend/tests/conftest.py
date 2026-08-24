@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from alembic import command
 from alembic.config import Config
+from google import genai
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
@@ -16,9 +17,18 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["ENVIRONMENT"] = "test"
 os.environ["PAIRING_CODE_SECRET"] = "test-pairing-code-secret-at-least-32-characters"
 os.environ["MAX_REQUEST_BYTES"] = "4096"
+os.environ["GEMINI_API_KEY"] = ""
 
 from api.main import app  # noqa: E402
 from database.session import engine  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def block_real_gemini_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    def reject_client(**_kwargs: object) -> None:
+        raise AssertionError("Tests must replace the Gemini client with a fake.")
+
+    monkeypatch.setattr(genai, "Client", reject_client)
 
 
 @pytest.fixture(scope="session", autouse=True)

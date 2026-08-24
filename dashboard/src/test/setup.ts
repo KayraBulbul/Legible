@@ -16,9 +16,19 @@ function memoryStorage(): Storage {
 }
 
 vi.stubGlobal("localStorage", memoryStorage());
+vi.stubEnv("VITE_API_BASE_URL", "");
+vi.stubEnv("VITE_USE_MOCK_API", "false");
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
+  vi.stubEnv("VITE_API_BASE_URL", "");
+  vi.stubEnv("VITE_USE_MOCK_API", "false");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() =>
+      Promise.reject(new Error("Tests must stub network requests explicitly.")),
+    ),
+  );
 });
 
 afterEach(() => {

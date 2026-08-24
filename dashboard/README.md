@@ -15,7 +15,7 @@ npm run test:watch
 
 The dashboard runs standalone out of the box, against the fixtures in
 `src/data`. No backend or environment file is needed to develop against it.
-The test suite uses jsdom and mocked HTTP responses, so it also runs without a
+The test suite forces mock mode and rejects unstubbed network requests, so it also runs without a
 backend process, PostgreSQL, or Gemini credentials.
 
 ## Architecture

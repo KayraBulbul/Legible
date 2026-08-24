@@ -55,6 +55,8 @@ uv run pytest
 ```
 
 Tests use `postgresql+asyncpg://melbhack:melbhack@localhost:55432/melbhack_test` by default. Override it with `TEST_DATABASE_URL` when needed.
+The test setup clears `GEMINI_API_KEY` and blocks the real Gemini client. AI tests must provide an
+in-memory fake.
 
 ## Migrations
 
