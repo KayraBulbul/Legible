@@ -41,10 +41,47 @@ not yet migrated to them.
 
 - **Sidebar**: click the toolbar icon to open the side panel — theme presets (invert, dark, light, high-contrast), accessible & dyslexia fonts (**Lexend, OpenDyslexic, Atkinson Hyperlegible, Arial/Helvetica, Verdana, Open Sans, Comic Sans MS**), fine-grained text size/letter spacing/line height controls, highlight links, hide images, pause animations, de-clutter mode, bionic reading, a customizable on-page cursor, TTS voice/rate/pitch, and an AI scan of the current page.
 - **Floating HUD**: click the ♿ pill in the bottom-right corner of any page for quick access to the same theme, highlight/hide, de-clutter, and bionic reading toggles without opening the sidebar.
+- **Linked devices**: the sidebar's Account section connects an anonymous guest session and saves pages to it. **Show a linking code** mints an eight-character code that another browser or the dashboard redeems to join the *same* anonymous user — a live countdown shows the ten minutes before it expires. Pairing links sessions, it does not copy pages: both clients then read one library, and signing out of one leaves the other signed in. See [Pairing](#pairing) below.
 - **Keyboard shortcuts** (customizable at `chrome://extensions/shortcuts`):
   - `Alt+R` — start/stop reading from the current position
   - `Alt+N` / `Alt+P` — next/previous readable element
   - `Alt+A` — run an AI vision scan on the hovered/focused image
+
+## Pairing
+
+Saved pages belong to a user, not to a device. Every saved page stores the `user.id` its
+session resolves to, and every list, read, update, delete, export and AI call filters by that
+id — so two clients share a library exactly when they share a user.
+
+Pairing is how a second client gets onto an existing user:
+
+1. The extension creates a guest session (`POST /api/v1/auth/guest`). The backend creates a
+   `User` and a 30-day session, and returns an access token — only the token's hash is stored.
+2. That authenticated client asks for a code (`POST /api/v1/auth/pairing-codes`). The backend
+   returns eight characters, keeps only an HMAC of them, sets a 10-minute expiry, and
+   invalidates any earlier unused code for that user.
+3. The second client redeems it (`POST /api/v1/auth/pairing-codes/redeem`). The backend
+   verifies and consumes the code, then issues a *different* token for the *same* user.
+
+What follows from that:
+
+- Two paired clients see one saved-page library, because they resolve to one `user.id`.
+- Nothing is copied anywhere. Pairing joins sessions; it is not sync.
+- Creating a fresh guest session instead creates a **new user** and therefore an empty,
+  separate library.
+- Revoking one session (`DELETE /api/v1/auth/session`, or the dashboard's Sign out) leaves the
+  paired session working.
+- Another user cannot read a page even given its UUID — it comes back `404`.
+
+Codes use an alphabet without `I`, `O`, `0` or `1` so they survive being read aloud, work
+once, and expire ten minutes after they are issued. The backend normalises nothing, so both
+clients strip spaces, dashes and case before sending. Both also count down to the deadline
+from the absolute expiry instant and pull the code off screen when it lapses, rather than
+leaving a dead code on display for someone to type.
+
+Where to find it: **extension** → sidebar Account → Linked devices (mint and redeem).
+**Dashboard** → the pairing screen shown when unpaired (redeem), and the account menu →
+Link another device (mint). The full contract is in [docs/api.md](docs/api.md).
 
 ## Notes
 

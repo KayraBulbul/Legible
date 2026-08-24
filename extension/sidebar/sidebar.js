@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS = {
   voiceURI: null,
   toolbarVisible: true,
   extTheme: 'light',
+  // Linked devices is collapsed by default: pairing is a once-per-device errand, and the
+  // panel is only 372px wide, so it should not cost the reading controls any height.
+  pairingOpen: false,
 };
 
 const els = {
@@ -29,14 +32,23 @@ const els = {
   powerIcon: document.getElementById('powerIcon'),
   powerHint: document.getElementById('powerHint'),
   backendStatus: document.getElementById('backendStatus'),
+  connectIcon: document.getElementById('connectIcon'),
+  connectLabel: document.getElementById('connectLabel'),
+  savePageIcon: document.getElementById('savePageIcon'),
+  savePageLabel: document.getElementById('savePageLabel'),
   pairCreateBtn: document.getElementById('pairCreateBtn'),
   pairCodeBox: document.getElementById('pairCodeBox'),
   pairCode: document.getElementById('pairCode'),
   pairCopyBtn: document.getElementById('pairCopyBtn'),
   pairExpiry: document.getElementById('pairExpiry'),
+  pairExpiryBar: document.getElementById('pairExpiryBar'),
   pairCodeInput: document.getElementById('pairCodeInput'),
   pairRedeemBtn: document.getElementById('pairRedeemBtn'),
   pairStatus: document.getElementById('pairStatus'),
+  pairConfirmDialog: document.getElementById('pairConfirmDialog'),
+  pairingToggle: document.getElementById('pairingToggle'),
+  pairingBody: document.getElementById('pairingBody'),
+  pairingBadge: document.getElementById('pairingBadge'),
   connectBtn: document.getElementById('connectBtn'),
   savePageBtn: document.getElementById('savePageBtn'),
   saveStatus: document.getElementById('saveStatus'),
@@ -332,6 +344,8 @@ function populateUI() {
   els.ttsPitch.value = settings.ttsPitch;
   els.ttsPitchOut.textContent = settings.ttsPitch.toFixed(1);
   if (settings.voiceURI) els.voiceSelect.value = settings.voiceURI;
+  // Also covers Reset All, which reverts pairingOpen to its collapsed default.
+  syncPairingDisclosure();
 }
 
 function persist(partial) {
@@ -381,16 +395,59 @@ function wireStepper({ rangeEl, downBtn, upBtn, step, key, format }) {
   upBtn.addEventListener('click', () => commit(clamp(Number(rangeEl.value) + step, min, max)));
 }
 
+/* The two Account buttons double as their own status readout. Both halves are swapped
+   together - a "Page Saved" label next to a still-uploading cloud icon would be worse than
+   either alone. Names are ligatures in Material Symbols Rounded (fonts/), which ships whole,
+   so any documented icon name resolves. */
+const CONNECT_IDLE = { icon: 'login', label: 'Connect' };
+const CONNECT_DONE = { icon: 'check_circle', label: 'Connected' };
+const SAVE_IDLE = { icon: 'cloud_upload', label: 'Save This Page' };
+const SAVE_DONE = { icon: 'cloud_done', label: 'Page Saved' };
+
+async function checkCurrentPageSaved() {
+  try {
+    const tab = await getActiveTab();
+    if (!tab || !tab.url) return false;
+    const res = await chrome.runtime.sendMessage({
+      type: 'BACKEND_IS_PAGE_SAVED',
+      payload: { url: tab.url },
+    });
+    return !!(res && res.ok && res.saved);
+  } catch (e) {
+    return false;
+  }
+}
+
+function setButtonState(btn, iconEl, labelEl, state, done) {
+  iconEl.textContent = state.icon;
+  labelEl.textContent = state.label;
+  btn.classList.toggle('is-done', !!done);
+}
+
 async function refreshBackendStatus() {
   const res = await chrome.runtime.sendMessage({ type: 'BACKEND_STATUS' });
   const connected = !!(res && res.ok && res.connected);
-  els.backendStatus.textContent = connected ? 'Connected' : 'Not connected';
-  els.backendStatus.className = connected ? 'status-text ok' : 'status-text';
+  // The Connect button says "Connected", so saying it here too would print it twice, one
+  // line apart. Progress and failures still land here, where they have nowhere else to go.
+  els.backendStatus.textContent = connected ? '' : 'Not connected';
+  els.backendStatus.className = 'status-text';
+  setButtonState(els.connectBtn, els.connectIcon, els.connectLabel,
+    connected ? CONNECT_DONE : CONNECT_IDLE, connected);
   els.savePageBtn.disabled = !connected;
   // Only an authenticated session can mint a pairing code; redeeming one deliberately
   // stays available while disconnected, since that is the whole point of joining.
   els.pairCreateBtn.disabled = !connected;
-  if (!connected) hidePairCode();
+  if (!connected) {
+    hidePairCode();
+    setButtonState(els.savePageBtn, els.savePageIcon, els.savePageLabel, SAVE_IDLE, false);
+  } else {
+    const isSaved = await checkCurrentPageSaved();
+    if (isSaved) {
+      setButtonState(els.savePageBtn, els.savePageIcon, els.savePageLabel, SAVE_DONE, true);
+    } else {
+      setButtonState(els.savePageBtn, els.savePageIcon, els.savePageLabel, SAVE_IDLE, false);
+    }
+  }
   return connected;
 }
 
@@ -399,7 +456,16 @@ async function refreshBackendStatus() {
    single-use, and creating a new one invalidates the previous unused one. */
 
 const PAIRING_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const PAIRING_CODE_LIFETIME_MS = 10 * 60 * 1000;
+// Under a minute left, reading the code out to someone is likely to lose the race.
+const PAIRING_URGENT_MS = 60 * 1000;
+// Sub-second so the bar slides instead of stepping, and the seconds flip close to when
+// they actually change rather than up to a second late.
+const PAIRING_TICK_MS = 250;
 let pairExpiryTimer = null;
+// Last countdown the tick rendered, mirrored onto the header badge when collapsed.
+let pairBadgeText = '';
+let pairBadgeUrgent = false;
 
 // Mirrors the backend's alphabet, which drops I/O/0/1 so codes read aloud cleanly. The
 // API rejects anything else outright, so tidy up what the user typed before sending.
@@ -409,6 +475,35 @@ function normalizePairingCode(raw) {
     .split('')
     .filter((ch) => PAIRING_ALPHABET.includes(ch))
     .join('');
+}
+
+/* The "Linked devices" disclosure. Collapsing must never hide the fact that a code is
+   counting down, so whatever the countdown last wrote is mirrored into a badge on the
+   header while the section is shut. */
+function syncPairingBadge() {
+  const live = !els.pairCodeBox.hidden && pairBadgeText !== '';
+  els.pairingBadge.hidden = !!settings.pairingOpen || !live;
+  els.pairingBadge.textContent = live ? pairBadgeText : '';
+  els.pairingBadge.className = pairBadgeUrgent
+    ? 'disclosure-badge urgent'
+    : 'disclosure-badge';
+}
+
+/* Kept separate from the badge because this runs on toggle, not on every tick: rewriting
+   aria-expanded four times a second is the kind of thing that makes a screen reader
+   chatter. */
+function syncPairingDisclosure() {
+  const open = !!settings.pairingOpen;
+  els.pairingToggle.setAttribute('aria-expanded', String(open));
+  els.pairingBody.hidden = !open;
+  syncPairingBadge();
+}
+
+function wirePairingDisclosure() {
+  els.pairingToggle.addEventListener('click', () => {
+    persist({ pairingOpen: !settings.pairingOpen });
+    syncPairingDisclosure();
+  });
 }
 
 function stopPairExpiryTimer() {
@@ -423,28 +518,95 @@ function hidePairCode() {
   els.pairCodeBox.hidden = true;
   els.pairCode.textContent = '';
   els.pairExpiry.textContent = '';
+  els.pairExpiry.className = 'status-text';
+  els.pairExpiryBar.className = 'pair-expiry-bar';
+  els.pairExpiryBar.style.width = '100%';
+  pairBadgeText = '';
+  pairBadgeUrgent = false;
+  syncPairingBadge();
 }
 
 function showPairCode(code, expiresAt) {
   els.pairCode.textContent = code;
   els.pairCodeBox.hidden = false;
 
+  // Read from the absolute deadline on every tick rather than counting down: this panel
+  // lives inside a page that can be backgrounded for minutes at a time, which throttles
+  // its timers, and a decremented counter would come back showing a stale number.
   const deadline = new Date(expiresAt).getTime();
   const tick = () => {
-    const left = Math.round((deadline - Date.now()) / 1000);
-    if (left <= 0) {
+    const leftMs = deadline - Date.now();
+    if (leftMs <= 0) {
       // The backend would reject it anyway; clearing it avoids reading out a dead code.
       hidePairCode();
       els.pairStatus.textContent = 'That code expired. Generate a new one.';
       return;
     }
+
+    const urgent = leftMs <= PAIRING_URGENT_MS;
+    const left = Math.ceil(leftMs / 1000);
     const mins = Math.floor(left / 60);
     const secs = String(left % 60).padStart(2, '0');
     els.pairExpiry.textContent = `Expires in ${mins}:${secs}`;
+    els.pairExpiry.className = urgent ? 'status-text urgent' : 'status-text';
+    els.pairExpiryBar.style.width = `${Math.max(0, Math.min(100, (leftMs / PAIRING_CODE_LIFETIME_MS) * 100))}%`;
+    els.pairExpiryBar.className = urgent ? 'pair-expiry-bar urgent' : 'pair-expiry-bar';
+    pairBadgeText = `${mins}:${secs}`;
+    pairBadgeUrgent = urgent;
+    syncPairingBadge();
   };
   tick();
   stopPairExpiryTimer();
-  pairExpiryTimer = setInterval(tick, 1000);
+  pairExpiryTimer = setInterval(tick, PAIRING_TICK_MS);
+}
+
+/* Stands in for window.confirm(), which Chrome ignores in a cross-origin iframe - and this
+   panel is exactly that. A native confirm would return false without ever showing anything,
+   so the link would appear to do nothing at all. Resolves false on Escape and on Cancel. */
+function confirmRedeem() {
+  return new Promise((resolve) => {
+    const dialog = els.pairConfirmDialog;
+    // showModal() throws if the dialog is already open. Nothing should reach here twice
+    // while it is up, but the throw would land in an async click handler as an unhandled
+    // rejection, so decline rather than risk it: never link on an ambiguous answer.
+    if (dialog.open) {
+      resolve(false);
+      return;
+    }
+    dialog.returnValue = '';
+    const onClose = () => {
+      dialog.removeEventListener('close', onClose);
+      resolve(dialog.returnValue === 'confirm');
+    };
+    dialog.addEventListener('close', onClose);
+    dialog.showModal();
+  });
+}
+
+/* The async clipboard API needs a `clipboard-write` permissions-policy delegation to work in
+   a cross-origin frame (content/panel.js grants it on the iframe). Older Chrome builds and
+   any future tightening still fall through to execCommand, and failing that the code is left
+   selected so Ctrl+C works. Something has to get the code onto the other device. */
+async function copyPairCode() {
+  try {
+    await navigator.clipboard.writeText(els.pairCode.textContent);
+    return 'Code copied.';
+  } catch (e) {
+    // Fall through to the selection-based path below.
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(els.pairCode);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  try {
+    if (document.execCommand('copy')) return 'Code copied.';
+  } catch (e) {
+    // Both paths are gone; the selection below is the fallback.
+  }
+  return 'Could not copy automatically - the code is selected, press Ctrl+C.';
 }
 
 function wirePairingEvents() {
@@ -467,13 +629,7 @@ function wirePairingEvents() {
   });
 
   els.pairCopyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(els.pairCode.textContent);
-      els.pairStatus.textContent = 'Code copied.';
-    } catch (e) {
-      // Clipboard access can be denied inside the overlay iframe; the code is on screen.
-      els.pairStatus.textContent = 'Could not copy - read the code off the screen instead.';
-    }
+    els.pairStatus.textContent = await copyPairCode();
   });
 
   // Normalizing as the user types means a code pasted with dashes or in lower case still
@@ -491,12 +647,7 @@ function wirePairingEvents() {
 
     // Redeeming swaps this device onto the other device's user, so anything saved under the
     // current session becomes unreachable from here. Destructive enough to confirm first.
-    const confirmed = window.confirm(
-      'Link this device to the other one?\n\n' +
-        'This device will switch to the other device\u2019s saved-page library. ' +
-        'Pages you saved on this device before linking will stay with the old session ' +
-        'and will not appear here.'
-    );
+    const confirmed = await confirmRedeem();
     if (!confirmed) return;
 
     els.pairRedeemBtn.disabled = true;
@@ -524,6 +675,14 @@ function wirePairingEvents() {
   });
 }
 
+/* When a page is saved, the button switches to "Page Saved" and stays in this state for
+   as long as this page remains saved by the user. */
+function showPageSaved() {
+  els.saveStatus.textContent = '';
+  setButtonState(els.savePageBtn, els.savePageIcon, els.savePageLabel, SAVE_DONE, true);
+  els.savePageBtn.disabled = false;
+}
+
 function wireBackendEvents() {
   els.connectBtn.addEventListener('click', async () => {
     els.connectBtn.disabled = true;
@@ -532,6 +691,7 @@ function wireBackendEvents() {
     const res = await chrome.runtime.sendMessage({ type: 'BACKEND_CONNECT' });
     els.connectBtn.disabled = false;
     if (res && res.ok) {
+      // Leaves the button reading "Connected" with a filled check.
       await refreshBackendStatus();
     } else {
       els.backendStatus.textContent = `Connect failed (${(res && res.error) || 'unknown'}).`;
@@ -557,12 +717,15 @@ function wireBackendEvents() {
         },
       });
 
-      els.saveStatus.textContent = res && res.ok ? 'Saved.' : `Save failed (${(res && res.error) || 'unknown'}).`;
+      if (res && res.ok) {
+        showPageSaved();
+        return;
+      }
+      els.saveStatus.textContent = `Save failed (${(res && res.error) || 'unknown'}).`;
     } catch (e) {
       els.saveStatus.textContent = 'Cannot save this page (try a regular website tab).';
-    } finally {
-      els.savePageBtn.disabled = !(await refreshBackendStatus());
     }
+    await refreshBackendStatus();
   });
 }
 
@@ -711,6 +874,7 @@ async function init() {
   window.speechSynthesis.onvoiceschanged = loadVoices;
   wireEvents();
   wireBackendEvents();
+  wirePairingDisclosure();
   wirePairingEvents();
   refreshBackendStatus();
 }

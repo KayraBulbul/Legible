@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, Smartphone } from "lucide-react";
 import { useDismiss } from "@/hooks/useDismiss";
 import { useAuth } from "@/context/authContext";
+import LinkDeviceModal from "@/components/LinkDeviceModal";
 
 /** Guests have no name to initial, so this falls back to a fixed mark. */
 function initialsFor(displayName: string | null): string {
@@ -12,10 +13,11 @@ function initialsFor(displayName: string | null): string {
   return letters.map((part) => part[0]!.toUpperCase()).join("") || "A";
 }
 
-/** Avatar button in the topbar that opens a menu for signing out. */
+/** Avatar button in the topbar that opens a menu for linking devices and signing out. */
 export default function UserMenu() {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -61,6 +63,18 @@ export default function UserMenu() {
             role="menuitem"
             onClick={() => {
               close();
+              setIsLinking(true);
+            }}
+            className="flex w-full items-center gap-2 border-b border-border px-3 py-2.5 text-left text-xs font-medium text-text-primary hover:bg-surface-hover"
+          >
+            <Smartphone size={13} aria-hidden="true" />
+            Link another device
+          </button>
+
+          <button
+            role="menuitem"
+            onClick={() => {
+              close();
               void handleSignOut();
             }}
             disabled={isSigningOut}
@@ -71,6 +85,8 @@ export default function UserMenu() {
           </button>
         </div>
       )}
+
+      {isLinking && <LinkDeviceModal onClose={() => setIsLinking(false)} />}
     </div>
   );
 }

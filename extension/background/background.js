@@ -73,6 +73,31 @@ async function handleBackendCreatePairingCode() {
   }
 }
 
+async function handleBackendIsPageSaved(payload) {
+  const session = await ensureSession();
+  if (!session || !payload || !payload.url) return { ok: true, saved: false };
+  try {
+    const list = await authedFetchWithRetry('/api/v1/saved-pages?limit=100');
+    if (!list || !Array.isArray(list.items)) return { ok: true, saved: false };
+    const normalize = (u) => {
+      try {
+        const parsed = new URL(u);
+        return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}${parsed.search}`;
+      } catch (e) {
+        return (u || '').split('#')[0].replace(/\/+$/, '');
+      }
+    };
+    const targetUrl = normalize(payload.url);
+    const isSaved = list.items.some((item) => {
+      if (!item.original_url) return false;
+      return normalize(item.original_url) === targetUrl;
+    });
+    return { ok: true, saved: isSaved };
+  } catch (err) {
+    return { ok: false, error: (err instanceof ApiError && err.code) || 'check-failed', saved: false };
+  }
+}
+
 async function handleBackendRedeemPairingCode(payload) {
   try {
     const session = await redeemPairingCode(payload.code);
@@ -94,6 +119,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     case 'BACKEND_SAVE_PAGE':
       handleBackendSavePage(message.payload || {}).then(sendResponse);
+      return true;
+    case 'BACKEND_IS_PAGE_SAVED':
+      handleBackendIsPageSaved(message.payload || {}).then(sendResponse);
       return true;
     case 'BACKEND_CREATE_PAIRING_CODE':
       handleBackendCreatePairingCode().then(sendResponse);
