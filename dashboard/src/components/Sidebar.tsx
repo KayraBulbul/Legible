@@ -10,7 +10,7 @@ import type { StaticView } from "@/types";
 import { VIEW_NAV_LABELS } from "@/navigation/views";
 import NavItem from "@/components/NavItem";
 import { useWorkspace } from "@/context/workspaceContext";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/Logo.svg";
 
 /** Order matters here — it is the order they appear in the sidebar. */
 const NAV_ITEMS: { view: StaticView; icon: LucideIcon }[] = [
