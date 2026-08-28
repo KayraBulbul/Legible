@@ -30,6 +30,16 @@ ALLOWED_IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/webp", "image/svg+
 
 _DATA_URL_RE = re.compile(r"^data:([^;]+);base64,(.*)$", re.DOTALL)
 
+_TRANSFORMATION_RESPONSE_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "html": {"type": "string"},
+        "text": {"type": "string"},
+        "language": {"type": ["string", "null"]},
+    },
+    "required": ["html", "text", "language"],
+}
+
 _client = None
 
 
@@ -50,6 +60,7 @@ def _now_iso() -> str:
 def _call_gemini(
     contents: Any,
     *,
+    response_json_schema: dict[str, Any] | None = None,
     client: genai.Client | None = None,
     model: str | None = None,
 ) -> str:
@@ -61,6 +72,8 @@ def _call_gemini(
             thinking_level=genai_types.ThinkingLevel.LOW,
         ),
     )
+    if response_json_schema is not None:
+        config["response_json_schema"] = response_json_schema
     try:
         response = client.models.generate_content(
             model=model,
@@ -123,7 +136,12 @@ def transform_content(
         f"Content (plain text fallback):\n{input_document.get('text', '')}"
     )
 
-    raw = _call_gemini([full_prompt], client=client, model=model)
+    raw = _call_gemini(
+        [full_prompt],
+        response_json_schema=_TRANSFORMATION_RESPONSE_JSON_SCHEMA,
+        client=client,
+        model=model,
+    )
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:

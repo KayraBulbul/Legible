@@ -129,9 +129,11 @@ async def test_gemini_transform_preserves_unknown_language(
     def call_gemini(
         _contents: object,
         *,
+        response_json_schema: dict[str, object],
         client: object,
         model: str,
     ) -> str:
+        assert response_json_schema
         assert client is not None
         assert model == "fake-gemini"
         return '{"html":"<p>Clear</p>","text":"Clear","language":null}'
@@ -178,6 +180,15 @@ async def test_gemini_transform_uses_supported_json_config(
     assert len(captured_configs) == 1
     assert captured_configs[0] == {
         "response_mime_type": "application/json",
+        "response_json_schema": {
+            "type": "object",
+            "properties": {
+                "html": {"type": "string"},
+                "text": {"type": "string"},
+                "language": {"type": ["string", "null"]},
+            },
+            "required": ["html", "text", "language"],
+        },
         "thinking_config": {"thinking_level": genai_types.ThinkingLevel.LOW},
     }
 
