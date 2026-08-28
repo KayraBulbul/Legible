@@ -136,7 +136,7 @@ async def test_gemini_transform_preserves_unknown_language(
         assert response_json_schema
         assert client is not None
         assert model == "fake-gemini"
-        return '{"html":"<p>Clear</p>","text":"Clear","language":null}'
+        return '{"html":"<p>Clear</p>","language":null}'
 
     monkeypatch.setattr("ai.gemini_service._call_gemini", call_gemini)
     result = await provider.transform(
@@ -164,7 +164,7 @@ async def test_gemini_transform_uses_supported_json_config(
         captured_configs.append(config)
         return SimpleNamespace(
             parsed=None,
-            text='{"html":"<p>Clear</p>","text":"Clear","language":"en"}',
+            text='{"html":"<h1>Clear</h1><p>Readable text</p>","language":"en"}',
         )
 
     fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
@@ -184,13 +184,46 @@ async def test_gemini_transform_uses_supported_json_config(
             "type": "object",
             "properties": {
                 "html": {"type": "string"},
-                "text": {"type": "string"},
                 "language": {"type": ["string", "null"]},
             },
-            "required": ["html", "text", "language"],
+            "required": ["html", "language"],
         },
         "thinking_config": {"thinking_level": genai_types.ThinkingLevel.LOW},
     }
+
+
+async def test_gemini_transform_sends_one_source_and_derives_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_contents: list[object] = []
+
+    def generate_content(**kwargs: object) -> object:
+        captured_contents.append(kwargs["contents"])
+        return SimpleNamespace(
+            text=(
+                '{"html":"<article><h1>Clear title</h1><p>First sentence.</p>'
+                '<p>Second <strong>sentence</strong>.</p></article>","language":"en"}'
+            )
+        )
+
+    fake_client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    monkeypatch.setattr("api.services.gemini.genai.Client", lambda **_kwargs: fake_client)
+    provider = GoogleGeminiService(api_key="secret-api-key", model="gemini-3.6-flash")
+
+    result = await provider.transform(
+        TextTransformationOperation.RESTRUCTURE,
+        SemanticDocument(
+            html="<p>Dense HTML source</p>",
+            text="Duplicate plain text source",
+            language="en",
+        ),
+        AiPreferences(),
+    )
+
+    prompt = str(captured_contents[0])
+    assert "Dense HTML source" in prompt
+    assert "Duplicate plain text source" not in prompt
+    assert result.document.text == "Clear title\nFirst sentence.\nSecond sentence."
 
 
 async def test_gemini_image_description_uses_supported_json_config(

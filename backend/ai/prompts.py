@@ -7,18 +7,18 @@ prompt produced them.
 
 TRANSFORM_PROMPTS = {
     "simplify": (
-        "simplify-v1",
+        "simplify-v2",
         "Rewrite the following content in simpler language, keeping every fact and the "
         "same overall meaning. Keep the same HTML structure (headings, paragraphs, lists) "
         "where possible.",
     ),
     "summarize": (
-        "summarize-v1",
+        "summarize-v2",
         "Summarize the following content concisely, keeping the most important facts. "
         "Return a short semantic HTML fragment (a few paragraphs at most).",
     ),
     "restructure": (
-        "restructure-v2",
+        "restructure-v3",
         "Rewrite the following content with clearer structure: add headings, break up "
         "long paragraphs, and use lists where it helps readability. Preserve every fact, "
         "detail, and nuance from the substantive content — never summarize, condense, or "
@@ -29,7 +29,7 @@ TRANSFORM_PROMPTS = {
         "or real content, keep it.",
     ),
     "focus": (
-        "focus-v1",
+        "focus-v2",
         "Extract and return only the single most important idea or section from the "
         "following content, dropping everything secondary.",
     ),

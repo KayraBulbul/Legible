@@ -10,6 +10,7 @@ import json
 import os
 import re
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 from typing import Any
 
 from google import genai
@@ -34,11 +35,77 @@ _TRANSFORMATION_RESPONSE_JSON_SCHEMA = {
     "type": "object",
     "properties": {
         "html": {"type": "string"},
-        "text": {"type": "string"},
         "language": {"type": ["string", "null"]},
     },
-    "required": ["html", "text", "language"],
+    "required": ["html", "language"],
 }
+
+_BLOCK_TAGS = {
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "br",
+    "caption",
+    "dd",
+    "div",
+    "dl",
+    "dt",
+    "figcaption",
+    "figure",
+    "footer",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hr",
+    "li",
+    "main",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "section",
+    "table",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "tr",
+    "ul",
+}
+
+
+class _PlainTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, _attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
+def _html_to_text(fragment: str) -> str:
+    parser = _PlainTextParser()
+    parser.feed(fragment)
+    parser.close()
+    lines = (
+        re.sub(r"[ \t\f\v]+", " ", line).strip() for line in "".join(parser.parts).splitlines()
+    )
+    return "\n".join(line for line in lines if line)
+
 
 _client = None
 
@@ -127,13 +194,18 @@ def transform_content(
     prompt_version, prompt_text = TRANSFORM_PROMPTS[operation]
     options = options or {}
 
+    source_html = input_document.get("html", "")
+    source_text = input_document.get("text", "")
+    source = (
+        f"Content (semantic HTML):\n{source_html}"
+        if isinstance(source_html, str) and source_html.strip()
+        else f"Content (plain text):\n{source_text}"
+    )
     full_prompt = (
         f"{prompt_text}\n\n"
         f"Options: {json.dumps(options)}\n\n"
-        'Respond ONLY with compact JSON: {"html": string, "text": string, '
-        '"language": string|null}.\n\n'
-        f"Content (semantic HTML):\n{input_document.get('html', '')}\n\n"
-        f"Content (plain text fallback):\n{input_document.get('text', '')}"
+        'Respond ONLY with compact JSON: {"html": string, "language": string|null}.\n\n'
+        f"{source}"
     )
 
     raw = _call_gemini(
@@ -150,7 +222,7 @@ def transform_content(
     output = {
         "format": "semantic_html",
         "html": parsed.get("html", ""),
-        "text": parsed.get("text", ""),
+        "text": _html_to_text(parsed.get("html", "")),
         "language": parsed.get("language") or input_document.get("language"),
     }
     metadata = {
