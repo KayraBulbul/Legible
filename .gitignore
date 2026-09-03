@@ -16,3 +16,7 @@ htmlcov/
 .coverage
 dashboard/node_modules
 dashboard/dist
+CONTEXT.md
+HANDOFF.md
+.vscode
+.DS_Store
